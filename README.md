@@ -22,11 +22,18 @@ Unlike speculative meme tokens or gold-backed stablecoins, **Copra Protocol** br
 
 ## 2. Core Smart Contract Architecture
 
-The protocol codebase is located in [src/](file:///Users/nandal/Desktop/desk/repos/cocobuck/src/):
+The protocol codebase is located in [src/](src/):
 
-- [CopraToken.sol](file:///Users/nandal/Desktop/desk/repos/cocobuck/src/CopraToken.sol): Standard ERC-20 token ($COPRA) with minting and burning permissions restricted exclusively to the autonomous vault.
-- [CopraVault.sol](file:///Users/nandal/Desktop/desk/repos/cocobuck/src/CopraVault.sol): The collateral reserve and Peg Stability Module (PSM). Handles permissionless minting, burning, direct redemptions, and autonomous fee capture.
-- [CopraOracle.sol](file:///Users/nandal/Desktop/desk/repos/cocobuck/src/CopraOracle.sol): Decentralized oracle adapter streaming international copra commodity prices (USD, 8 decimals) with price volatility guardrails.
+- [CopraToken.sol](src/CopraToken.sol): Standard ERC-20 token ($COPRA) with minting and burning permissions restricted exclusively to the autonomous vault.
+- [CopraVault.sol](src/CopraVault.sol): The collateral reserve and Peg Stability Module (PSM). Handles permissionless minting, burning, direct redemptions, and autonomous fee capture.
+- [CopraOracle.sol](src/CopraOracle.sol): Decentralized oracle adapter streaming international copra commodity prices (USD, 8 decimals) with price volatility guardrails.
+- [TestnetUSDC.sol](src/TestnetUSDC.sol): Public Base Sepolia testnet collateral token with a permissionless `faucet()` for frictionless testing.
+
+Further technical documentation:
+- [Whitepaper](docs/WHITEPAPER.md)
+- [Architecture & Security Model](docs/ARCHITECTURE.md)
+- [Contributing Guidelines](CONTRIBUTING.md)
+- [Security Policy](SECURITY.md)
 
 ---
 
@@ -72,25 +79,39 @@ forge test -v
 
 ### Test Suite Output
 ```text
-Ran 6 tests for test/CopraProtocol.t.sol:CopraProtocolTest
+Ran 10 tests for test/CopraProtocol.t.sol:CopraProtocolTest
 [PASS] test_ClaimProtocolFees()
 [PASS] test_InitialState()
 [PASS] test_MintCopra()
 [PASS] test_OraclePriceUpdate()
 [PASS] test_OracleRevertOnUnauthorized()
+[PASS] test_Ownable2StepTransfer()
 [PASS] test_RedeemCopra()
-Suite result: ok. 6 passed; 0 failed; 0 skipped
+[PASS] test_SetFeeRecipient()
+[PASS] test_SetProtocolFee()
+[PASS] test_TestnetUSDC_Faucet()
+Suite result: ok. 10 passed; 0 failed; 0 skipped
 ```
 
 ---
 
-## 6. Zero-Cost Testnet Deployment (Base Sepolia)
+## 6. Live Testnet Deployment (Base Sepolia)
 
+Canonical deployment manifest: [deployments/base-sepolia.json](deployments/base-sepolia.json) (Chain ID `84532`).
+
+| Contract | Address | Explorer |
+| :--- | :--- | :--- |
+| **CopraToken (`$COPRA`)** | `0xcAdd63DFd49bC1383aA35ace7fa72aba43283a81` | [Basescan](https://sepolia.basescan.org/address/0xcAdd63DFd49bC1383aA35ace7fa72aba43283a81) |
+| **CopraVault (PSM)** | `0x6F8d4948B4be558fc0db547F837a86CE2d88c01b` | [Basescan](https://sepolia.basescan.org/address/0x6F8d4948B4be558fc0db547F837a86CE2d88c01b) |
+| **CopraOracle** | `0x7Fe0746161eb2e91fB13470fbBca15d4cC0EF522` | [Basescan](https://sepolia.basescan.org/address/0x7Fe0746161eb2e91fB13470fbBca15d4cC0EF522) |
+| **TestnetUSDC** | `0x1b8a3536F8826Db6Bacbab452366cC75c960E738` | [Basescan](https://sepolia.basescan.org/address/0x1b8a3536F8826Db6Bacbab452366cC75c960E738) |
+
+### Deploy Your Own Instance
 1. Obtain free Base Sepolia testnet ETH from [faucets.chain.link](https://faucets.chain.link) or [base.org/faucets](https://www.base.org/faucets).
 2. Set your environment variables:
    ```bash
    export PRIVATE_KEY="your_wallet_private_key"
-   export BASE_SEPOLIA_RPC="https://sepolia.base.org"
+   export BASE_SEPOLIA_RPC="https://base-sepolia-rpc.publicnode.com"
    ```
 3. Run the deployment script:
    ```bash
@@ -101,12 +122,7 @@ Suite result: ok. 6 passed; 0 failed; 0 skipped
 
 ## 7. Web Interface for copra.dev
 
-A clean, responsive dApp is included in [web/index.html](file:///Users/nandal/Desktop/desk/repos/cocobuck/web/index.html).
-
-### Host on Vercel or Cloudflare Pages for Free:
-- Point your domain `copra.dev` nameservers to Cloudflare or Vercel.
-- Deploy the `/web` folder as the root directory.
-- Instant, zero-cost static hosting with automatic HTTPS.
+A clean, responsive dApp is included in [web/index.html](web/index.html) and deployed via Cloudflare Workers static assets ([wrangler.jsonc](wrangler.jsonc)).
 
 ---
 
