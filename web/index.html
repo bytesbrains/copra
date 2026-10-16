@@ -4,6 +4,24 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Copra Protocol ($COPRA) | The Coconut Commodity Currency</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <meta name="theme-color" content="#0a0f0d">
+
+  <!-- Open Graph & Social Cards -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://copra.dev">
+  <meta property="og:title" content="Copra Protocol ($COPRA) | The Coconut Commodity Currency">
+  <meta property="og:description" content="Autonomous, ownerless cryptocurrency pegged to the real-world international benchmark value of copra commodity on Base.">
+  <meta property="og:image" content="https://copra.dev/og-image.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Copra Protocol ($COPRA)">
+  <meta name="twitter:description" content="Autonomous, ownerless cryptocurrency pegged to the real-world international benchmark value of copra commodity on Base.">
+  <meta name="twitter:image" content="https://copra.dev/og-image.png">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -37,10 +55,8 @@
   <header class="border-b border-brand-border bg-brand-dark/80 backdrop-blur sticky top-0 z-50">
     <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
       <div class="flex items-center space-x-3">
-        <div class="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold text-sm">
-          🥥
-        </div>
-        <span class="font-bold text-lg tracking-tight">Copra<span class="text-emerald-400">.dev</span></span>
+        <img src="/assets/copra_logo_64.png" alt="Copra Logo" class="w-8 h-8 rounded-full border border-emerald-500/30 object-cover shadow-sm">
+        <span class="text-lg tracking-tight"><span class="font-bold text-white">Copra</span><span class="text-emerald-400 font-medium">.dev</span></span>
         <span class="text-xs font-mono bg-emerald-950 text-emerald-300 border border-emerald-800 px-2 py-0.5 rounded-full">Base L2</span>
       </div>
       <div class="flex items-center space-x-4">
@@ -58,6 +74,12 @@
   <!-- Hero Section -->
   <main class="max-w-6xl mx-auto px-6 py-16">
     <div class="text-center max-w-3xl mx-auto mb-16">
+      <div class="flex justify-center mb-6">
+        <div class="relative">
+          <div class="absolute -inset-1 rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 opacity-25 blur-lg"></div>
+          <img src="/assets/copra_logo_128.png" alt="Copra Protocol" class="relative w-20 h-20 rounded-full border border-emerald-500/40 object-cover shadow-2xl">
+        </div>
+      </div>
       <div class="inline-flex items-center space-x-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs px-3 py-1 rounded-full mb-6 font-mono">
         <span>Autonomous RWA Commodity Protocol</span>
       </div>
@@ -100,7 +122,10 @@
           </div>
           <div class="relative">
             <input type="number" id="outputAmount" value="10.0" readonly class="w-full bg-brand-dark/50 border border-brand-border/60 rounded-xl px-4 py-3 text-lg font-mono text-emerald-400 font-bold focus:outline-none" placeholder="0.0">
-            <div class="absolute right-3 top-3.5 text-xs font-mono font-bold text-emerald-400" id="outputTicker">COPRA</div>
+            <div class="absolute right-3 top-3.5 flex items-center space-x-1.5 text-xs font-mono font-bold text-emerald-400" id="outputTicker">
+              <img src="/assets/copra_logo_32.png" alt="Copra" class="w-4 h-4 rounded-full">
+              <span>COPRA</span>
+            </div>
           </div>
         </div>
 
@@ -202,8 +227,8 @@
       tabRedeem.className = 'flex-1 py-2 rounded-md text-slate-400 hover:text-white transition';
       inputLabel.textContent = 'You Pay (USDC)';
       outputLabel.textContent = 'You Receive ($COPRA)';
-      inputTicker.textContent = 'USDC';
-      outputTicker.textContent = 'COPRA';
+      inputTicker.innerHTML = '<span>USDC</span>';
+      outputTicker.innerHTML = '<img src="/assets/copra_logo_32.png" alt="Copra" class="w-4 h-4 rounded-full"><span>COPRA</span>';
       amountInput.value = '14.20';
       actionBtn.textContent = 'Mint $COPRA';
       calculate();
@@ -215,8 +240,8 @@
       tabMint.className = 'flex-1 py-2 rounded-md text-slate-400 hover:text-white transition';
       inputLabel.textContent = 'You Burn ($COPRA)';
       outputLabel.textContent = 'You Receive (USDC)';
-      inputTicker.textContent = 'COPRA';
-      outputTicker.textContent = 'USDC';
+      inputTicker.innerHTML = '<img src="/assets/copra_logo_32.png" alt="Copra" class="w-4 h-4 rounded-full"><span>COPRA</span>';
+      outputTicker.innerHTML = '<span>USDC</span>';
       amountInput.value = '10.00';
       actionBtn.textContent = 'Redeem USDC';
       calculate();

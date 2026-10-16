@@ -1,8 +1,9 @@
-# Copra Protocol ($COPRA)
-
-Official Domain: [copra.dev](https://copra.dev)  
-Token Ticker: **$COPRA**  
-Target Network: **Base L2**
+<div align="center">
+  <img src="assets/copra_logo_256.png" alt="Copra Protocol Logo" width="128" />
+  <h1>Copra Protocol ($COPRA)</h1>
+  <p><strong>The Global Coconut Commodity Currency</strong></p>
+  <p><a href="https://copra.dev">copra.dev</a> • Target Network: <strong>Base L2</strong></p>
+</div>
 
 Copra Protocol is an autonomous, ownerless cryptocurrency pegged to the real-world international benchmark value of copra—the dried coconut meat that serves as the global price anchor for the multi-billion dollar coconut economy.
 
@@ -105,3 +106,15 @@ A clean, responsive dApp is included in [web/index.html](file:///Users/nandal/De
 - Point your domain `copra.dev` nameservers to Cloudflare or Vercel.
 - Deploy the `/web` folder as the root directory.
 - Instant, zero-cost static hosting with automatic HTTPS.
+
+---
+
+## 8. Brand & Identity Guidelines
+
+| Context | Canonical Format | Example |
+| :--- | :--- | :--- |
+| **Domain & Website Links** | `copra.dev` (lowercase) | [https://copra.dev](https://copra.dev) |
+| **Navigation & Wordmark** | `Copra.dev` (Title Case + accent) | **Copra**<span style="color:#34d399">.dev</span> |
+| **Protocol / Project Name** | `Copra Protocol` or `Copra` | *"Copra Protocol is an autonomous currency..."* |
+| **Token Ticker Symbol** | `$COPRA` (All-caps) | *"1 $COPRA tracks 1 kg of Copra"* |
+

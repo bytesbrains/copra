@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="../assets/copra_logo_256.png" alt="Copra Protocol Logo" width="100" />
+</div>
+
 # Copra Protocol Whitepaper
 
 **Title**: Copra Protocol: An Autonomous On-Chain Currency Pegged to the Global Coconut Commodity Benchmark  
