@@ -1,12 +1,15 @@
-.PHONY: all build test fmt fmt-check lint clean
+.PHONY: all build test test-web fmt fmt-check lint clean
 
-all: build test
+all: build test test-web
 
 build:
 	forge build --sizes
 
 test:
 	forge test -vvv
+
+test-web:
+	node --test test/web/*.test.cjs
 
 fmt:
 	forge fmt

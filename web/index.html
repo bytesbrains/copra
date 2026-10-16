@@ -28,6 +28,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- ethers.js v6 for direct Web3 on-chain connectivity -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js"></script>
+  <script src="/assets/quote.js"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -387,7 +388,8 @@
 
     // --- State Variables ---
     let currentPriceUSD = 1.42;
-    let feeRate = 0.0025; // 0.25% (25 bps)
+    let currentPriceRaw = 142000000n; // oracle price, 8 decimals
+    let feeBps = 25n; // 0.25%
     let mode = 'mint';
     let userAddress = null;
     let provider = null;
@@ -437,29 +439,25 @@
     const watchUsdcBtn = document.getElementById('watchUsdcBtn');
 
     // --- Price & Calculation Engine ---
-    // Matches CopraVault.quoteMint / quoteRedeem:
-    // In CopraVault.quoteMint:
-    //   baseCollateral = (copraAmount * priceUSD) / 1e8 (scaled to 6 decimals)
-    //   fee = (baseCollateral * protocolFeeBps) / 10000
-    //   collateralRequired = baseCollateral + fee = baseCollateral * (1 + feeRate)
-    // Therefore, given total USDC paid `val`:
-    //   baseCollateral = val / (1 + feeRate)
-    //   fee = val - baseCollateral = val * feeRate / (1 + feeRate)
-    //   copra = baseCollateral / currentPriceUSD
+    // Exact BigInt mirror of CopraVault.quoteMint / quoteRedeem (see /assets/quote.js).
+    // Mint: the input is the total USDC paid, fee included, so the $COPRA amount is the largest
+    // one whose quoteMint().collateralRequired fits inside it.
+    function mintCopraWei() {
+      const usdcRaw = CopraQuote.parseUnits(amountInput.value, 6) ?? 0n;
+      return CopraQuote.copraForCollateral(usdcRaw, currentPriceRaw, feeBps);
+    }
+
     function calculate() {
-      const val = Math.max(0, parseFloat(amountInput.value) || 0);
       if (mode === 'mint') {
-        const baseCollateral = val / (1 + feeRate);
-        const copra = currentPriceUSD > 0 ? baseCollateral / currentPriceUSD : 0;
-        const fee = val - baseCollateral;
-        outputAmount.value = copra.toFixed(4);
-        feeDisplay.textContent = '$' + fee.toFixed(4) + ' USDC';
+        const copraWei = mintCopraWei();
+        const { fee } = CopraQuote.quoteMint(copraWei, currentPriceRaw, feeBps);
+        outputAmount.value = CopraQuote.formatUnits(copraWei, 18, 4);
+        feeDisplay.textContent = '$' + CopraQuote.formatUnits(fee, 6, 4) + ' USDC';
       } else {
-        const baseCollateral = val * currentPriceUSD;
-        const fee = baseCollateral * feeRate;
-        const usdc = baseCollateral - fee;
-        outputAmount.value = usdc.toFixed(4);
-        feeDisplay.textContent = '$' + fee.toFixed(4) + ' USDC';
+        const copraWei = CopraQuote.parseUnits(amountInput.value, 18) ?? 0n;
+        const { collateralToReturn, fee } = CopraQuote.quoteRedeem(copraWei, currentPriceRaw, feeBps);
+        outputAmount.value = CopraQuote.formatUnits(collateralToReturn, 6, 4);
+        feeDisplay.textContent = '$' + CopraQuote.formatUnits(fee, 6, 4) + ' USDC';
       }
     }
 
@@ -499,13 +497,10 @@
     // --- MAX Button Handler ---
     maxBtn.addEventListener('click', () => {
       if (!userAddress) return;
-      if (mode === 'mint') {
-        const usdcVal = Number(userUsdcBalanceRaw) / 1e6;
-        amountInput.value = usdcVal > 0 ? usdcVal.toFixed(2) : '0';
-      } else {
-        const copraVal = Number(userCopraBalanceRaw) / 1e18;
-        amountInput.value = copraVal > 0 ? copraVal.toFixed(4) : '0';
-      }
+      // Exact balance, never rounded up — a rounded-up MAX makes transferFrom / burn revert.
+      amountInput.value = mode === 'mint'
+        ? CopraQuote.formatUnits(userUsdcBalanceRaw, 6)
+        : CopraQuote.formatUnits(userCopraBalanceRaw, 18);
       calculate();
       checkAllowance();
     });
@@ -558,11 +553,19 @@
       if (type === 'error') colorClass = 'bg-red-500/10 border-red-500/30 text-red-300';
       txStatus.className = 'rounded-xl p-3 text-xs font-mono border ' + colorClass;
 
-      let html = `<div>${msg}</div>`;
+      // Messages can carry wallet/RPC error text, so build nodes instead of interpolating HTML.
+      const msgEl = document.createElement('div');
+      msgEl.textContent = msg;
+      txStatus.replaceChildren(msgEl);
       if (txHash) {
-        html += `<a href="${CONTRACTS.explorer}/tx/${txHash}" target="_blank" rel="noopener noreferrer" class="underline mt-1 inline-block text-[11px] font-bold">View on Basescan ↗</a>`;
+        const link = document.createElement('a');
+        link.href = `${CONTRACTS.explorer}/tx/${encodeURIComponent(txHash)}`;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.className = 'underline mt-1 inline-block text-[11px] font-bold';
+        link.textContent = 'View on Basescan ↗';
+        txStatus.appendChild(link);
       }
-      txStatus.innerHTML = html;
     }
 
     // --- Web3 Blockchain Connection & Interactivity ---
@@ -646,6 +649,7 @@
 
         if (oracleData) {
           const [priceBn, updatedAtBn] = oracleData;
+          currentPriceRaw = BigInt(priceBn);
           currentPriceUSD = Number(priceBn) / 1e8;
           const updatedAtSec = Number(updatedAtBn);
           document.getElementById('benchmarkHeader').textContent = `$${currentPriceUSD.toFixed(2)} USD / kg`;
@@ -656,8 +660,8 @@
         }
 
         if (feeBpsRaw !== null) {
+          feeBps = BigInt(feeBpsRaw);
           const bps = Number(feeBpsRaw);
-          feeRate = bps / 10000;
           const pct = (bps / 100).toFixed(2);
           feeLabel.textContent = `Protocol Fee (${pct}%)`;
           document.getElementById('metricFeeRate').textContent = `${pct}% (${bps} bps) Fee`;
@@ -712,7 +716,7 @@
       try {
         const usdcContract = new ethers.Contract(CONTRACTS.usdc, ERC20_ABI, provider);
         const allowance = await usdcContract.allowance(userAddress, CONTRACTS.vault);
-        const amountUSDC = ethers.parseUnits((Math.max(0, parseFloat(amountInput.value) || 0)).toFixed(6), 6);
+        const amountUSDC = CopraQuote.parseUnits(amountInput.value, 6) ?? 0n;
 
         if (allowance < amountUSDC) {
           actionBtnText.textContent = 'Approve USDC';
@@ -741,16 +745,20 @@
           const usdcContract = new ethers.Contract(CONTRACTS.usdc, ERC20_ABI, signer);
           const vaultContract = new ethers.Contract(CONTRACTS.vault, VAULT_ABI, signer);
 
-          // Calculate amount of COPRA to mint
-          const copraAmount = parseFloat(outputAmount.value);
-          if (!copraAmount || copraAmount <= 0) {
+          // Largest $COPRA amount whose collateral (fee included) fits inside the USDC entered
+          const copraWei = mintCopraWei();
+          if (copraWei <= 0n) {
             showToast('Enter a valid USDC amount to mint.', 'warn');
             return;
           }
-          const copraWei = ethers.parseUnits(copraAmount.toFixed(18), 18);
 
-          // Get exact quote from vault
+          // Get exact quote from vault — the oracle may have moved since the preview
           const [collateralRequired] = await vaultContract.quoteMint(copraWei);
+          const usdcBalance = await usdcContract.balanceOf(userAddress);
+          if (usdcBalance < collateralRequired) {
+            showToast(`Insufficient USDC: this mint needs ${CopraQuote.formatUnits(collateralRequired, 6)} USDC at the current oracle price.`, 'warn');
+            return;
+          }
           const allowance = await usdcContract.allowance(userAddress, CONTRACTS.vault);
 
           if (allowance < collateralRequired) {
@@ -769,18 +777,17 @@
           showToast(`Mint transaction broadcast! Waiting for confirmation...`, 'pending', mintTx.hash);
           await mintTx.wait(1);
 
-          showToast(`🎉 Successfully minted ${copraAmount.toFixed(4)} $COPRA!`, 'info', mintTx.hash);
+          showToast(`🎉 Successfully minted ${CopraQuote.formatUnits(copraWei, 18, 4)} $COPRA!`, 'info', mintTx.hash);
           await refreshBalances();
           await readProtocolTelemetry();
         } else {
           // Redeem flow
           const vaultContract = new ethers.Contract(CONTRACTS.vault, VAULT_ABI, signer);
-          const copraAmount = parseFloat(amountInput.value);
-          if (!copraAmount || copraAmount <= 0) {
+          const copraWei = CopraQuote.parseUnits(amountInput.value, 18) ?? 0n;
+          if (copraWei <= 0n) {
             showToast('Enter a valid $COPRA amount to redeem.', 'warn');
             return;
           }
-          const copraWei = ethers.parseUnits(copraAmount.toFixed(18), 18);
 
           showToast('Redeeming $COPRA for USDC...', 'pending');
           const redeemTx = await vaultContract.redeem(copraWei);
