@@ -56,14 +56,14 @@ test('every script and stylesheet index.html loads is allowed by the CSP', () =>
 });
 
 test('the app scripts write no HTML strings into the DOM', () => {
-  for (const f of ['app.js', 'tailwind-config.js', 'quote.js']) {
+  for (const f of fs.readdirSync(path.join(WEB, 'assets')).filter((n) => n.endsWith('.js'))) {
     const src = fs.readFileSync(path.join(WEB, 'assets', f), 'utf8');
     assert.doesNotMatch(src, /\.(innerHTML|outerHTML)\s*=|insertAdjacentHTML|document\.write/, f);
   }
 });
 
-test('connect-src covers the RPC endpoint app.js reads from', () => {
-  const app = fs.readFileSync(path.join(WEB, 'assets/app.js'), 'utf8');
-  const rpc = app.match(/rpcUrl:\s*'([^']+)'/)[1];
+test('connect-src covers the RPC endpoint config.js reads from', () => {
+  const config = fs.readFileSync(path.join(WEB, 'assets/config.js'), 'utf8');
+  const rpc = config.match(/rpcUrl:\s*'([^']+)'/)[1];
   assert.ok(allows('connect-src', rpc), `connect-src blocks ${rpc}`);
 });
