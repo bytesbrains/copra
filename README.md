@@ -35,13 +35,13 @@ The protocol codebase is located in [src/](file:///Users/nandal/Desktop/desk/rep
 ### Direct Minting
 A user deposits collateral (e.g., USDC) to mint $COPRA:
 ```
-Collateral Required = (COPRA_Amount × Copra_Price_USD) / 1e8 + Protocol_Fee (0.5%)
+Collateral Required = (COPRA_Amount × Copra_Price_USD) / 1e8 + Protocol_Fee (0.25%)
 ```
 
 ### Direct Redemption (Hard Peg Floor)
 A holder can burn $COPRA to claim underlying collateral at any time:
 ```
-Collateral Returned = (COPRA_Amount × Copra_Price_USD) / 1e8 - Protocol_Fee (0.5%)
+Collateral Returned = (COPRA_Amount × Copra_Price_USD) / 1e8 - Protocol_Fee (0.25%)
 ```
 
 ### Self-Balancing Arbitrage
@@ -52,10 +52,11 @@ Collateral Returned = (COPRA_Amount × Copra_Price_USD) / 1e8 - Protocol_Fee (0.
 
 ## 4. Creator Economics & Autonomous Fee Capture
 
-The creator does not need administrative control to earn revenue. The smart contracts autonomously capture a **0.5% protocol fee** on all mints and redemptions:
+The creator does not need administrative control over user reserves to earn revenue. The smart contracts autonomously capture a **0.25% protocol fee** (configurable up to an immutable 1.0% hard cap) on all mints and redemptions:
 
 - Fees accumulate directly in reserve collateral (USDC) inside `CopraVault.sol`.
-- The designated `feeRecipient` wallet can call `claimFees()` at any time to withdraw accumulated earnings.
+- The designated `feeRecipient` wallet receives accumulated earnings when `claimFees()` is triggered.
+- `feeRecipient` is updateable by the contract owner via OpenZeppelin's `Ownable2Step`, enabling progressive decentralization (e.g., migrating from a creator wallet to a community staking pool or DAO treasury) with zero risk of typos or lockout.
 - As global trading and minting volume expands, the fee recipient earns perpetual, passive, dollar-denominated cash flow.
 
 ---
