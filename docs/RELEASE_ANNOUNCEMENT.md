@@ -16,7 +16,7 @@
 **Post 1 — Announcement**
 Introducing Copra Protocol ($COPRA) — the autonomous coconut commodity currency on @base.
 
-1 $COPRA is anchored to 1 kg of international copra (dried coconut kernel, CIF Rotterdam / World Bank Pink Sheet benchmark) and backed 100% by on-chain USDC reserves.
+1 $COPRA is anchored to 1 kg of international copra (dried coconut kernel, CIF Rotterdam / World Bank Pink Sheet benchmark) and minted against its full value in on-chain USDC reserves.
 
 Live on Base Sepolia: https://copra.dev
 Codebase (MIT): https://github.com/bytesbrains/copra
@@ -29,7 +29,7 @@ Copra is the global benchmark commodity behind coconut oil, lauric acid, and agr
 **Post 3 — How the Peg Works**
 Permissionless Peg Stability Module (PSM) in `CopraVault.sol`:
 - Mint $COPRA at the oracle benchmark price by depositing USDC (+0.25% protocol fee)
-- Redeem $COPRA at any time for underlying USDC directly from the vault (-0.25% protocol fee)
+- Redeem $COPRA for USDC at the benchmark price directly from the vault while it holds enough collateral (-0.25% protocol fee)
 - 20% max single-update oracle shift collar & 7-day heartbeat safeguard
 
 **Post 4 — Try the Live Testnet**
@@ -43,7 +43,7 @@ Permissionless Peg Stability Module (PSM) in `CopraVault.sol`:
 
 Copra Protocol ($COPRA) is now open-source and live on Base Sepolia.
 
-$COPRA tracks 1 kg of global benchmark copra (dried coconut kernel) with 100% on-chain USDC reserve backing in an immutable Peg Stability Module:
+$COPRA tracks 1 kg of global benchmark copra (dried coconut kernel) minted against its full value in on-chain USDC, in a non-upgradeable Peg Stability Module:
 - Permissionless minting & direct vault redemptions
 - Automated commodity oracle feeder with 20% volatility guardrails and 7-day heartbeat enforcement
 - Built-in Base Sepolia Testnet USDC faucet on the web interface

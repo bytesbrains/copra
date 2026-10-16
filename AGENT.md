@@ -12,7 +12,7 @@ This document provides autonomous coding assistants and contributors with critic
 - **Ticker**: `$COPRA`
 - **Domain**: [copra.dev](https://copra.dev)
 - **Target Network**: Base Layer-2
-- **Core Thesis**: An autonomous cryptocurrency pegged to the real-world international benchmark spot price of copra (dried coconut meat). Backed 100% by transparent on-chain stable collateral (USDC).
+- **Core Thesis**: An autonomous cryptocurrency pegged to the real-world international benchmark spot price of copra (dried coconut meat). Minted against its full value in transparent on-chain stable collateral (USDC) at the price of the day; see README "Backing & Price Moves" for what happens when the price moves.
 
 ---
 
@@ -59,10 +59,10 @@ gitleaks detect --config .gitleaks.toml --verbose
 
 ## 4. Architectural Invariants (Must Never Be Broken)
 
-1. **Collateral Solvency Invariant**:
-   `vaultCollateralBalance >= (totalSupply(COPRA) * copraPriceUSD / 1e8) + accumulatedFees`
-2. **Hard Peg Floor**:
-   Any user must always be able to call `vault.redeem(copraAmount)` and receive 100% of the commodity dollar value in collateral minus the protocol fee.
+1. **Full Backing at Mint**:
+   `mint` must take at least the full value of the new $COPRA at the current price (rounded up) plus the fee. This is the only backing the vault guarantees: it is not a solvency invariant, because `vaultCollateralBalance >= totalSupply(COPRA) * copraPriceUSD / 1e8 + accumulatedFees` can stop holding once the price rises after deposits.
+2. **Fees Stay Backed**:
+   `redeem` must never pay out collateral that backs `accumulatedFees`: it reverts with `InsufficientVaultCollateral` instead (`test_Vault_RedeemCannotLeaveFeesUnbacked`). Redemption pays 100% of the commodity value minus the fee only while the vault can cover it at the current price; it is not guaranteed after a price rise. See README "Backing & Price Moves".
 3. **Immutability & Bounded Privilege**:
    Contracts must not use upgradeable proxies, and no role may gain a function that moves user collateral or pauses the vault. The privileged roles that exist (oracle updater, vault owner, registry owner) are listed in README "Trust Assumptions". A change to any role's powers must update that section and the `test_TrustAssumption_*` tests.
 4. **Reentrancy Protection**:
