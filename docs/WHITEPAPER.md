@@ -82,9 +82,10 @@ While the vault is fully covered, this acts as a **price floor**:
 ## 3. Autonomous Oracle Design
 
 The price feed contract (`CopraOracle.sol`) enforces rigorous stability parameters:
-1. **Maximum Price Shift Guardrail**: A single price update cannot deviate by more than 20% (2,000 basis points) from the previous price. There is no minimum interval between updates, so this limits one faulty update, not the updater (see §6).
-2. **Heartbeat Verification**: A strict 7-day heartbeat requirement ensures that stale pricing data causes transactions to safely revert until fresh data is verified.
-3. **Single Updater Today**: Prices are posted by one authorized address (`feedUpdater`, immutable). Moving to a multi-source feed such as Chainlink Functions or UMA's Optimistic Oracle would need a new oracle *and* a new vault, because the vault's `oracle` is immutable too, followed by a registry update.
+1. **Maximum Price Shift Guardrail**: A single price update cannot deviate by more than 20% (2,000 basis points) from the previous price.
+2. **Minimum Update Interval**: The oracle accepts one update per day (`MIN_UPDATE_INTERVAL`), so the price can move at most 20% a day, about ×3.6 a week. This turns the collar into a limit over time, so a large move takes days of public updates instead of one block. It slows the updater but does not bound it (see §6).
+3. **Heartbeat Verification**: A strict 7-day heartbeat requirement ensures that stale pricing data causes transactions to safely revert until fresh data is verified.
+4. **Single Updater Today**: Prices are posted by one authorized address (`feedUpdater`, immutable). Moving to a multi-source feed such as Chainlink Functions or UMA's Optimistic Oracle would need a new oracle *and* a new vault, because the vault's `oracle` is immutable too, followed by a registry update.
 
 ---
 
@@ -112,7 +113,7 @@ The protocol implements a capped fee distribution engine:
 
 Copra is not ownerless. Three privileged roles exist, and on Base Sepolia the deployer holds all three:
 
-1. **Oracle updater** (`CopraOracle.feedUpdater`, immutable): posts the price used by every mint and redeem. Each update may move the price by at most 20%. There is no minimum interval between updates, so a run of updates can reach any price, even within one block. **This is the protocol's main trust assumption.** Redemptions pay out at the oracle price, so a compromised or malicious updater can raise the price, redeem its own $COPRA and drain the vault's collateral. If the updater stops posting, the price goes stale after 7 days and mint and redeem revert until it resumes.
+1. **Oracle updater** (`CopraOracle.feedUpdater`, immutable): posts the price used by every mint and redeem. Each update may move the price by at most 20%, and only one update per day is accepted. Given enough days, a run of updates can still reach any price. **This is the protocol's main trust assumption.** Redemptions pay out at the oracle price, so a compromised or malicious updater can raise the price over a series of days, redeem its own $COPRA and drain the vault's collateral. Oracles deployed before the interval existed have no daily limit. If the updater stops posting, the price goes stale after 7 days and mint and redeem revert until it resumes.
 2. **Vault owner** (`CopraVault`, `Ownable2Step`): sets `protocolFeeBps` (capped at 100 bps, 1.00%) and `feeRecipient`, and can transfer or renounce ownership. `setCopraToken` is one-shot and has already been used.
 3. **Registry owner** (`CopraRegistry`, `Ownable2Step`): chooses which contract set the web app, oracle feeder and release manifest use. The set must be wired to itself, and deployed contracts cannot be changed.
 

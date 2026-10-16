@@ -21,7 +21,7 @@ This document provides autonomous coding assistants and contributors with critic
 - `src/`: Solidity smart contracts (Solc 0.8.28)
   - `CopraToken.sol`: ERC-20 token with mint/burn hooks restricted to the vault.
   - `CopraVault.sol`: Peg Stability Module (PSM) and collateral reserve engine.
-  - `CopraOracle.sol`: Commodity price oracle. One immutable `feedUpdater`; at most 20% change per update.
+  - `CopraOracle.sol`: Commodity price oracle. One immutable `feedUpdater`; at most 20% change per update and one update per `MIN_UPDATE_INTERVAL` (1 day), which must stay below `HEARTBEAT`.
   - `interfaces/ICopraOracle.sol`: Interface for benchmark pricing.
 - `test/`: Foundry unit and integration tests (`CopraProtocol.t.sol`).
 - `script/`: Deployment scripts (`DeployCopra.s.sol`).

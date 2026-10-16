@@ -26,7 +26,7 @@ The protocol codebase is located in [src/](src/):
 
 - [CopraToken.sol](src/CopraToken.sol): Standard ERC-20 token ($COPRA) with minting and burning permissions restricted exclusively to the autonomous vault.
 - [CopraVault.sol](src/CopraVault.sol): The collateral reserve and Peg Stability Module (PSM). Handles permissionless minting, burning, direct redemptions, and autonomous fee capture.
-- [CopraOracle.sol](src/CopraOracle.sol): Price oracle for the international copra benchmark (USD, 8 decimals). A single authorized updater posts prices, limited to a 20% change per update.
+- [CopraOracle.sol](src/CopraOracle.sol): Price oracle for the international copra benchmark (USD, 8 decimals). A single authorized updater posts prices, limited to a 20% change per update and one update per day (`MIN_UPDATE_INTERVAL`).
 - [CopraRegistry.sol](src/CopraRegistry.sol): On-chain pointer to the live contract set, read by copra.dev, the oracle feeder and the release manifest.
 - [TestnetUSDC.sol](src/testnet/TestnetUSDC.sol): Public Base Sepolia testnet collateral token with a permissionless `faucet()` for frictionless testing.
 
@@ -42,11 +42,11 @@ Copra is **not ownerless**. Three privileged roles exist. On Base Sepolia, all t
 
 | Role | Can | Limits |
 | :--- | :--- | :--- |
-| **Oracle updater**<br>`CopraOracle.feedUpdater` (immutable) | Post the copra price that every mint and redeem uses | At most 20% change **per update**, but there is **no minimum interval** between updates, so a run of updates can reach any price, even within one block |
+| **Oracle updater**<br>`CopraOracle.feedUpdater` (immutable) | Post the copra price that every mint and redeem uses | At most 20% change per update and **one update per day** (`MIN_UPDATE_INTERVAL = 1 days`), so at most +20% in a day and about ×3.6 in a week. That slows the updater down but does not bound it: given time, a run of updates can still reach any price. Oracles deployed before the interval existed (no `MIN_UPDATE_INTERVAL()` getter) have no such limit, so check the oracle the registry points at. |
 | **Vault owner**<br>`CopraVault`, `Ownable2Step` | Set the protocol fee and the fee recipient; transfer or renounce ownership | Fee capped at 1.00% (`MAX_FEE_BPS = 100`). `setCopraToken` is one-shot and already used |
 | **Registry owner**<br>`CopraRegistry`, `Ownable2Step` | Choose which contract set copra.dev, the oracle feeder and the release manifest use | The set must be wired to itself (vault ↔ token ↔ oracle ↔ collateral). It cannot change contracts already deployed |
 
-**The oracle updater is the main trust assumption.** No function lets any role withdraw user collateral, and `claimFees()` can only send `accumulatedFees` to `feeRecipient`. But redemptions pay out at the oracle price. An updater that is compromised or malicious can raise the price, redeem its own $COPRA and drain the vault, leaving other holders unable to redeem. If the updater stops posting, the price goes stale after 7 days, and mint and redeem revert until it resumes. Redemptions are always paid from the USDC the vault actually holds: if the price rises after deposits, the vault can be worth less than all $COPRA in circulation, and `redeem` reverts once the vault runs short.
+**The oracle updater is the main trust assumption.** No function lets any role withdraw user collateral, and `claimFees()` can only send `accumulatedFees` to `feeRecipient`. But redemptions pay out at the oracle price. An updater that is compromised or malicious can raise the price, redeem its own $COPRA and drain the vault, leaving other holders unable to redeem. The update interval means this takes days of public price updates rather than one block, but it does not prevent it. If the updater stops posting, the price goes stale after 7 days, and mint and redeem revert until it resumes. Redemptions are always paid from the USDC the vault actually holds: if the price rises after deposits, the vault can be worth less than all $COPRA in circulation, and `redeem` reverts once the vault runs short.
 
 These behaviors are pinned by tests (`test_TrustAssumption_*`, `test_Vault_MintAndRedeemRevertOnStalePrice` and `test_Vault_RedeemCannotLeaveFeesUnbacked` in [test/CopraProtocol.t.sol](test/CopraProtocol.t.sol)), so a change to them also has to change this section.
 

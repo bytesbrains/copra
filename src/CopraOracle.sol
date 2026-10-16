@@ -17,6 +17,9 @@ contract CopraOracle is ICopraOracle {
     uint8 public constant override decimals = 8;
     uint256 public constant MAX_PRICE_CHANGE_BPS = 2000; // 20% max single shift safeguard
     uint256 public constant HEARTBEAT = 7 days;
+    // Spaces updates out so the 20% collar bounds movement over time, not just per transaction.
+    // Must stay below HEARTBEAT, or a fresh price could not be posted before the old one goes stale.
+    uint256 public constant MIN_UPDATE_INTERVAL = 1 days;
 
     event PriceUpdated(uint256 indexed oldPrice, uint256 indexed newPrice, uint256 timestamp);
 
@@ -24,6 +27,7 @@ contract CopraOracle is ICopraOracle {
     error StalePrice();
     error PriceTooLow();
     error PriceChangeExceeded();
+    error UpdateTooSoon();
 
     modifier onlyUpdater() {
         if (msg.sender != feedUpdater) revert OnlyUpdater();
@@ -43,11 +47,13 @@ contract CopraOracle is ICopraOracle {
     }
 
     /**
-     * @notice Updates the copra commodity benchmark price.
+     * @notice Updates the copra commodity benchmark price, at most once per MIN_UPDATE_INTERVAL.
      * @param _newPrice New price with 8 decimals.
      */
     function updatePrice(uint256 _newPrice) external onlyUpdater {
         if (_newPrice == 0) revert PriceTooLow();
+        // The constructor sets lastUpdatedAt, so the first update also waits a full interval.
+        if (block.timestamp < lastUpdatedAt + MIN_UPDATE_INTERVAL) revert UpdateTooSoon();
 
         // Safeguard against oracle flash crashes / manipulation (max 20% shift per update unless initialized)
         if (copraPriceUSD > 0) {

@@ -54,7 +54,9 @@ echo "📡 Reading current on-chain oracle state..."
 if ONCHAIN_RAW=$(cast call "${ORACLE_ADDRESS}" "getCopraPriceUSD()(uint256,uint256)" --rpc-url "${RPC_URL}" 2>/dev/null); then
     ONCHAIN_PRICE=$(echo "${ONCHAIN_RAW}" | head -n 1 | awk '{print $1}')
     LAST_UPDATED=$(echo "${ONCHAIN_RAW}" | tail -n 1 | awk '{print $1}')
-    CURRENT_TIME=$(date +%s)
+    # Age by chain time, which the oracle's heartbeat and update interval use; fall back to the local clock.
+    CURRENT_TIME=$(cast block latest --field timestamp --rpc-url "${RPC_URL}" 2>/dev/null) || CURRENT_TIME=""
+    [[ "${CURRENT_TIME}" =~ ^[0-9]+$ ]] || CURRENT_TIME=$(date +%s)
     AGE_SECONDS=$((CURRENT_TIME - LAST_UPDATED))
     AGE_HOURS=$((AGE_SECONDS / 3600))
 
@@ -173,6 +175,16 @@ FORCE_UPDATE="${FORCE:-false}"
 if [[ "${FORCE_UPDATE}" != "true" && "${ONCHAIN_PRICE}" -gt 0 && "${DIFF}" -eq 0 && "${AGE_SECONDS}" -lt 432000 ]]; then
     echo "✅ On-chain oracle is fresh (${AGE_HOURS}h old, within 7-day heartbeat) and price is unchanged. Skipping broadcast."
     echo "   (Set FORCE=true to force broadcast)."
+    exit 0
+fi
+
+# The oracle accepts one update per MIN_UPDATE_INTERVAL and reverts anything sooner, even with FORCE.
+# Oracles deployed before the interval existed have no such getter: treat that as no interval.
+MIN_INTERVAL=$(cast call "${ORACLE_ADDRESS}" "MIN_UPDATE_INTERVAL()(uint256)" --rpc-url "${RPC_URL}" 2>/dev/null | awk '{print $1}') || MIN_INTERVAL=0
+[[ "${MIN_INTERVAL}" =~ ^[0-9]+$ ]] || MIN_INTERVAL=0
+if [[ "${LAST_UPDATED}" -gt 0 && "${AGE_SECONDS}" -lt "${MIN_INTERVAL}" ]]; then
+    echo "⏳ Last update was ${AGE_SECONDS}s ago; the oracle accepts one update per ${MIN_INTERVAL}s. Skipping broadcast."
+    echo "   Next update allowed in $((MIN_INTERVAL - AGE_SECONDS))s."
     exit 0
 fi
 
