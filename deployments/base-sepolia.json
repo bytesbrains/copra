@@ -1,0 +1,23 @@
+{
+  "network": "Base Sepolia",
+  "chainId": 84532,
+  "deployedAt": "2026-10-16T18:14:59Z",
+  "deployer": "0x91d3019b38185b517Bb98B7BB4953c137F5EEb8E",
+  "contracts": {
+    "TestnetUSDC": "0x1b8a3536F8826Db6Bacbab452366cC75c960E738",
+    "CopraOracle": "0x7Fe0746161eb2e91fB13470fbBca15d4cC0EF522",
+    "CopraVault": "0x6F8d4948B4be558fc0db547F837a86CE2d88c01b",
+    "CopraToken": "0xcAdd63DFd49bC1383aA35ace7fa72aba43283a81"
+  },
+  "parameters": {
+    "collateralDecimals": 6,
+    "initialCopraPriceUSD": 1.42,
+    "protocolFeeBps": 25,
+    "maxFeeBps": 100,
+    "heartbeatSeconds": 604800,
+    "maxPriceChangeBps": 2000
+  },
+  "explorers": {
+    "basescan": "https://sepolia.basescan.org"
+  }
+}

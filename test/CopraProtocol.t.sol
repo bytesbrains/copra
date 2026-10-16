@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 import "../src/CopraToken.sol";
 import "../src/CopraOracle.sol";
 import "../src/CopraVault.sol";
+import "../src/testnet/TestnetUSDC.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
@@ -187,5 +188,19 @@ contract CopraProtocolTest is Test {
         vm.expectRevert(CopraOracle.OnlyUpdater.selector);
         vm.prank(alice);
         oracle.updatePrice(150000000);
+    }
+
+    function test_TestnetUSDC_Faucet() public {
+        TestnetUSDC testUsdc = new TestnetUSDC();
+        assertEq(testUsdc.decimals(), 6);
+        assertEq(testUsdc.symbol(), "USDC");
+
+        // Alice claims 1000 USDC from faucet
+        testUsdc.faucet(alice, 1000 * 1e6);
+        assertEq(testUsdc.balanceOf(alice), 1000 * 1e6);
+
+        // Claiming above max reverts
+        vm.expectRevert("Amount exceeds max faucet claim");
+        testUsdc.faucet(alice, 10001 * 1e6);
     }
 }

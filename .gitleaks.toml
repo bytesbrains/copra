@@ -16,5 +16,7 @@ paths = [
     '''lib/.*''',
     '''cache/.*''',
     '''out/.*''',
+    '''broadcast/.*''',
+    '''deployments/.*''',
     '''\.gitleaks\.toml''',
 ]
