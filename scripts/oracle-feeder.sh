@@ -55,25 +55,41 @@ if [[ -n "${TARGET_PRICE_INPUT}" ]]; then
     # Custom price provided via command line argument (in dollars, e.g. 1.45)
     NEW_PRICE=$(awk "BEGIN {printf \"%.0f\", ${TARGET_PRICE_INPUT} * 100000000}")
 else
-    # Autonomous benchmark calculation:
-    # Simulates realistic micro-market fluctuations around global CIF benchmark ($1.40 - $1.45)
-    # while strictly respecting the 20% on-chain shift guardrail.
+    # Autonomous benchmark resolution with defensive schema validation & fallbacks:
     python3 -c "
-import urllib.request, json, sys
+import urllib.request, json, sys, os
 
-# World Bank copra benchmark reference: \$1,420 / MT = \$1.42 / kg
-base_price = 1.42
+# Absolute sanity guardrails for agricultural copra spot price in USD / kg
+MIN_SAFE_PRICE = 0.50   # \$0.50 / kg floor
+MAX_SAFE_PRICE = 5.00   # \$5.00 / kg ceiling
+DEFAULT_BENCHMARK = float(os.environ.get('DEFAULT_BENCHMARK', '1.42'))
 
-# Check if an external commodity feed API is available
-try:
-    # Placeholder for live commodities REST endpoint if configured
-    pass
-except Exception:
-    pass
+target_price = DEFAULT_BENCHMARK
 
-# Scale to 8 decimals
-price_8dec = int(base_price * 100000000)
-print(price_8dec)
+# If an external commodity feed URL is configured, attempt retrieval with strict schema validation
+feed_url = os.environ.get('COMMODITY_FEED_API_URL', '')
+if feed_url:
+    try:
+        req = urllib.request.Request(feed_url, headers={'User-Agent': 'CopraProtocol/1.0'})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode('utf-8'))
+            # Defensive schema parsing: verify field exists, is numeric, and in bounds
+            raw_val = data.get('price') or data.get('copra') or data.get('value')
+            if raw_val is not None:
+                parsed_val = float(raw_val)
+                # Handle possible unit confusion (MT vs kg)
+                if parsed_val > 500:
+                    parsed_val = parsed_val / 1000.0
+                if MIN_SAFE_PRICE <= parsed_val <= MAX_SAFE_PRICE:
+                    target_price = parsed_val
+                else:
+                    sys.stderr.write(f'⚠️ Warning: External price \${parsed_val} out of safe bounds [\${MIN_SAFE_PRICE}, \${MAX_SAFE_PRICE}]. Using fallback.\n')
+    except Exception as e:
+        # Schema change, network error, or unexpected JSON structure: NEVER break protocol
+        sys.stderr.write(f'⚠️ Notice: External feed parsing safely bypassed ({e}). Falling back to verified benchmark \${target_price}.\n')
+
+# Convert to 8 decimals
+print(int(target_price * 100000000))
 " > /tmp/copra_target_price.txt
     NEW_PRICE=$(cat /tmp/copra_target_price.txt)
 fi
