@@ -84,7 +84,7 @@ sequenceDiagram
 | Contract | State Variables | Core Functions | Access Control |
 | :--- | :--- | :--- | :--- |
 | **`CopraToken`** | `vault` (immutable) | `mint()`, `burnFromVault()` | Restricted to `vault` only |
-| **`CopraVault`** | `collateralToken`, `oracle`, `copraToken`, `accumulatedFees` | `mint()`, `redeem()`, `claimFees()`, `quoteMint()`, `quoteRedeem()` | Permissionless for users; `claimFees()` to `feeRecipient` |
+| **`CopraVault`** | `collateralToken`, `oracle`, `copraToken`, `accumulatedFees`, `feeRecipient`, `protocolFeeBps` | `mint()`, `redeem()`, `claimFees()`, `quoteMint()`, `quoteRedeem()`, `setFeeRecipient()`, `setProtocolFee()` | Permissionless mint/redeem; `claimFees()` sends to `feeRecipient`; `set*` restricted to `owner` (Ownable2Step) |
 | **`CopraOracle`** | `copraPriceUSD`, `lastUpdatedAt`, `feedUpdater` | `updatePrice()`, `getCopraPriceUSD()` | `updatePrice()` restricted to `feedUpdater` |
 
 ---

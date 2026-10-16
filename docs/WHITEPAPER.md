@@ -51,18 +51,18 @@ Reserve_USDC >= Total_Supply(COPRA) × Copra_Price_USD
 Because 100% backing is maintained programmatically, the protocol carries **zero liquidation cascades** and **zero bad debt risk**.
 
 ### 2.3 The Mint Function
-Anyone may mint new $COPRA by depositing collateral at the prevailing oracle price plus a 0.5% protocol fee:
+Anyone may mint new $COPRA by depositing collateral at the prevailing oracle price plus a 0.25% protocol fee:
 
 ```
 Collateral_In = [(Amount_COPRA × Price_USD) / 10^8] × (1 + Fee_BPS / 10000)
 ```
 
 Where:
-- `Fee_BPS` = 50 (0.50%)
+- `Fee_BPS` = 25 (0.25% default, hard capped at 1.00% max)
 - `Price_USD` = 8-decimal commodity price from the oracle
 
 ### 2.4 The Direct Redemption Hard Peg
-Holders of $COPRA can burn tokens to withdraw the exact underlying dollar value in collateral minus a 0.5% redemption fee:
+Holders of $COPRA can burn tokens to withdraw the exact underlying dollar value in collateral minus a 0.25% redemption fee:
 
 ```
 Collateral_Out = [(Amount_COPRA × Price_USD) / 10^8] × (1 - Fee_BPS / 10000)
@@ -86,10 +86,11 @@ The price feed contract (`CopraOracle.sol`) enforces rigorous stability paramete
 ## 4. Autonomous Fee Capture
 
 The protocol implements a zero-governance fee distribution engine:
-- A 0.5% fee is clipped on every mint and redemption.
+- A 0.25% fee is clipped on every mint and redemption (default 25 bps, capped at a maximum of 100 bps / 1.00%).
 - Fees accumulate directly in the reserve collateral token (USDC) inside the smart contract.
-- The creator wallet (`feeRecipient`) can withdraw accumulated fees at any time via `claimFees()`.
-- No admin key can alter the fee rate, pause the vault, or confiscate deposited user collateral.
+- The designated `feeRecipient` address receives accumulated fees via `claimFees()`.
+- The `feeRecipient` address is updateable via `Ownable2Step`, enabling progressive decentralization (e.g. migrating from creator to a community staking pool or DAO treasury) with zero key-loss risk.
+- No admin key can ever alter user reserve backing, pause redemptions, or confiscate deposited user collateral.
 
 ---
 

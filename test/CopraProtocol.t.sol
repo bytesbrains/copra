@@ -6,6 +6,7 @@ import "../src/CopraToken.sol";
 import "../src/CopraOracle.sol";
 import "../src/CopraVault.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract MockUSDC is ERC20 {
     constructor() ERC20("USD Coin", "USDC") {}
@@ -35,7 +36,7 @@ contract CopraProtocolTest is Test {
     function setUp() public {
         usdc = new MockUSDC();
         oracle = new CopraOracle(oracleUpdater, INITIAL_PRICE);
-        vault = new CopraVault(address(usdc), 6, address(oracle), feeRecipient);
+        vault = new CopraVault(address(usdc), 6, address(oracle), feeRecipient, address(this));
 
         copraToken = new CopraToken(address(vault));
         vault.setCopraToken(address(copraToken));
@@ -50,17 +51,19 @@ contract CopraProtocolTest is Test {
         assertEq(copraToken.symbol(), "COPRA");
         assertEq(copraToken.vault(), address(vault));
         assertEq(vault.feeRecipient(), feeRecipient);
+        assertEq(vault.protocolFeeBps(), 25); // 0.25% default
+        assertEq(vault.owner(), address(this));
     }
 
     function test_MintCopra() public {
         // Alice wants to mint 100 COPRA
         // At $1.40 per COPRA, 100 COPRA = $140.00
-        // + 0.5% fee = $0.70 => Total = $140.70 = 140_700_000 micro-USDC (6 decimals)
+        // + 0.25% fee = $0.35 => Total = $140.35 = 140_350_000 micro-USDC (6 decimals)
         uint256 mintAmount = 100 * 1e18;
         (uint256 requiredUSDC, uint256 fee) = vault.quoteMint(mintAmount);
 
-        assertEq(requiredUSDC, 140_700_000); // $140.70
-        assertEq(fee, 700_000); // $0.70
+        assertEq(requiredUSDC, 140_350_000); // $140.35
+        assertEq(fee, 350_000); // $0.35
 
         vm.startPrank(alice);
         usdc.approve(address(vault), requiredUSDC);
@@ -87,10 +90,10 @@ contract CopraProtocolTest is Test {
 
         // Bob redeems 50 COPRA for USDC
         // 50 COPRA at $1.40 = $70.00
-        // Minus 0.5% protocol fee ($0.35) = $69.65 USDC (69_650_000)
+        // Minus 0.25% protocol fee ($0.175) = $69.825 USDC (69_825_000)
         (uint256 redeemCollateral, uint256 fee) = vault.quoteRedeem(50 * 1e18);
-        assertEq(redeemCollateral, 69_650_000); // $69.65
-        assertEq(fee, 350_000); // $0.35
+        assertEq(redeemCollateral, 69_825_000); // $69.825
+        assertEq(fee, 175_000); // $0.175
 
         uint256 bobUsdcBefore = usdc.balanceOf(bob);
 
@@ -119,6 +122,52 @@ contract CopraProtocolTest is Test {
         assertEq(vault.accumulatedFees(), 0);
     }
 
+    function test_SetFeeRecipient() public {
+        address newRecipient = address(0xCAFE);
+        vault.setFeeRecipient(newRecipient);
+        assertEq(vault.feeRecipient(), newRecipient);
+
+        // Non-owner cannot update
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, alice));
+        vault.setFeeRecipient(alice);
+
+        // Zero address reverts
+        vm.expectRevert(CopraVault.ZeroAddress.selector);
+        vault.setFeeRecipient(address(0));
+    }
+
+    function test_SetProtocolFee() public {
+        // Update fee to 0.50% (50 bps)
+        vault.setProtocolFee(50);
+        assertEq(vault.protocolFeeBps(), 50);
+
+        // Max fee is 100 bps (1.00%)
+        vault.setProtocolFee(100);
+        assertEq(vault.protocolFeeBps(), 100);
+
+        // Exceeding max fee reverts
+        vm.expectRevert(CopraVault.FeeExceedsMax.selector);
+        vault.setProtocolFee(101);
+
+        // Non-owner cannot update
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, alice));
+        vault.setProtocolFee(20);
+    }
+
+    function test_Ownable2StepTransfer() public {
+        address newOwner = address(0x999);
+        vault.transferOwnership(newOwner);
+        assertEq(vault.pendingOwner(), newOwner);
+        assertEq(vault.owner(), address(this));
+
+        // Accept ownership from new owner
+        vm.prank(newOwner);
+        vault.acceptOwnership();
+        assertEq(vault.owner(), newOwner);
+    }
+
     function test_OraclePriceUpdate() public {
         // Commodity price rises from $1.40 to $1.54 (+10%)
         uint256 newPrice = 154000000;
@@ -130,8 +179,8 @@ contract CopraProtocolTest is Test {
 
         // Mint quotes now reflect higher coconut price
         (uint256 requiredUSDC,) = vault.quoteMint(100 * 1e18);
-        // 100 * 1.54 = $154 + 0.5% ($0.77) = $154.77
-        assertEq(requiredUSDC, 154_770_000);
+        // 100 * 1.54 = $154 + 0.25% ($0.385) = $154.385
+        assertEq(requiredUSDC, 154_385_000);
     }
 
     function test_OracleRevertOnUnauthorized() public {

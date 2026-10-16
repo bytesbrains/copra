@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "./interfaces/ICopraOracle.sol";
 import "./CopraToken.sol";
 
@@ -14,7 +15,7 @@ import "./CopraToken.sol";
  *         Allows permissionless minting and redemption of $COPRA at the real-world
  *         Copra commodity benchmark price, backed 100% by on-chain stable collateral.
  */
-contract CopraVault is ReentrancyGuard {
+contract CopraVault is ReentrancyGuard, Ownable2Step {
     using SafeERC20 for IERC20;
 
     /// @notice The $COPRA ERC-20 token contract
@@ -30,11 +31,14 @@ contract CopraVault is ReentrancyGuard {
     ICopraOracle public immutable oracle;
 
     /// @notice The fee recipient address (creator / fee-staking pool)
-    address public immutable feeRecipient;
+    address public feeRecipient;
 
-    /// @notice Protocol minting & redemption fee in basis points (50 bps = 0.5%)
-    uint256 public constant PROTOCOL_FEE_BPS = 50;
+    /// @notice Maximum allowable protocol fee (100 bps = 1.0%)
+    uint256 public constant MAX_FEE_BPS = 100;
     uint256 public constant BPS_DENOMINATOR = 10000;
+
+    /// @notice Protocol minting & redemption fee in basis points (default 25 bps = 0.25%)
+    uint256 public protocolFeeBps;
 
     /// @notice Total protocol fees accumulated in collateral
     uint256 public accumulatedFees;
@@ -42,20 +46,26 @@ contract CopraVault is ReentrancyGuard {
     event Minted(address indexed user, uint256 copraAmount, uint256 collateralPaid, uint256 feePaid);
     event Redeemed(address indexed user, uint256 copraAmount, uint256 collateralReturned, uint256 feePaid);
     event FeesClaimed(address indexed recipient, uint256 amount);
+    event FeeRecipientUpdated(address indexed oldRecipient, address indexed newRecipient);
+    event ProtocolFeeUpdated(uint256 oldFeeBps, uint256 newFeeBps);
     event TokenBound(address indexed tokenAddress);
 
     error VaultAlreadyInitialized();
     error ZeroAmount();
     error ZeroAddress();
     error InsufficientVaultCollateral();
+    error FeeExceedsMax();
 
     /**
      * @param _collateral Address of the reserve collateral token (e.g. USDC).
      * @param _collateralDecimals Decimals of the collateral token (e.g. 6).
      * @param _oracle Address of the CopraOracle contract.
      * @param _feeRecipient Address that receives protocol mint/redeem fee earnings.
+     * @param _owner Initial owner of the vault contract (capable of updating feeRecipient, protocolFee, and binding token).
      */
-    constructor(address _collateral, uint8 _collateralDecimals, address _oracle, address _feeRecipient) {
+    constructor(address _collateral, uint8 _collateralDecimals, address _oracle, address _feeRecipient, address _owner)
+        Ownable(_owner)
+    {
         if (_collateral == address(0) || _oracle == address(0) || _feeRecipient == address(0)) {
             revert ZeroAddress();
         }
@@ -63,17 +73,38 @@ contract CopraVault is ReentrancyGuard {
         collateralDecimals = _collateralDecimals;
         oracle = ICopraOracle(_oracle);
         feeRecipient = _feeRecipient;
+        protocolFeeBps = 25; // 0.25% (25 bps) default
     }
 
     /**
      * @notice One-time binding of the CopraToken contract address.
      * @param _copraToken Address of the deployed CopraToken contract.
      */
-    function setCopraToken(address _copraToken) external {
+    function setCopraToken(address _copraToken) external onlyOwner {
         if (address(copraToken) != address(0)) revert VaultAlreadyInitialized();
         if (_copraToken == address(0)) revert ZeroAddress();
         copraToken = CopraToken(_copraToken);
         emit TokenBound(_copraToken);
+    }
+
+    /**
+     * @notice Updates the fee recipient address.
+     * @param _newRecipient The new address to receive protocol fees.
+     */
+    function setFeeRecipient(address _newRecipient) external onlyOwner {
+        if (_newRecipient == address(0)) revert ZeroAddress();
+        emit FeeRecipientUpdated(feeRecipient, _newRecipient);
+        feeRecipient = _newRecipient;
+    }
+
+    /**
+     * @notice Updates the protocol fee in basis points.
+     * @param _newFeeBps New fee in basis points (must be <= MAX_FEE_BPS = 100 bps / 1.0%).
+     */
+    function setProtocolFee(uint256 _newFeeBps) external onlyOwner {
+        if (_newFeeBps > MAX_FEE_BPS) revert FeeExceedsMax();
+        emit ProtocolFeeUpdated(protocolFeeBps, _newFeeBps);
+        protocolFeeBps = _newFeeBps;
     }
 
     /**
@@ -98,7 +129,7 @@ contract CopraVault is ReentrancyGuard {
             baseCollateral = valueUSD18;
         }
 
-        fee = (baseCollateral * PROTOCOL_FEE_BPS) / BPS_DENOMINATOR;
+        fee = (baseCollateral * protocolFeeBps) / BPS_DENOMINATOR;
         collateralRequired = baseCollateral + fee;
     }
 
@@ -121,7 +152,7 @@ contract CopraVault is ReentrancyGuard {
             baseCollateral = valueUSD18;
         }
 
-        fee = (baseCollateral * PROTOCOL_FEE_BPS) / BPS_DENOMINATOR;
+        fee = (baseCollateral * protocolFeeBps) / BPS_DENOMINATOR;
         collateralToReturn = baseCollateral - fee;
     }
 
@@ -160,7 +191,8 @@ contract CopraVault is ReentrancyGuard {
     }
 
     /**
-     * @notice Allows the feeRecipient to withdraw their earned protocol fees.
+     * @notice Allows withdrawal of accumulated protocol fees directly to feeRecipient.
+     *         Permissionless to trigger, but collateral is strictly sent to feeRecipient.
      */
     function claimFees() external nonReentrant {
         uint256 feesToClaim = accumulatedFees;
