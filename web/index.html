@@ -327,6 +327,11 @@
     <p class="text-[11px] text-slate-600">Autonomous Commodity RWA on Base L2 • Non-Custodial • MIT License</p>
   </footer>
 
+  <!-- Classic scripts sharing one global scope: order matters, and app.js (the entry point) is last. -->
+  <script src="/assets/config.js"></script>
+  <script src="/assets/ui.js"></script>
+  <script src="/assets/chain.js"></script>
+  <script src="/assets/wallet.js"></script>
   <script src="/assets/app.js"></script>
 </body>
 </html>
