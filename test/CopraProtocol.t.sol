@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 import "../src/CopraToken.sol";
 import "../src/CopraOracle.sol";
 import "../src/CopraVault.sol";
+import "../src/CopraRegistry.sol";
 import "../src/testnet/TestnetUSDC.sol";
 import "../script/DeployCopra.s.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -204,6 +205,74 @@ contract CopraProtocolTest is Test {
         // Claiming above max reverts
         vm.expectRevert("Amount exceeds max faucet claim");
         testUsdc.faucet(alice, 10001 * 1e6);
+    }
+
+    // ---------------------------------------------------------------------
+    // CopraRegistry
+    // ---------------------------------------------------------------------
+
+    function test_Registry_SetAndRead() public {
+        CopraRegistry registry = new CopraRegistry(address(this));
+        assertEq(registry.version(), 0);
+
+        registry.setDeployment(address(usdc), address(oracle), address(vault), address(copraToken));
+        (address c, address o, address v, address t, uint256 ver, uint256 at) = registry.getDeployment();
+        assertEq(c, address(usdc));
+        assertEq(o, address(oracle));
+        assertEq(v, address(vault));
+        assertEq(t, address(copraToken));
+        assertEq(ver, 1);
+        assertEq(at, block.timestamp);
+    }
+
+    function test_Registry_OnlyOwner() public {
+        CopraRegistry registry = new CopraRegistry(address(this));
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, alice));
+        registry.setDeployment(address(usdc), address(oracle), address(vault), address(copraToken));
+    }
+
+    function test_Registry_RejectsZeroAndMismatchedSets() public {
+        CopraRegistry registry = new CopraRegistry(address(this));
+
+        vm.expectRevert(CopraRegistry.ZeroAddress.selector);
+        registry.setDeployment(address(0), address(oracle), address(vault), address(copraToken));
+
+        // Wrong oracle for this vault
+        CopraOracle otherOracle = new CopraOracle(oracleUpdater, INITIAL_PRICE);
+        vm.expectRevert(CopraRegistry.InconsistentDeployment.selector);
+        registry.setDeployment(address(usdc), address(otherOracle), address(vault), address(copraToken));
+
+        // Token that trusts a different vault
+        CopraToken strayToken = new CopraToken(address(0xBAD));
+        vm.expectRevert(CopraRegistry.InconsistentDeployment.selector);
+        registry.setDeployment(address(usdc), address(oracle), address(vault), address(strayToken));
+
+        assertEq(registry.version(), 0);
+    }
+
+    function test_DeployCopra_CreatesAndRepointsRegistry() public {
+        DeployCopra deployer = new DeployCopra();
+
+        deployer.deploy(123456);
+        CopraRegistry registry = CopraRegistry(deployer.registryAddress(vm.addr(123456)));
+        assertGt(address(registry).code.length, 0);
+        assertEq(registry.owner(), vm.addr(123456));
+        assertEq(registry.version(), 1);
+        address firstVault = registry.vault();
+        assertEq(address(CopraVault(firstVault).copraToken()), registry.token());
+
+        // A second deploy reuses the same registry and repoints it
+        deployer.deploy(123456);
+        assertEq(registry.version(), 2);
+        assertTrue(registry.vault() != firstVault);
+    }
+
+    /// @dev The web app and oracle feeder hardcode REGISTRY. If the registry's code or the compiler
+    ///      settings change, its CREATE2 address moves and this fails before anything ships.
+    function test_DeployCopra_CanonicalRegistryAddressIsStable() public {
+        DeployCopra deployer = new DeployCopra();
+        assertEq(deployer.registryAddress(deployer.REGISTRY_OWNER()), deployer.REGISTRY());
     }
 
     function test_DeployCopra_RequiresExplicitPrivateKey() public {

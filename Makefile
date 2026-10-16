@@ -19,6 +19,7 @@ fmt-check:
 
 lint:
 	gitleaks detect --config .gitleaks.toml --verbose
+	./test/gitleaks/allowlist.test.sh
 
 clean:
 	forge clean
