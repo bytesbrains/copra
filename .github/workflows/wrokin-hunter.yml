@@ -51,7 +51,7 @@ jobs:
     # published for amd64 and arm64, so either kind of runner runs it natively.
     runs-on: ${{ vars.RUNNER_LINUX || 'ubuntu-latest' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Log in to GHCR (pull the wrokin-hunter image)
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
       - name: Hunt (Docker socket mounted so a PoC can detonate)
