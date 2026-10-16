@@ -14,7 +14,8 @@ import "./CopraToken.sol";
  * @author Copra Protocol (https://copra.dev)
  * @notice Autonomous Peg Stability and Collateral Reserve Engine for $COPRA.
  *         Allows permissionless minting and redemption of $COPRA at the real-world
- *         Copra commodity benchmark price, backed 100% by on-chain stable collateral.
+ *         Copra commodity benchmark price. Each mint deposits the full value at the current
+ *         price in on-chain stable collateral; coverage then moves with the price.
  */
 contract CopraVault is ReentrancyGuard, Ownable2Step {
     using SafeERC20 for IERC20;
@@ -174,7 +175,9 @@ contract CopraVault is ReentrancyGuard, Ownable2Step {
 
     /**
      * @notice Permissionlessly redeem $COPRA for underlying collateral at the real-time commodity price.
-     *         This guarantees the hard peg floor: anyone can exit at 100% commodity asset value.
+     *         Pays first-come-first-served from the collateral the vault holds: after a price rise
+     *         the vault can hold less than all $COPRA is worth, and this reverts with
+     *         InsufficientVaultCollateral once it runs short.
      * @param copraAmount The quantity of $COPRA tokens to burn (18 decimals).
      */
     function redeem(uint256 copraAmount) external nonReentrant {

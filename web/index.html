@@ -130,7 +130,7 @@
       <div class="bg-brand-card border border-brand-border rounded-xl p-4">
         <div class="text-slate-400 text-[11px] mb-1">Vault USDC Reserves</div>
         <div id="metricVaultReserves" class="text-base font-bold text-emerald-400">Loading...</div>
-        <div class="text-[10px] text-slate-500 mt-0.5">100% Solvency Reserve</div>
+        <div class="text-[10px] text-slate-500 mt-0.5">collateral.balanceOf(vault)</div>
       </div>
       <div class="bg-brand-card border border-brand-border rounded-xl p-4">
         <div class="text-slate-400 text-[11px] mb-1">Accumulated Protocol Fees</div>
@@ -208,8 +208,8 @@
             <span class="text-white" id="feeDisplay">$0.0354 USDC</span>
           </div>
           <div class="flex justify-between">
-            <span>Collateral Reserve Ratio</span>
-            <span id="reserveDisplay" class="text-emerald-400 font-bold">100% Backed</span>
+            <span>Backing</span>
+            <span id="reserveDisplay" class="text-emerald-400 font-bold">Full value at mint price</span>
           </div>
         </div>
 
@@ -238,9 +238,9 @@
         <div class="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold mb-4">
           ⚖️
         </div>
-        <h3 class="font-bold text-white mb-2 text-base">100% Reserve Backing</h3>
+        <h3 class="font-bold text-white mb-2 text-base">Full Backing at Mint</h3>
         <p class="text-slate-400 text-sm leading-relaxed">
-          Every token is minted with full stable collateral. Redeemable permissionlessly at the benchmark price on Base.
+          Every token is minted against its full value in stable collateral. Redeemable permissionlessly at the benchmark price on Base while the vault holds enough.
         </p>
       </div>
 

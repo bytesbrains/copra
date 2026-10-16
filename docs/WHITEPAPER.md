@@ -14,7 +14,7 @@
 
 ## Abstract
 
-We introduce **Copra Protocol**, an autonomous Real-World Asset (RWA) currency that maps the macro value and production yield of the global coconut economy to an on-chain digital asset ($COPRA). Unlike speculative meme coins or fiat stablecoins, $COPRA is anchored to the global spot price of copra—the dried coconut meat that serves as the international price benchmark for the $15 billion coconut derivatives market. Backed 100% by transparent on-chain reserves and governed by zero-admin immutable smart contracts, Copra Protocol eliminates counterparty risk, provides a mathematical hard floor through permissionless redemptions, and creates an autonomous cash-flow engine for protocol participants.
+We introduce **Copra Protocol**, an autonomous Real-World Asset (RWA) currency that maps the macro value and production yield of the global coconut economy to an on-chain digital asset ($COPRA). Unlike speculative meme coins or fiat stablecoins, $COPRA is anchored to the global spot price of copra—the dried coconut meat that serves as the international price benchmark for the $15 billion coconut derivatives market. Minted against its full value in transparent on-chain reserves and run by non-upgradeable smart contracts with a small, explicit set of privileged roles (§6), Copra Protocol removes custodial counterparty risk, offers permissionless redemption at the benchmark price while the vault is fully covered (§2.2), and creates an autonomous cash-flow engine for protocol participants.
 
 ---
 
@@ -32,7 +32,7 @@ Existing commodity tokens suffer from two extremes:
 1. **Physical Custody Risks**: Tokens backed by vaulted physical goods (gold, agricultural grain) require trusted third-party warehouse operators, legal SPVs, inspection audits, and off-chain legal overhead.
 2. **Purely Speculative Tokens**: Tokens with agricultural branding that have zero connection to real-world commodity pricing or production data.
 
-Copra Protocol solves this by implementing an **Autonomous Peg Stability Module (PSM)**: $COPRA is fully backed by on-chain stable collateral (USDC) while its unit price dynamically tracks the verified international copra commodity benchmark.
+Copra Protocol solves this by implementing an **Autonomous Peg Stability Module (PSM)**: $COPRA is minted against its full value in on-chain stable collateral (USDC) while its unit price dynamically tracks the verified international copra commodity benchmark.
 
 ---
 
@@ -41,14 +41,18 @@ Copra Protocol solves this by implementing an **Autonomous Peg Stability Module 
 ### 2.1 The Unit of Account
 The base benchmark unit is **1 kg of standardized commercial-grade Copra** as reported by the International Coconut Community (ICC) and World Bank Commodity trade bulletins.
 
-### 2.2 Collateralization & Reserve Invariant
-Every unit of $COPRA in circulation is backed by at least 100% stable reserve collateral locked inside the `CopraVault`:
+### 2.2 Collateralization & Price Moves
+Every unit of $COPRA is minted against its full value in stable collateral at the price of the moment, locked inside the `CopraVault`. That collateral is a fixed pool of USDC, while the value it backs floats with the oracle price. The vault is fully covered when:
 
 ```
 Reserve_USDC >= Total_Supply(COPRA) × Copra_Price_USD
 ```
 
-Because 100% backing is maintained programmatically, the protocol carries **zero liquidation cascades** and **zero bad debt risk**.
+This holds right after each mint, and a price fall keeps it true. It is **not** maintained programmatically:
+- If the price **falls**, the vault holds a surplus, which stays in the vault.
+- If the price **rises**, the vault holds less than all $COPRA is worth at the new price. Redemptions are paid first-come-first-served and revert with `InsufficientVaultCollateral` once the vault runs short. There is no liquidation, rebalancing or haircut to share the shortfall.
+
+The protocol has no debt positions, so there are no liquidation cascades. But holders bear the shortfall risk of a price rise, in the order they redeem. Whether to add an over-collateralization buffer or a pro-rata redemption haircut is an open design decision.
 
 ### 2.3 The Mint Function
 Anyone may mint new $COPRA by depositing collateral at the prevailing oracle price plus a 0.25% protocol fee:
@@ -61,16 +65,17 @@ Where:
 - `Fee_BPS` = 25 (0.25% default, hard capped at 1.00% max)
 - `Price_USD` = 8-decimal commodity price from the oracle
 
-### 2.4 The Direct Redemption Hard Peg
-Holders of $COPRA can burn tokens to withdraw the exact underlying dollar value in collateral minus a 0.25% redemption fee:
+### 2.4 Direct Redemption
+Holders of $COPRA can burn tokens to withdraw their dollar value at the current price in collateral, minus a 0.25% redemption fee, as long as the vault holds enough collateral (§2.2):
 
 ```
 Collateral_Out = [(Amount_COPRA × Price_USD) / 10^8] × (1 - Fee_BPS / 10000)
 ```
 
-This guarantees an inviolable **hard price floor**:
-- If $COPRA ever trades below its benchmark price on secondary markets (such as Uniswap or Aerodrome), arbitrageurs immediately buy discounted $COPRA on the market and burn it in the vault for a risk-free profit.
-- This automated arbitrage mechanism continuously pulls the secondary market price back to parity without human intervention.
+While the vault is fully covered, this acts as a **price floor**:
+- If $COPRA trades below its benchmark price on secondary markets (such as Uniswap or Aerodrome), arbitrageurs can buy discounted $COPRA on the market and burn it in the vault for a profit.
+- This arbitrage pulls the secondary market price back toward parity without human intervention.
+- After a price rise leaves the vault short, the floor holds only until the collateral runs out; holders who redeem later may be unable to.
 
 ---
 

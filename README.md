@@ -14,8 +14,8 @@ Copra Protocol is an autonomous cryptocurrency pegged to the real-world internat
 Unlike speculative meme tokens or gold-backed stablecoins, **Copra Protocol** bridges decentralized finance with a renewable, perennial biological asset:
 
 - **Perennial Biological Engine**: Coconut palms produce continuous yields every 45 to 60 days for over 60 years.
-- **100% On-Chain Collateral Backing**: Every $COPRA in circulation is backed 100% by stable reserves (USDC) locked in the protocol vault.
-- **Autonomous Peg Stability**: Anyone can mint $COPRA by depositing collateral at the current commodity benchmark price, or burn $COPRA to reclaim full collateral value directly from the vault.
+- **On-Chain Collateral, Full at Mint**: Every $COPRA is minted against its full value in USDC at the current price, locked in the protocol vault. The collateral pool is fixed while the price floats, so coverage moves with the price. See [Backing & Price Moves](#backing--price-moves).
+- **Autonomous Peg Stability**: Anyone can mint $COPRA by depositing collateral at the current commodity benchmark price, or burn $COPRA to reclaim its value at the current price directly from the vault, while the vault holds enough collateral.
 - **Immutable, Non-Custodial Contracts**: No proxies, no upgrade path, no pause function, and no function that can withdraw user collateral. Three privileged roles do exist, and the oracle updater is the one you trust most. See [Trust Assumptions](#trust-assumptions).
 
 ---
@@ -60,14 +60,23 @@ A user deposits collateral (e.g., USDC) to mint $COPRA:
 Collateral Required = (COPRA_Amount × Copra_Price_USD) / 1e8 + Protocol_Fee (0.25%)
 ```
 
-### Direct Redemption (Hard Peg Floor)
-A holder can burn $COPRA to claim underlying collateral at any time:
+### Direct Redemption
+A holder can burn $COPRA to claim collateral at the current benchmark price, as long as the vault holds enough:
 ```
 Collateral Returned = (COPRA_Amount × Copra_Price_USD) / 1e8 - Protocol_Fee (0.25%)
 ```
 
+### Backing & Price Moves
+Collateral is a fixed pool of USDC. The value it has to cover is `totalSupply × price`, which moves with the oracle:
+
+- **At mint**: each mint deposits the full value of the new $COPRA at that moment's price (rounded up), plus the fee.
+- **Price falls**: the vault holds more USDC than all $COPRA is worth. The surplus stays in the vault.
+- **Price rises**: the vault holds less USDC than all $COPRA is worth. `redeem` pays first-come-first-served at the new price and reverts with `InsufficientVaultCollateral` once the backing runs out, so the last holders to redeem cannot exit until the price falls or new mints add collateral.
+
+There is no over-collateralization buffer and no redemption haircut today. Redemption is a price floor only while the vault is fully covered at the current price. `test_Vault_RedeemCannotLeaveFeesUnbacked` shows a redeem reverting after a 0.14% price rise.
+
 ### Self-Balancing Arbitrage
-- **If Market Price < Benchmark Price**: Arbitrageurs buy cheap $COPRA on decentralized exchanges and burn it in the vault for full dollar value, pushing the market price back up to peg.
+- **If Market Price < Benchmark Price**: Arbitrageurs buy cheap $COPRA on decentralized exchanges and burn it in the vault for its benchmark value, pushing the market price back up to peg.
 - **If Market Price > Benchmark Price**: Arbitrageurs deposit collateral to mint new $COPRA at the benchmark price and sell it on DEXs for profit, driving the price back down to peg.
 
 ---

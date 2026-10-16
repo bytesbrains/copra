@@ -55,7 +55,7 @@ sequenceDiagram
 
 ---
 
-## 3. Interaction Sequence: Redeeming $COPRA (Hard Floor)
+## 3. Interaction Sequence: Redeeming $COPRA
 
 ```mermaid
 sequenceDiagram
@@ -72,9 +72,13 @@ sequenceDiagram
     Vault-->>User: (collateralToReturn, fee)
 
     User->>Vault: redeem(copraAmount)
-    Vault->>Token: burnFromVault(User, copraAmount)
-    Vault->>USDC: safeTransfer(User, collateralToReturn)
-    Note over Vault: User receives dollar value; hard floor maintained
+    alt collateralToReturn + fee > balance - accumulatedFees
+        Vault-->>User: revert InsufficientVaultCollateral
+    else vault can cover it
+        Vault->>Token: burnFromVault(User, copraAmount)
+        Vault->>USDC: safeTransfer(User, collateralToReturn)
+        Note over Vault: User receives dollar value at the current price
+    end
 ```
 
 ---
@@ -92,8 +96,8 @@ sequenceDiagram
 
 ## 5. Security & Invariants
 
-1. **Solvency Invariant**:
-   `collateralToken.balanceOf(address(vault)) >= (totalSupply * price) + accumulatedFees`
+1. **Backing at Mint, Not Solvency at Every Price**:
+   Each mint deposits the full value at the current price (rounded up) plus the fee. The collateral pool is fixed while the price floats, so `collateralToken.balanceOf(address(vault)) >= (totalSupply * price) + accumulatedFees` holds right after each mint and stays true when the price falls, but a price rise can break it. After a rise, `redeem` pays first-come-first-served and reverts with `InsufficientVaultCollateral` once it would touch the collateral backing `accumulatedFees`. See README "Backing & Price Moves".
 2. **Flash Loan Resistance**:
    Reentrancy guards on all deposit, redemption, and fee-claiming pathways.
 3. **Price Manipulation Protection**:
