@@ -83,7 +83,7 @@
         <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 font-bold text-xs">⚠️</span>
         <span class="font-medium">
           <strong class="text-amber-300 font-bold">Base Sepolia Testnet Live (Chain ID: 84532)</strong> • Tokens have zero real-world value •
-          <a href="https://sepolia.basescan.org/address/0x6F8d4948B4be558fc0db547F837a86CE2d88c01b" target="_blank" rel="noopener noreferrer" class="text-white underline hover:text-amber-200 ml-1 transition">View Contracts on Basescan ↗</a>
+          <a data-contract="vault" href="https://sepolia.basescan.org/address/0xbB1CDe2B3c2f8F1D6AAFc1718a92192cb3335f54" target="_blank" rel="noopener noreferrer" class="text-white underline hover:text-amber-200 ml-1 transition">View Contracts on Basescan ↗</a>
         </span>
       </div>
       <div class="flex items-center space-x-2">
@@ -291,8 +291,8 @@
           <div>
             <div class="text-slate-400 text-[10px]">CopraVault (PSM & Reserves)</div>
             <div class="flex items-center gap-2 mt-0.5">
-              <a href="https://sepolia.basescan.org/address/0x6F8d4948B4be558fc0db547F837a86CE2d88c01b" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:underline">0x6F8d...c01b</a>
-              <button type="button" data-copy="0x6F8d4948B4be558fc0db547F837a86CE2d88c01b" class="copy-addr-btn text-[10px] text-slate-400 hover:text-white bg-brand-card px-1.5 py-0.5 rounded border border-brand-border transition">Copy</button>
+              <a data-contract="vault" data-short href="https://sepolia.basescan.org/address/0xbB1CDe2B3c2f8F1D6AAFc1718a92192cb3335f54" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:underline">0xbB1C...5f54</a>
+              <button type="button" data-contract="vault" data-copy="0xbB1CDe2B3c2f8F1D6AAFc1718a92192cb3335f54" class="copy-addr-btn text-[10px] text-slate-400 hover:text-white bg-brand-card px-1.5 py-0.5 rounded border border-brand-border transition">Copy</button>
             </div>
           </div>
           <span class="text-[10px] text-slate-500 bg-brand-card px-2 py-0.5 rounded border border-brand-border">0.25% Fee</span>
@@ -301,8 +301,8 @@
           <div>
             <div class="text-slate-400 text-[10px]">CopraToken ($COPRA ERC-20)</div>
             <div class="flex items-center gap-2 mt-0.5">
-              <a href="https://sepolia.basescan.org/address/0xcAdd63DFd49bC1383aA35ace7fa72aba43283a81" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:underline">0xcAdd...3a81</a>
-              <button type="button" data-copy="0xcAdd63DFd49bC1383aA35ace7fa72aba43283a81" class="copy-addr-btn text-[10px] text-slate-400 hover:text-white bg-brand-card px-1.5 py-0.5 rounded border border-brand-border transition">Copy</button>
+              <a data-contract="token" data-short href="https://sepolia.basescan.org/address/0x53f5Ef67439E8565559f9C450cFF5CB49b4b996C" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:underline">0x53f5...996C</a>
+              <button type="button" data-contract="token" data-copy="0x53f5Ef67439E8565559f9C450cFF5CB49b4b996C" class="copy-addr-btn text-[10px] text-slate-400 hover:text-white bg-brand-card px-1.5 py-0.5 rounded border border-brand-border transition">Copy</button>
             </div>
           </div>
           <span class="text-[10px] text-slate-500 bg-brand-card px-2 py-0.5 rounded border border-brand-border">18 Decimals</span>
@@ -311,8 +311,8 @@
           <div>
             <div class="text-slate-400 text-[10px]">CopraOracle (Commodity Feed)</div>
             <div class="flex items-center gap-2 mt-0.5">
-              <a href="https://sepolia.basescan.org/address/0x7Fe0746161eb2e91fB13470fbBca15d4cC0EF522" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:underline">0x7Fe0...F522</a>
-              <button type="button" data-copy="0x7Fe0746161eb2e91fB13470fbBca15d4cC0EF522" class="copy-addr-btn text-[10px] text-slate-400 hover:text-white bg-brand-card px-1.5 py-0.5 rounded border border-brand-border transition">Copy</button>
+              <a data-contract="oracle" data-short href="https://sepolia.basescan.org/address/0x4F409293636dCf579f12e7627137e62A8a790b9A" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:underline">0x4F40...0b9A</a>
+              <button type="button" data-contract="oracle" data-copy="0x4F409293636dCf579f12e7627137e62A8a790b9A" class="copy-addr-btn text-[10px] text-slate-400 hover:text-white bg-brand-card px-1.5 py-0.5 rounded border border-brand-border transition">Copy</button>
             </div>
           </div>
           <span class="text-[10px] text-slate-500 bg-brand-card px-2 py-0.5 rounded border border-brand-border">8 Decimals</span>
@@ -321,13 +321,18 @@
           <div>
             <div class="text-slate-400 text-[10px]">TestnetUSDC (Collateral + Faucet)</div>
             <div class="flex items-center gap-2 mt-0.5">
-              <a href="https://sepolia.basescan.org/address/0x1b8a3536F8826Db6Bacbab452366cC75c960E738" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:underline">0x1b8a...E738</a>
-              <button type="button" data-copy="0x1b8a3536F8826Db6Bacbab452366cC75c960E738" class="copy-addr-btn text-[10px] text-slate-400 hover:text-white bg-brand-card px-1.5 py-0.5 rounded border border-brand-border transition">Copy</button>
+              <a data-contract="usdc" data-short href="https://sepolia.basescan.org/address/0xd6bC2f148b750e47936f8720aF84DDFc061404DF" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:underline">0xd6bC...04DF</a>
+              <button type="button" data-contract="usdc" data-copy="0xd6bC2f148b750e47936f8720aF84DDFc061404DF" class="copy-addr-btn text-[10px] text-slate-400 hover:text-white bg-brand-card px-1.5 py-0.5 rounded border border-brand-border transition">Copy</button>
             </div>
           </div>
           <span class="text-[10px] text-slate-500 bg-brand-card px-2 py-0.5 rounded border border-brand-border">6 Decimals</span>
         </div>
       </div>
+      <p class="mt-3 text-[10px] text-slate-500 font-mono">
+        Addresses resolve live from
+        <a href="https://sepolia.basescan.org/address/0x379cB5FED578D6F485ab1834C81E4F1CF4EABb25" target="_blank" rel="noopener noreferrer" class="text-slate-300 hover:underline">CopraRegistry 0x379c...Bb25</a>
+        <span id="registryVersion"></span>
+      </p>
     </div>
   </main>
 
@@ -345,17 +350,20 @@
   </footer>
 
   <script>
-    // On-Chain Base Sepolia Contract Addresses
+    // On-Chain Base Sepolia Contract Addresses.
+    // `registry` is permanent (CREATE2). usdc/oracle/vault/token are only fallbacks: the live set is
+    // read from CopraRegistry on load, so a protocol redeploy needs no change to this page.
     const CONTRACTS = {
+      registry: '0x379cB5FED578D6F485ab1834C81E4F1CF4EABb25',
       chainId: 84532,
       chainIdHex: '0x14a34',
       chainName: 'Base Sepolia',
       rpcUrl: 'https://base-sepolia-rpc.publicnode.com',
       explorer: 'https://sepolia.basescan.org',
-      usdc: '0x1b8a3536F8826Db6Bacbab452366cC75c960E738',
-      oracle: '0x7Fe0746161eb2e91fB13470fbBca15d4cC0EF522',
-      vault: '0x6F8d4948B4be558fc0db547F837a86CE2d88c01b',
-      token: '0xcAdd63DFd49bC1383aA35ace7fa72aba43283a81'
+      usdc: '0xd6bC2f148b750e47936f8720aF84DDFc061404DF',
+      oracle: '0x4F409293636dCf579f12e7627137e62A8a790b9A',
+      vault: '0xbB1CDe2B3c2f8F1D6AAFc1718a92192cb3335f54',
+      token: '0x53f5Ef67439E8565559f9C450cFF5CB49b4b996C'
     };
 
     // --- Environment & Dynamic Theme Engine ---
@@ -386,6 +394,10 @@
       "function redeem(uint256 copraAmount) external",
       "function protocolFeeBps() view returns (uint256)",
       "function accumulatedFees() view returns (uint256)"
+    ];
+
+    const REGISTRY_ABI = [
+      "function getDeployment() view returns (address collateral, address oracle, address vault, address token, uint256 version, uint256 updatedAt)"
     ];
 
     // --- State Variables ---
@@ -547,6 +559,41 @@
       watchToken(CONTRACTS.usdc, 'USDC', 6, '');
     });
 
+    // --- Live Contract Resolution (CopraRegistry) ---
+    function renderContractAddresses() {
+      document.querySelectorAll('[data-contract]').forEach((el) => {
+        const addr = CONTRACTS[el.getAttribute('data-contract')];
+        if (!addr) return;
+        if (el.tagName === 'A') {
+          el.href = `${CONTRACTS.explorer}/address/${addr}`;
+          if (el.hasAttribute('data-short')) el.textContent = `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+        }
+        if (el.hasAttribute('data-copy')) el.setAttribute('data-copy', addr);
+      });
+    }
+
+    // Resolves to true when the registry was read; on any failure the baked-in fallbacks stay in use.
+    async function loadDeployment() {
+      try {
+        const readProvider = new ethers.JsonRpcProvider(CONTRACTS.rpcUrl);
+        const registry = new ethers.Contract(CONTRACTS.registry, REGISTRY_ABI, readProvider);
+        const [collateral, oracle, vault, token, version] = await registry.getDeployment();
+        const live = { usdc: collateral, oracle, vault, token };
+        if (version === 0n || !Object.values(live).every((a) => ethers.isAddress(a) && a !== ethers.ZeroAddress)) {
+          throw new Error('registry has no deployment');
+        }
+        Object.assign(CONTRACTS, live);
+        renderContractAddresses();
+        document.getElementById('registryVersion').textContent = `· deployment v${version}`;
+        return true;
+      } catch (e) {
+        console.warn('CopraRegistry unavailable, using built-in addresses:', e);
+        return false;
+      }
+    }
+
+    const deploymentReady = loadDeployment();
+
     // --- Toast / Notification Helper ---
     function showToast(msg, type = 'info', txHash = null) {
       txStatus.classList.remove('hidden', 'bg-emerald-500/10', 'border-emerald-500/30', 'text-emerald-300', 'bg-amber-500/10', 'border-amber-500/30', 'text-amber-300', 'bg-red-500/10', 'border-red-500/30', 'text-red-300');
@@ -572,6 +619,7 @@
 
     // --- Web3 Blockchain Connection & Interactivity ---
     async function initWeb3() {
+      await deploymentReady;
       if (typeof window.ethereum === 'undefined') {
         showToast('Please install MetaMask, Coinbase Wallet, or Rabby to interact with Copra Protocol on Base Sepolia.', 'warn');
         return;
@@ -634,6 +682,7 @@
 
     // Read live price, total supply, vault reserves, and protocol fee metrics from Base Sepolia
     async function readProtocolTelemetry() {
+      await deploymentReady;
       try {
         const readProvider = new ethers.JsonRpcProvider(CONTRACTS.rpcUrl);
         const oracleContract = new ethers.Contract(CONTRACTS.oracle, ORACLE_ABI, readProvider);

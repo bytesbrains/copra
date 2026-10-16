@@ -50,7 +50,7 @@ $COPRA tracks 1 kg of global benchmark copra (dried coconut kernel) with 100% on
 
 App: https://copra.dev
 GitHub: https://github.com/bytesbrains/copra
-Contracts (Base Sepolia):
-- CopraToken: `0xcAdd63DFd49bC1383aA35ace7fa72aba43283a81`
-- CopraVault: `0x6F8d4948B4be558fc0db547F837a86CE2d88c01b`
-- CopraOracle: `0x7Fe0746161eb2e91fB13470fbBca15d4cC0EF522`
+Contracts (Base Sepolia, live set; always current at CopraRegistry `0x379cB5FED578D6F485ab1834C81E4F1CF4EABb25`):
+- CopraToken: `0x53f5Ef67439E8565559f9C450cFF5CB49b4b996C`
+- CopraVault: `0xbB1CDe2B3c2f8F1D6AAFc1718a92192cb3335f54`
+- CopraOracle: `0x4F409293636dCf579f12e7627137e62A8a790b9A`

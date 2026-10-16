@@ -117,8 +117,12 @@ jobs:
 
   publish-github-release:
     name: Publish GitHub Release & Artifacts
-    needs: validate-and-simulate
-    if: startsWith(github.ref, 'refs/tags/v')
+    # Runs after a same-run deploy (if any) so the manifest below reflects the new contracts.
+    needs: [validate-and-simulate, deploy-base-sepolia]
+    if: >-
+      always() && startsWith(github.ref, 'refs/tags/v') &&
+      needs.validate-and-simulate.result == 'success' &&
+      (needs.deploy-base-sepolia.result == 'success' || needs.deploy-base-sepolia.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -137,6 +141,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ github.ref_name }}
+          BASE_SEPOLIA_RPC: ${{ secrets.BASE_SEPOLIA_RPC || 'https://base-sepolia-rpc.publicnode.com' }}
+          COPRA_REGISTRY: '0x379cB5FED578D6F485ab1834C81E4F1CF4EABb25'
         run: |
           set -euo pipefail
 
@@ -156,9 +162,27 @@ jobs:
               "out/${contract}.sol/${contract}.json" > "${DIST_DIR}/${contract}.artifact.json"
           done
 
-          MANIFEST_FILE="deployments/base-sepolia.json"
-          if [[ -f "${MANIFEST_FILE}" ]]; then
-            cp "${MANIFEST_FILE}" "${DIST_DIR}/base-sepolia.json"
+          # The live addresses come from CopraRegistry, not the repo file, so the release can never
+          # advertise a superseded deployment. The repo manifest only supplies static parameters.
+          REPO_MANIFEST="deployments/base-sepolia.json"
+          MANIFEST_FILE="${DIST_DIR}/base-sepolia.json"
+          if DEPLOYMENT=$(cast call "${COPRA_REGISTRY}" \
+              "getDeployment()(address,address,address,address,uint256,uint256)" \
+              --rpc-url "${BASE_SEPOLIA_RPC}" 2>/dev/null); then
+            # cast prints one value per line; large uints carry a " [1.79e9]" suffix, dropped by `_`.
+            { read -r USDC; read -r ORACLE; read -r VAULT; read -r TOKEN; read -r VERSION _; read -r UPDATED_AT _; } <<< "${DEPLOYMENT}"
+            jq --arg usdc "${USDC}" --arg oracle "${ORACLE}" --arg vault "${VAULT}" --arg token "${TOKEN}" \
+               --arg registry "${COPRA_REGISTRY}" \
+               --argjson version "${VERSION}" --argjson updatedAt "${UPDATED_AT}" \
+              '.contracts = {TestnetUSDC: $usdc, CopraOracle: $oracle, CopraVault: $vault, CopraToken: $token, CopraRegistry: $registry}
+               | .registryVersion = $version
+               | .deployedAt = (($updatedAt | todate))
+               | del(.deployer)' \
+              "${REPO_MANIFEST}" > "${MANIFEST_FILE}"
+            echo "Manifest resolved from CopraRegistry v${VERSION}"
+          else
+            echo "::warning::CopraRegistry ${COPRA_REGISTRY} unreadable; falling back to ${REPO_MANIFEST}"
+            cp "${REPO_MANIFEST}" "${MANIFEST_FILE}"
           fi
 
           ARCHIVE_NAME="copra-protocol-${RELEASE_TAG}-artifacts.tar.gz"
@@ -208,12 +232,11 @@ jobs:
             "${DIST_DIR}/TestnetUSDC.abi.json"
             "${DIST_DIR}/SHA256SUMS.txt"
           )
-          if [[ -f "${DIST_DIR}/base-sepolia.json" ]]; then
-            RELEASE_ASSETS+=("${DIST_DIR}/base-sepolia.json")
-          fi
+          RELEASE_ASSETS+=("${MANIFEST_FILE}")
 
           if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
             gh release upload "${RELEASE_TAG}" "${RELEASE_ASSETS[@]}" --clobber
+            gh release edit "${RELEASE_TAG}" --notes-file "${NOTES_FILE}"
           else
             gh release create "${RELEASE_TAG}" "${RELEASE_ASSETS[@]}" \
               --title "Copra Protocol ${RELEASE_TAG}" \

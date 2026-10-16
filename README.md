@@ -97,14 +97,15 @@ Suite result: ok. 10 passed; 0 failed; 0 skipped
 
 ## 6. Live Testnet Deployment (Base Sepolia)
 
-Canonical deployment manifest: [deployments/base-sepolia.json](deployments/base-sepolia.json) (Chain ID `84532`).
+The live contract set is published on-chain by **CopraRegistry** at a permanent address. The web app, the oracle feeder and release notes all resolve addresses from it, so redeploys never require editing them. A snapshot is kept in [deployments/base-sepolia.json](deployments/base-sepolia.json) (Chain ID `84532`), and each GitHub release ships a manifest read from the registry.
 
 | Contract | Address | Explorer |
 | :--- | :--- | :--- |
-| **CopraToken (`$COPRA`)** | `0xcAdd63DFd49bC1383aA35ace7fa72aba43283a81` | [Basescan](https://sepolia.basescan.org/address/0xcAdd63DFd49bC1383aA35ace7fa72aba43283a81) |
-| **CopraVault (PSM)** | `0x6F8d4948B4be558fc0db547F837a86CE2d88c01b` | [Basescan](https://sepolia.basescan.org/address/0x6F8d4948B4be558fc0db547F837a86CE2d88c01b) |
-| **CopraOracle** | `0x7Fe0746161eb2e91fB13470fbBca15d4cC0EF522` | [Basescan](https://sepolia.basescan.org/address/0x7Fe0746161eb2e91fB13470fbBca15d4cC0EF522) |
-| **TestnetUSDC** | `0x1b8a3536F8826Db6Bacbab452366cC75c960E738` | [Basescan](https://sepolia.basescan.org/address/0x1b8a3536F8826Db6Bacbab452366cC75c960E738) |
+| **CopraRegistry (permanent)** | `0x379cB5FED578D6F485ab1834C81E4F1CF4EABb25` | [Basescan](https://sepolia.basescan.org/address/0x379cB5FED578D6F485ab1834C81E4F1CF4EABb25) |
+| **CopraToken (`$COPRA`)** | `0x53f5Ef67439E8565559f9C450cFF5CB49b4b996C` | [Basescan](https://sepolia.basescan.org/address/0x53f5Ef67439E8565559f9C450cFF5CB49b4b996C) |
+| **CopraVault (PSM)** | `0xbB1CDe2B3c2f8F1D6AAFc1718a92192cb3335f54` | [Basescan](https://sepolia.basescan.org/address/0xbB1CDe2B3c2f8F1D6AAFc1718a92192cb3335f54) |
+| **CopraOracle** | `0x4F409293636dCf579f12e7627137e62A8a790b9A` | [Basescan](https://sepolia.basescan.org/address/0x4F409293636dCf579f12e7627137e62A8a790b9A) |
+| **TestnetUSDC** | `0xd6bC2f148b750e47936f8720aF84DDFc061404DF` | [Basescan](https://sepolia.basescan.org/address/0xd6bC2f148b750e47936f8720aF84DDFc061404DF) |
 
 ### Deploy Your Own Instance
 1. Obtain free Base Sepolia testnet ETH from [faucets.chain.link](https://faucets.chain.link) or [base.org/faucets](https://www.base.org/faucets).

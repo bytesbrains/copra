@@ -19,16 +19,33 @@ fi
 # Configuration
 RPC_URL="${BASE_SEPOLIA_RPC:-https://base-sepolia-rpc.publicnode.com}"
 PRIVATE_KEY="${ORACLE_FEEDER_KEY:-${PRIVATE_KEY:-}}"
-ORACLE_ADDRESS="${COPRA_ORACLE_ADDRESS:-0x7Fe0746161eb2e91fB13470fbBca15d4cC0EF522}"
+# Permanent CopraRegistry (CREATE2) — the oracle address is resolved from it, so redeploys need no edit here.
+REGISTRY_ADDRESS="${COPRA_REGISTRY_ADDRESS:-0x379cB5FED578D6F485ab1834C81E4F1CF4EABb25}"
 
 if [[ -z "${PRIVATE_KEY}" ]]; then
     echo "❌ Error: ORACLE_FEEDER_KEY or PRIVATE_KEY must be set."
     exit 1
 fi
 
+if [[ -n "${COPRA_ORACLE_ADDRESS:-}" ]]; then
+    ORACLE_ADDRESS="${COPRA_ORACLE_ADDRESS}"
+else
+    # Never fall back to a guessed address: signing updatePrice against the wrong oracle is worse than skipping a run.
+    if ! ORACLE_ADDRESS=$(cast call "${REGISTRY_ADDRESS}" "oracle()(address)" --rpc-url "${RPC_URL}" 2>/dev/null); then
+        echo "❌ Error: could not read oracle() from CopraRegistry ${REGISTRY_ADDRESS}. Set COPRA_ORACLE_ADDRESS to override."
+        exit 1
+    fi
+fi
+
+if [[ ! "${ORACLE_ADDRESS}" =~ ^0x[0-9a-fA-F]{40}$ ]] || [[ "${ORACLE_ADDRESS}" =~ ^0x0{40}$ ]]; then
+    echo "❌ Error: invalid oracle address '${ORACLE_ADDRESS}' (registry empty or misconfigured)."
+    exit 1
+fi
+
 echo "=================================================="
 echo "🥥 Copra Protocol - Autonomous Oracle Feeder"
 echo "=================================================="
+echo "Registry        : ${REGISTRY_ADDRESS}"
 echo "Oracle Contract : ${ORACLE_ADDRESS}"
 echo "RPC Endpoint    : ${RPC_URL}"
 
