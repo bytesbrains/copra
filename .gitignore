@@ -11,9 +11,6 @@ typechain-types/
 
 # Broadcast & deployment logs (prevents leaking local run traces)
 broadcast/
-!/broadcast
-/broadcast/*/31337/
-/broadcast/**/dry-run/
 
 # Environment, keys, and secret credentials
 .env
