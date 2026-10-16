@@ -40,6 +40,9 @@ jobs:
       - name: Run Forge tests
         run: forge test -vvv
 
+      - name: Run web quote tests
+        run: node --test test/web/*.test.cjs
+
       - name: Simulate deployment script (dry-run)
         env:
           PRIVATE_KEY: ${{ secrets.DEPLOYER_PRIVATE_KEY || '1' }}

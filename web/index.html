@@ -28,6 +28,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- ethers.js v6 for direct Web3 on-chain connectivity -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js"></script>
+  <script src="/assets/quote.js"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -81,8 +82,8 @@
       <div class="flex items-center space-x-2 text-center sm:text-left">
         <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 font-bold text-xs">⚠️</span>
         <span class="font-medium">
-          <strong class="text-amber-300 font-bold">Base Sepolia Testnet Sandbox</strong> • Tokens have zero real-world value •
-          <a href="https://copra.dev" class="text-white underline hover:text-amber-200 ml-1 transition">Switch to Mainnet (copra.dev)</a>
+          <strong class="text-amber-300 font-bold">Base Sepolia Testnet Live (Chain ID: 84532)</strong> • Tokens have zero real-world value •
+          <a href="https://sepolia.basescan.org/address/0x6F8d4948B4be558fc0db547F837a86CE2d88c01b" target="_blank" rel="noopener noreferrer" class="text-white underline hover:text-amber-200 ml-1 transition">View Contracts on Basescan ↗</a>
         </span>
       </div>
       <div class="flex items-center space-x-2">
@@ -105,6 +106,11 @@
         <span id="testnetBadge" class="hidden text-xs font-mono bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-bold animate-pulse">TESTNET</span>
       </div>
       <div class="flex items-center space-x-3">
+        <nav class="hidden lg:flex items-center space-x-4 text-xs font-mono text-slate-400 mr-2">
+          <a href="https://github.com/bytesbrains/copra/blob/main/docs/WHITEPAPER.md" target="_blank" rel="noopener noreferrer" class="hover:text-white transition">Whitepaper</a>
+          <a href="https://github.com/bytesbrains/copra/blob/main/docs/ARCHITECTURE.md" target="_blank" rel="noopener noreferrer" class="hover:text-white transition">Architecture</a>
+          <a href="https://github.com/bytesbrains/copra" target="_blank" rel="noopener noreferrer" class="hover:text-white transition">GitHub</a>
+        </nav>
         <div class="hidden md:flex items-center text-xs font-mono text-slate-400 bg-brand-card border border-brand-border px-3 py-1.5 rounded-lg">
           <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block mr-2 animate-pulse"></span>
           Benchmark: <span id="benchmarkHeader" class="text-white ml-1 font-semibold">$1.42 USD / kg</span>
@@ -118,7 +124,7 @@
 
   <!-- Hero Section -->
   <main class="max-w-6xl mx-auto px-6 py-12">
-    <div class="text-center max-w-3xl mx-auto mb-12">
+    <div class="text-center max-w-3xl mx-auto mb-10">
       <div class="flex justify-center mb-6">
         <div class="relative">
           <div id="heroGlow" class="absolute -inset-1 rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 opacity-25 blur-lg"></div>
@@ -136,12 +142,42 @@
       </p>
     </div>
 
+    <!-- Live On-Chain Protocol Telemetry Bar -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl mx-auto mb-12 text-xs font-mono">
+      <div class="bg-brand-card border border-brand-border rounded-xl p-4">
+        <div class="text-slate-400 text-[11px] mb-1">Total $COPRA Supply</div>
+        <div id="metricTotalSupply" class="text-base font-bold text-white">Loading...</div>
+        <div class="text-[10px] text-slate-500 mt-0.5">token.totalSupply()</div>
+      </div>
+      <div class="bg-brand-card border border-brand-border rounded-xl p-4">
+        <div class="text-slate-400 text-[11px] mb-1">Vault USDC Reserves</div>
+        <div id="metricVaultReserves" class="text-base font-bold text-emerald-400">Loading...</div>
+        <div class="text-[10px] text-slate-500 mt-0.5">100% Solvency Reserve</div>
+      </div>
+      <div class="bg-brand-card border border-brand-border rounded-xl p-4">
+        <div class="text-slate-400 text-[11px] mb-1">Accumulated Protocol Fees</div>
+        <div id="metricAccumulatedFees" class="text-base font-bold text-white">Loading...</div>
+        <div id="metricFeeRate" class="text-[10px] text-slate-500 mt-0.5">0.25% (25 bps) Fee</div>
+      </div>
+      <div class="bg-brand-card border border-brand-border rounded-xl p-4">
+        <div class="text-slate-400 text-[11px] mb-1">Oracle Heartbeat Status</div>
+        <div id="metricOracleAge" class="text-base font-bold text-emerald-400">Active (7d Heartbeat)</div>
+        <div id="metricOracleUpdated" class="text-[10px] text-slate-500 mt-0.5">CopraOracle Feed</div>
+      </div>
+    </div>
+
     <!-- Mint & Redeem Card -->
     <div class="max-w-md mx-auto bg-brand-card border border-brand-border rounded-2xl p-6 shadow-2xl mb-16 relative">
       <!-- User Balance Bar (Visible when connected) -->
-      <div id="balanceBar" class="hidden mb-4 p-2.5 rounded-xl bg-brand-dark border border-brand-border text-xs font-mono flex justify-between text-slate-400">
-        <div>USDC: <span id="usdcBalance" class="text-white font-bold">0.00</span></div>
-        <div>$COPRA: <span id="copraBalance" class="text-emerald-400 font-bold">0.00</span></div>
+      <div id="balanceBar" class="hidden mb-4 p-2.5 rounded-xl bg-brand-dark border border-brand-border text-xs font-mono flex flex-col gap-2 text-slate-400">
+        <div class="flex justify-between items-center">
+          <div>USDC: <span id="usdcBalance" class="text-white font-bold">0.00</span></div>
+          <div>$COPRA: <span id="copraBalance" class="text-emerald-400 font-bold">0.00</span></div>
+        </div>
+        <div class="flex justify-between items-center pt-1.5 border-t border-brand-border/60 text-[10px]">
+          <button id="watchCopraBtn" type="button" class="text-emerald-400 hover:underline flex items-center gap-1">+ Add $COPRA to Wallet</button>
+          <button id="watchUsdcBtn" type="button" class="text-slate-300 hover:underline flex items-center gap-1">+ Add Testnet USDC</button>
+        </div>
       </div>
 
       <div class="flex rounded-lg bg-brand-dark p-1 mb-6 border border-brand-border text-xs font-semibold">
@@ -152,10 +188,13 @@
       <div class="space-y-4">
         <!-- Input Box -->
         <div>
-          <label id="inputLabel" class="block text-xs font-mono text-slate-400 mb-1">You Pay (USDC)</label>
+          <div class="flex justify-between items-center mb-1">
+            <label id="inputLabel" for="amountInput" class="block text-xs font-mono text-slate-400">You Pay (USDC)</label>
+            <button id="maxBtn" type="button" class="hidden text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30 transition">MAX</button>
+          </div>
           <div class="flex items-center bg-brand-dark border border-brand-border rounded-xl px-4 py-3 focus-within:border-emerald-500 transition">
-            <input id="amountInput" type="number" step="any" value="14.20" class="bg-transparent text-xl font-bold text-white focus:outline-none w-full font-mono">
-            <div id="inputTicker" class="flex items-center space-x-1.5 text-xs font-bold text-slate-300 bg-brand-card px-2.5 py-1 rounded-md border border-brand-border">
+            <input id="amountInput" type="number" step="any" min="0" value="14.20" class="bg-transparent text-xl font-bold text-white focus:outline-none w-full font-mono">
+            <div id="inputTicker" class="flex items-center space-x-1.5 text-xs font-bold text-slate-300 bg-brand-card px-2.5 py-1 rounded-md border border-brand-border shrink-0">
               <span>USDC</span>
             </div>
           </div>
@@ -170,10 +209,10 @@
 
         <!-- Output Box -->
         <div>
-          <label id="outputLabel" class="block text-xs font-mono text-slate-400 mb-1">You Receive ($COPRA)</label>
+          <label id="outputLabel" for="outputAmount" class="block text-xs font-mono text-slate-400 mb-1">You Receive ($COPRA)</label>
           <div class="flex items-center bg-brand-dark border border-brand-border rounded-xl px-4 py-3">
-            <input id="outputAmount" type="text" readonly value="9.9750" class="bg-transparent text-xl font-bold text-slate-300 focus:outline-none w-full font-mono">
-            <div id="outputTicker" class="flex items-center space-x-1.5 text-xs font-bold text-white bg-brand-card px-2.5 py-1 rounded-md border border-brand-border">
+            <input id="outputAmount" type="text" readonly value="9.9751" class="bg-transparent text-xl font-bold text-slate-300 focus:outline-none w-full font-mono">
+            <div id="outputTicker" class="flex items-center space-x-1.5 text-xs font-bold text-white bg-brand-card px-2.5 py-1 rounded-md border border-brand-border shrink-0">
               <img src="/assets/copra_logo_32.png" alt="Copra" class="w-4 h-4 rounded-full">
               <span>COPRA</span>
             </div>
@@ -187,8 +226,8 @@
             <span class="text-white" id="oracleDisplay">$1.42 USD / kg</span>
           </div>
           <div class="flex justify-between">
-            <span>Protocol Fee (0.25%)</span>
-            <span class="text-white" id="feeDisplay">$0.0355 USDC</span>
+            <span id="feeLabel">Protocol Fee (0.25%)</span>
+            <span class="text-white" id="feeDisplay">$0.0354 USDC</span>
           </div>
           <div class="flex justify-between">
             <span>Collateral Reserve Ratio</span>
@@ -251,28 +290,40 @@
         <div class="bg-brand-dark p-3 rounded-lg border border-brand-border flex justify-between items-center">
           <div>
             <div class="text-slate-400 text-[10px]">CopraVault (PSM & Reserves)</div>
-            <a href="https://sepolia.basescan.org/address/0x6F8d4948B4be558fc0db547F837a86CE2d88c01b" target="_blank" class="text-emerald-400 hover:underline">0x6F8d...C01b</a>
+            <div class="flex items-center gap-2 mt-0.5">
+              <a href="https://sepolia.basescan.org/address/0x6F8d4948B4be558fc0db547F837a86CE2d88c01b" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:underline">0x6F8d...c01b</a>
+              <button type="button" data-copy="0x6F8d4948B4be558fc0db547F837a86CE2d88c01b" class="copy-addr-btn text-[10px] text-slate-400 hover:text-white bg-brand-card px-1.5 py-0.5 rounded border border-brand-border transition">Copy</button>
+            </div>
           </div>
           <span class="text-[10px] text-slate-500 bg-brand-card px-2 py-0.5 rounded border border-brand-border">0.25% Fee</span>
         </div>
         <div class="bg-brand-dark p-3 rounded-lg border border-brand-border flex justify-between items-center">
           <div>
             <div class="text-slate-400 text-[10px]">CopraToken ($COPRA ERC-20)</div>
-            <a href="https://sepolia.basescan.org/address/0xcAdd63DFd49bC1383aA35ace7fa72aba43283a81" target="_blank" class="text-emerald-400 hover:underline">0xcAdd...3a81</a>
+            <div class="flex items-center gap-2 mt-0.5">
+              <a href="https://sepolia.basescan.org/address/0xcAdd63DFd49bC1383aA35ace7fa72aba43283a81" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:underline">0xcAdd...3a81</a>
+              <button type="button" data-copy="0xcAdd63DFd49bC1383aA35ace7fa72aba43283a81" class="copy-addr-btn text-[10px] text-slate-400 hover:text-white bg-brand-card px-1.5 py-0.5 rounded border border-brand-border transition">Copy</button>
+            </div>
           </div>
           <span class="text-[10px] text-slate-500 bg-brand-card px-2 py-0.5 rounded border border-brand-border">18 Decimals</span>
         </div>
         <div class="bg-brand-dark p-3 rounded-lg border border-brand-border flex justify-between items-center">
           <div>
             <div class="text-slate-400 text-[10px]">CopraOracle (Commodity Feed)</div>
-            <a href="https://sepolia.basescan.org/address/0x7Fe0746161eb2e91fB13470fbBca15d4cC0EF522" target="_blank" class="text-emerald-400 hover:underline">0x7Fe0...15d4</a>
+            <div class="flex items-center gap-2 mt-0.5">
+              <a href="https://sepolia.basescan.org/address/0x7Fe0746161eb2e91fB13470fbBca15d4cC0EF522" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:underline">0x7Fe0...F522</a>
+              <button type="button" data-copy="0x7Fe0746161eb2e91fB13470fbBca15d4cC0EF522" class="copy-addr-btn text-[10px] text-slate-400 hover:text-white bg-brand-card px-1.5 py-0.5 rounded border border-brand-border transition">Copy</button>
+            </div>
           </div>
           <span class="text-[10px] text-slate-500 bg-brand-card px-2 py-0.5 rounded border border-brand-border">8 Decimals</span>
         </div>
         <div class="bg-brand-dark p-3 rounded-lg border border-brand-border flex justify-between items-center">
           <div>
             <div class="text-slate-400 text-[10px]">TestnetUSDC (Collateral + Faucet)</div>
-            <a href="https://sepolia.basescan.org/address/0x1b8a3536F8826Db6Bacbab452366cC75c960E738" target="_blank" class="text-emerald-400 hover:underline">0x1b8a...E738</a>
+            <div class="flex items-center gap-2 mt-0.5">
+              <a href="https://sepolia.basescan.org/address/0x1b8a3536F8826Db6Bacbab452366cC75c960E738" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:underline">0x1b8a...E738</a>
+              <button type="button" data-copy="0x1b8a3536F8826Db6Bacbab452366cC75c960E738" class="copy-addr-btn text-[10px] text-slate-400 hover:text-white bg-brand-card px-1.5 py-0.5 rounded border border-brand-border transition">Copy</button>
+            </div>
           </div>
           <span class="text-[10px] text-slate-500 bg-brand-card px-2 py-0.5 rounded border border-brand-border">6 Decimals</span>
         </div>
@@ -281,15 +332,19 @@
   </main>
 
   <!-- Footer -->
-  <footer class="border-t border-brand-border py-8 text-center text-xs text-slate-500 font-mono">
-    <p>Copra Protocol • <a href="https://copra.dev" class="text-emerald-400 hover:underline">copra.dev</a> • <a href="https://testnet.copra.dev" class="text-amber-400 hover:underline">testnet.copra.dev</a> • Autonomous Commodity RWA</p>
+  <footer class="border-t border-brand-border py-8 text-center text-xs text-slate-500 font-mono space-y-2">
+    <p>
+      Copra Protocol •
+      <a href="https://copra.dev" class="text-emerald-400 hover:underline">copra.dev</a> •
+      <a href="https://github.com/bytesbrains/copra" target="_blank" rel="noopener noreferrer" class="text-slate-300 hover:underline">GitHub</a> •
+      <a href="https://github.com/bytesbrains/copra/blob/main/docs/WHITEPAPER.md" target="_blank" rel="noopener noreferrer" class="text-slate-300 hover:underline">Whitepaper</a> •
+      <a href="https://github.com/bytesbrains/copra/blob/main/docs/ARCHITECTURE.md" target="_blank" rel="noopener noreferrer" class="text-slate-300 hover:underline">Architecture</a> •
+      <a href="https://github.com/bytesbrains/copra/releases" target="_blank" rel="noopener noreferrer" class="text-slate-300 hover:underline">Releases</a>
+    </p>
+    <p class="text-[11px] text-slate-600">Autonomous Commodity RWA on Base L2 • Non-Custodial • MIT License</p>
   </footer>
 
   <script>
-    // --- Environment & Dynamic Theme Engine ---
-    const hostname = window.location.hostname;
-    const isTestnet = hostname.includes('testnet') || hostname.includes('localhost') || hostname.includes('127.0.0.1') || window.location.search.includes('testnet');
-
     // On-Chain Base Sepolia Contract Addresses
     const CONTRACTS = {
       chainId: 84532,
@@ -303,9 +358,16 @@
       token: '0xcAdd63DFd49bC1383aA35ace7fa72aba43283a81'
     };
 
+    // --- Environment & Dynamic Theme Engine ---
+    // Derive testnet mode directly from the active contract deployment chainId (Base Sepolia = 84532)
+    // so visitors on copra.dev and *.workers.dev always have access to the Base Sepolia faucet and badge.
+    const hostname = window.location.hostname;
+    const isTestnet = CONTRACTS.chainId === 84532 || hostname.includes('testnet') || hostname.includes('localhost') || hostname.includes('127.0.0.1') || window.location.search.includes('testnet');
+
     // Contract ABIs
     const ERC20_ABI = [
       "function balanceOf(address owner) view returns (uint256)",
+      "function totalSupply() view returns (uint256)",
       "function allowance(address owner, address spender) view returns (uint256)",
       "function approve(address spender, uint256 amount) returns (bool)",
       "function faucet(address to, uint256 amount) external"
@@ -320,16 +382,20 @@
       "function quoteRedeem(uint256 copraAmount) view returns (uint256 collateralToReturn, uint256 fee)",
       "function mint(uint256 copraAmount) external",
       "function redeem(uint256 copraAmount) external",
-      "function protocolFeeBps() view returns (uint256)"
+      "function protocolFeeBps() view returns (uint256)",
+      "function accumulatedFees() view returns (uint256)"
     ];
 
     // --- State Variables ---
     let currentPriceUSD = 1.42;
-    let feeRate = 0.0025; // 0.25%
+    let currentPriceRaw = 142000000n; // oracle price, 8 decimals
+    let feeBps = 25n; // 0.25%
     let mode = 'mint';
     let userAddress = null;
     let provider = null;
     let signer = null;
+    let userUsdcBalanceRaw = 0n;
+    let userCopraBalanceRaw = 0n;
 
     // --- Apply Theme & Hostname Adaptations ---
     if (isTestnet) {
@@ -358,6 +424,7 @@
     const amountInput = document.getElementById('amountInput');
     const outputAmount = document.getElementById('outputAmount');
     const feeDisplay = document.getElementById('feeDisplay');
+    const feeLabel = document.getElementById('feeLabel');
     const actionBtn = document.getElementById('actionBtn');
     const actionBtnText = document.getElementById('actionBtnText');
     const connectBtn = document.getElementById('connectBtn');
@@ -367,18 +434,30 @@
     const copraBalanceEl = document.getElementById('copraBalance');
     const txStatus = document.getElementById('txStatus');
     const faucetBtn = document.getElementById('faucetBtn');
+    const maxBtn = document.getElementById('maxBtn');
+    const watchCopraBtn = document.getElementById('watchCopraBtn');
+    const watchUsdcBtn = document.getElementById('watchUsdcBtn');
 
     // --- Price & Calculation Engine ---
+    // Exact BigInt mirror of CopraVault.quoteMint / quoteRedeem (see /assets/quote.js).
+    // Mint: the input is the total USDC paid, fee included, so the $COPRA amount is the largest
+    // one whose quoteMint().collateralRequired fits inside it.
+    function mintCopraWei() {
+      const usdcRaw = CopraQuote.parseUnits(amountInput.value, 6) ?? 0n;
+      return CopraQuote.copraForCollateral(usdcRaw, currentPriceRaw, feeBps);
+    }
+
     function calculate() {
-      const val = parseFloat(amountInput.value) || 0;
       if (mode === 'mint') {
-        const copra = val / (currentPriceUSD * (1 + feeRate));
-        outputAmount.value = copra.toFixed(4);
-        feeDisplay.textContent = '$' + (val * feeRate).toFixed(4) + ' USDC';
+        const copraWei = mintCopraWei();
+        const { fee } = CopraQuote.quoteMint(copraWei, currentPriceRaw, feeBps);
+        outputAmount.value = CopraQuote.formatUnits(copraWei, 18, 4);
+        feeDisplay.textContent = '$' + CopraQuote.formatUnits(fee, 6, 4) + ' USDC';
       } else {
-        const usdc = (val * currentPriceUSD) * (1 - feeRate);
-        outputAmount.value = usdc.toFixed(4);
-        feeDisplay.textContent = '$' + (val * currentPriceUSD * feeRate).toFixed(4) + ' USDC';
+        const copraWei = CopraQuote.parseUnits(amountInput.value, 18) ?? 0n;
+        const { collateralToReturn, fee } = CopraQuote.quoteRedeem(copraWei, currentPriceRaw, feeBps);
+        outputAmount.value = CopraQuote.formatUnits(collateralToReturn, 6, 4);
+        feeDisplay.textContent = '$' + CopraQuote.formatUnits(fee, 6, 4) + ' USDC';
       }
     }
 
@@ -415,6 +494,57 @@
     tabMint.addEventListener('click', () => { mode = 'mint'; setTabStyles(); checkAllowance(); });
     tabRedeem.addEventListener('click', () => { mode = 'redeem'; setTabStyles(); });
 
+    // --- MAX Button Handler ---
+    maxBtn.addEventListener('click', () => {
+      if (!userAddress) return;
+      // Exact balance, never rounded up — a rounded-up MAX makes transferFrom / burn revert.
+      amountInput.value = mode === 'mint'
+        ? CopraQuote.formatUnits(userUsdcBalanceRaw, 6)
+        : CopraQuote.formatUnits(userCopraBalanceRaw, 18);
+      calculate();
+      checkAllowance();
+    });
+
+    // --- Copy Address Buttons ---
+    document.querySelectorAll('.copy-addr-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const addr = btn.getAttribute('data-copy');
+        if (!addr) return;
+        try {
+          await navigator.clipboard.writeText(addr);
+          const prev = btn.textContent;
+          btn.textContent = 'Copied!';
+          setTimeout(() => { btn.textContent = prev; }, 1500);
+        } catch (e) {
+          console.warn('Clipboard copy failed:', e);
+        }
+      });
+    });
+
+    // --- EIP-747 Watch Asset Helpers ---
+    async function watchToken(address, symbol, decimals, image) {
+      if (!window.ethereum) return;
+      try {
+        await window.ethereum.request({
+          method: 'wallet_watchAsset',
+          params: {
+            type: 'ERC20',
+            options: { address, symbol, decimals, image }
+          }
+        });
+      } catch (e) {
+        console.warn('wallet_watchAsset error:', e);
+      }
+    }
+
+    watchCopraBtn.addEventListener('click', () => {
+      watchToken(CONTRACTS.token, 'COPRA', 18, window.location.origin + '/assets/copra_logo_128.png');
+    });
+
+    watchUsdcBtn.addEventListener('click', () => {
+      watchToken(CONTRACTS.usdc, 'USDC', 6, '');
+    });
+
     // --- Toast / Notification Helper ---
     function showToast(msg, type = 'info', txHash = null) {
       txStatus.classList.remove('hidden', 'bg-emerald-500/10', 'border-emerald-500/30', 'text-emerald-300', 'bg-amber-500/10', 'border-amber-500/30', 'text-amber-300', 'bg-red-500/10', 'border-red-500/30', 'text-red-300');
@@ -423,17 +553,25 @@
       if (type === 'error') colorClass = 'bg-red-500/10 border-red-500/30 text-red-300';
       txStatus.className = 'rounded-xl p-3 text-xs font-mono border ' + colorClass;
 
-      let html = `<div>${msg}</div>`;
+      // Messages can carry wallet/RPC error text, so build nodes instead of interpolating HTML.
+      const msgEl = document.createElement('div');
+      msgEl.textContent = msg;
+      txStatus.replaceChildren(msgEl);
       if (txHash) {
-        html += `<a href="${CONTRACTS.explorer}/tx/${txHash}" target="_blank" class="underline mt-1 inline-block text-[11px] font-bold">View on Basescan ↗</a>`;
+        const link = document.createElement('a');
+        link.href = `${CONTRACTS.explorer}/tx/${encodeURIComponent(txHash)}`;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.className = 'underline mt-1 inline-block text-[11px] font-bold';
+        link.textContent = 'View on Basescan ↗';
+        txStatus.appendChild(link);
       }
-      txStatus.innerHTML = html;
     }
 
     // --- Web3 Blockchain Connection & Interactivity ---
     async function initWeb3() {
       if (typeof window.ethereum === 'undefined') {
-        alert('Please install MetaMask, Coinbase Wallet, or Rabby to interact with Copra Protocol on Base Sepolia.');
+        showToast('Please install MetaMask, Coinbase Wallet, or Rabby to interact with Copra Protocol on Base Sepolia.', 'warn');
         return;
       }
 
@@ -441,9 +579,8 @@
         provider = new ethers.BrowserProvider(window.ethereum);
         const accounts = await provider.send("eth_requestAccounts", []);
         userAddress = accounts[0];
-        signer = await provider.getSigner();
 
-        // Check & enforce network
+        // Check & enforce network before getting signer
         const network = await provider.getNetwork();
         if (Number(network.chainId) !== CONTRACTS.chainId) {
           try {
@@ -467,12 +604,15 @@
               throw switchError;
             }
           }
+          provider = new ethers.BrowserProvider(window.ethereum);
         }
 
+        signer = await provider.getSigner();
         connectText.textContent = `${userAddress.slice(0, 6)}...${userAddress.slice(-4)}`;
         balanceBar.classList.remove('hidden');
+        maxBtn.classList.remove('hidden');
         await refreshBalances();
-        await readOraclePrice();
+        await readProtocolTelemetry();
         await checkAllowance();
       } catch (err) {
         console.error('Wallet error:', err);
@@ -480,18 +620,71 @@
       }
     }
 
-    // Read live price from CopraOracle
-    async function readOraclePrice() {
+    // Format relative age for oracle timestamp
+    function formatAge(updatedAtSeconds) {
+      const nowSec = Math.floor(Date.now() / 1000);
+      const diff = Math.max(0, nowSec - updatedAtSeconds);
+      if (diff < 60) return `${diff}s ago`;
+      if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+      if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+      return `${Math.floor(diff / 86400)}d ago`;
+    }
+
+    // Read live price, total supply, vault reserves, and protocol fee metrics from Base Sepolia
+    async function readProtocolTelemetry() {
       try {
-        const readProvider = provider || new ethers.JsonRpcProvider(CONTRACTS.rpcUrl);
+        const readProvider = new ethers.JsonRpcProvider(CONTRACTS.rpcUrl);
         const oracleContract = new ethers.Contract(CONTRACTS.oracle, ORACLE_ABI, readProvider);
-        const [priceBn] = await oracleContract.getCopraPriceUSD();
-        currentPriceUSD = Number(priceBn) / 1e8;
-        document.getElementById('benchmarkHeader').textContent = `$${currentPriceUSD.toFixed(2)} USD / kg`;
-        document.getElementById('oracleDisplay').textContent = `$${currentPriceUSD.toFixed(2)} USD / kg`;
+        const vaultContract = new ethers.Contract(CONTRACTS.vault, VAULT_ABI, readProvider);
+        const tokenContract = new ethers.Contract(CONTRACTS.token, ERC20_ABI, readProvider);
+        const usdcContract = new ethers.Contract(CONTRACTS.usdc, ERC20_ABI, readProvider);
+
+        const [oracleData, totalSupplyRaw, vaultUsdcRaw, accFeesRaw, feeBpsRaw] = await Promise.all([
+          oracleContract.getCopraPriceUSD().catch(() => null),
+          tokenContract.totalSupply().catch(() => null),
+          usdcContract.balanceOf(CONTRACTS.vault).catch(() => null),
+          vaultContract.accumulatedFees().catch(() => null),
+          vaultContract.protocolFeeBps().catch(() => null)
+        ]);
+
+        if (oracleData) {
+          const [priceBn, updatedAtBn] = oracleData;
+          currentPriceRaw = BigInt(priceBn);
+          currentPriceUSD = Number(priceBn) / 1e8;
+          const updatedAtSec = Number(updatedAtBn);
+          document.getElementById('benchmarkHeader').textContent = `$${currentPriceUSD.toFixed(2)} USD / kg`;
+          document.getElementById('oracleDisplay').textContent = `$${currentPriceUSD.toFixed(2)} USD / kg`;
+          document.getElementById('metricOracleAge').textContent = `Updated ${formatAge(updatedAtSec)}`;
+          const dateStr = new Date(updatedAtSec * 1000).toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
+          document.getElementById('metricOracleUpdated').textContent = dateStr;
+        }
+
+        if (feeBpsRaw !== null) {
+          feeBps = BigInt(feeBpsRaw);
+          const bps = Number(feeBpsRaw);
+          const pct = (bps / 100).toFixed(2);
+          feeLabel.textContent = `Protocol Fee (${pct}%)`;
+          document.getElementById('metricFeeRate').textContent = `${pct}% (${bps} bps) Fee`;
+        }
+
+        if (totalSupplyRaw !== null) {
+          const supply = Number(totalSupplyRaw) / 1e18;
+          document.getElementById('metricTotalSupply').textContent = `${supply.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })} $COPRA`;
+        }
+
+        if (vaultUsdcRaw !== null) {
+          const reserves = Number(vaultUsdcRaw) / 1e6;
+          document.getElementById('metricVaultReserves').textContent = `$${reserves.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDC`;
+        }
+
+        if (accFeesRaw !== null) {
+          const fees = Number(accFeesRaw) / 1e6;
+          document.getElementById('metricAccumulatedFees').textContent = `$${fees.toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })} USDC`;
+        }
+
         calculate();
       } catch (e) {
-        console.warn('Could not read oracle price:', e);
+        console.warn('Could not read protocol telemetry:', e);
       }
     }
 
@@ -507,6 +700,9 @@
           tokenContract.balanceOf(userAddress)
         ]);
 
+        userUsdcBalanceRaw = usdcRaw;
+        userCopraBalanceRaw = copraRaw;
+
         usdcBalanceEl.textContent = (Number(usdcRaw) / 1e6).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         copraBalanceEl.textContent = (Number(copraRaw) / 1e18).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 });
       } catch (e) {
@@ -520,7 +716,7 @@
       try {
         const usdcContract = new ethers.Contract(CONTRACTS.usdc, ERC20_ABI, provider);
         const allowance = await usdcContract.allowance(userAddress, CONTRACTS.vault);
-        const amountUSDC = ethers.parseUnits((parseFloat(amountInput.value) || 0).toFixed(6), 6);
+        const amountUSDC = CopraQuote.parseUnits(amountInput.value, 6) ?? 0n;
 
         if (allowance < amountUSDC) {
           actionBtnText.textContent = 'Approve USDC';
@@ -542,7 +738,6 @@
       }
 
       actionBtn.disabled = true;
-      const originalText = actionBtnText.textContent;
       actionBtnText.textContent = 'Confirming in wallet...';
 
       try {
@@ -550,12 +745,20 @@
           const usdcContract = new ethers.Contract(CONTRACTS.usdc, ERC20_ABI, signer);
           const vaultContract = new ethers.Contract(CONTRACTS.vault, VAULT_ABI, signer);
 
-          // Calculate amount of COPRA to mint
-          const copraAmount = parseFloat(outputAmount.value);
-          const copraWei = ethers.parseUnits(copraAmount.toFixed(18), 18);
+          // Largest $COPRA amount whose collateral (fee included) fits inside the USDC entered
+          const copraWei = mintCopraWei();
+          if (copraWei <= 0n) {
+            showToast('Enter a valid USDC amount to mint.', 'warn');
+            return;
+          }
 
-          // Get exact quote from vault
+          // Get exact quote from vault — the oracle may have moved since the preview
           const [collateralRequired] = await vaultContract.quoteMint(copraWei);
+          const usdcBalance = await usdcContract.balanceOf(userAddress);
+          if (usdcBalance < collateralRequired) {
+            showToast(`Insufficient USDC: this mint needs ${CopraQuote.formatUnits(collateralRequired, 6)} USDC at the current oracle price.`, 'warn');
+            return;
+          }
           const allowance = await usdcContract.allowance(userAddress, CONTRACTS.vault);
 
           if (allowance < collateralRequired) {
@@ -574,13 +777,17 @@
           showToast(`Mint transaction broadcast! Waiting for confirmation...`, 'pending', mintTx.hash);
           await mintTx.wait(1);
 
-          showToast(`🎉 Successfully minted ${copraAmount.toFixed(4)} $COPRA!`, 'info', mintTx.hash);
+          showToast(`🎉 Successfully minted ${CopraQuote.formatUnits(copraWei, 18, 4)} $COPRA!`, 'info', mintTx.hash);
           await refreshBalances();
+          await readProtocolTelemetry();
         } else {
           // Redeem flow
           const vaultContract = new ethers.Contract(CONTRACTS.vault, VAULT_ABI, signer);
-          const copraAmount = parseFloat(amountInput.value);
-          const copraWei = ethers.parseUnits(copraAmount.toFixed(18), 18);
+          const copraWei = CopraQuote.parseUnits(amountInput.value, 18) ?? 0n;
+          if (copraWei <= 0n) {
+            showToast('Enter a valid $COPRA amount to redeem.', 'warn');
+            return;
+          }
 
           showToast('Redeeming $COPRA for USDC...', 'pending');
           const redeemTx = await vaultContract.redeem(copraWei);
@@ -589,13 +796,18 @@
 
           showToast(`🎉 Successfully redeemed for USDC!`, 'info', redeemTx.hash);
           await refreshBalances();
+          await readProtocolTelemetry();
         }
       } catch (err) {
         console.error('Transaction error:', err);
         showToast('Transaction error: ' + (err.shortMessage || err.message || 'Cancelled'), 'error');
       } finally {
         actionBtn.disabled = false;
-        checkAllowance();
+        if (mode === 'mint') {
+          checkAllowance();
+        } else {
+          actionBtnText.textContent = userAddress ? 'Redeem USDC' : 'Connect Wallet to Redeem';
+        }
       }
     });
 
@@ -630,8 +842,8 @@
 
     connectBtn.addEventListener('click', initWeb3);
 
-    // Initial load: read oracle price and perform initial calculation
-    readOraclePrice();
+    // Initial load: read protocol telemetry and perform initial calculation
+    readProtocolTelemetry();
     calculate();
 
     // Listen to account changes
@@ -640,12 +852,15 @@
         if (accounts.length > 0) {
           userAddress = accounts[0];
           connectText.textContent = `${userAddress.slice(0, 6)}...${userAddress.slice(-4)}`;
+          balanceBar.classList.remove('hidden');
+          maxBtn.classList.remove('hidden');
           refreshBalances();
           checkAllowance();
         } else {
           userAddress = null;
           connectText.textContent = 'Connect Wallet';
           balanceBar.classList.add('hidden');
+          maxBtn.classList.add('hidden');
         }
       });
       window.ethereum.on('chainChanged', () => window.location.reload());
