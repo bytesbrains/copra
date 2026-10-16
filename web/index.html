@@ -26,6 +26,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- ethers.js v6 for direct Web3 on-chain connectivity -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -49,80 +51,129 @@
       }
     }
   </script>
+  <style>
+    /* Dynamic theme variables */
+    :root {
+      --accent: #10b981;
+      --accent-hover: #059669;
+      --accent-bg: rgba(16, 185, 129, 0.1);
+      --accent-border: rgba(16, 185, 129, 0.3);
+      --accent-text: #34d399;
+    }
+    body.testnet-theme {
+      --accent: #f59e0b;
+      --accent-hover: #d97706;
+      --accent-bg: rgba(245, 158, 11, 0.12);
+      --accent-border: rgba(245, 158, 11, 0.35);
+      --accent-text: #fbbf24;
+    }
+    .theme-accent { color: var(--accent-text); }
+    .theme-accent-bg { background-color: var(--accent); }
+    .theme-accent-bg-subtle { background-color: var(--accent-bg); }
+    .theme-accent-border { border-color: var(--accent-border); }
+  </style>
 </head>
-<body class="bg-brand-dark text-slate-100 font-sans min-h-screen antialiased selection:bg-emerald-500 selection:text-black">
+<body id="bodyEl" class="bg-brand-dark text-slate-100 font-sans min-h-screen antialiased selection:bg-emerald-500 selection:text-black">
+
+  <!-- Persistent Testnet Notification Header Row -->
+  <aside id="testnetBar" class="hidden bg-gradient-to-r from-amber-950/90 via-amber-900/90 to-amber-950/90 border-b border-amber-500/30 text-amber-200 text-xs px-4 py-2 transition-all">
+    <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+      <div class="flex items-center space-x-2 text-center sm:text-left">
+        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 font-bold text-xs">⚠️</span>
+        <span class="font-medium">
+          <strong class="text-amber-300 font-bold">Base Sepolia Testnet Sandbox</strong> • Tokens have zero real-world value •
+          <a href="https://copra.dev" class="text-white underline hover:text-amber-200 ml-1 transition">Switch to Mainnet (copra.dev)</a>
+        </span>
+      </div>
+      <div class="flex items-center space-x-2">
+        <button id="faucetBtn" class="bg-amber-500 hover:bg-amber-400 text-black font-bold px-3 py-1 rounded text-xs transition flex items-center space-x-1 shadow-sm">
+          <span>💧 Claim 1,000 Testnet USDC</span>
+        </button>
+      </div>
+    </div>
+  </aside>
+
   <!-- Top Navigation -->
   <header class="border-b border-brand-border bg-brand-dark/80 backdrop-blur sticky top-0 z-50">
     <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
       <div class="flex items-center space-x-3">
-        <img src="/assets/copra_logo_64.png" alt="Copra Logo" class="w-8 h-8 rounded-full border border-emerald-500/30 object-cover shadow-sm">
-        <span class="text-lg tracking-tight"><span class="font-bold text-white">Copra</span><span class="text-emerald-400 font-medium">.dev</span></span>
-        <span class="text-xs font-mono bg-emerald-950 text-emerald-300 border border-emerald-800 px-2 py-0.5 rounded-full">Base L2</span>
+        <a href="/" class="flex items-center space-x-2.5">
+          <img src="/assets/copra_logo_64.png" alt="Copra Logo" class="w-8 h-8 rounded-full border border-emerald-500/30 object-cover shadow-sm">
+          <span class="text-lg tracking-tight"><span class="font-bold text-white">Copra</span><span id="logoSuffix" class="text-emerald-400 font-medium">.dev</span></span>
+        </a>
+        <span id="networkBadge" class="text-xs font-mono bg-emerald-950 text-emerald-300 border border-emerald-800 px-2 py-0.5 rounded-full">Base L2</span>
+        <span id="testnetBadge" class="hidden text-xs font-mono bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-bold animate-pulse">TESTNET</span>
       </div>
-      <div class="flex items-center space-x-4">
-        <div class="hidden sm:flex items-center text-xs font-mono text-slate-400 bg-brand-card border border-brand-border px-3 py-1.5 rounded-lg">
+      <div class="flex items-center space-x-3">
+        <div class="hidden md:flex items-center text-xs font-mono text-slate-400 bg-brand-card border border-brand-border px-3 py-1.5 rounded-lg">
           <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block mr-2 animate-pulse"></span>
-          Benchmark: $1.42 USD / kg Copra
+          Benchmark: <span id="benchmarkHeader" class="text-white ml-1 font-semibold">$1.42 USD / kg</span>
         </div>
-        <button id="connectBtn" class="bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-xs px-4 py-2 rounded-lg transition">
-          Connect Wallet
+        <button id="connectBtn" class="bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-xs px-4 py-2 rounded-lg transition flex items-center space-x-1.5">
+          <span id="connectText">Connect Wallet</span>
         </button>
       </div>
     </div>
   </header>
 
   <!-- Hero Section -->
-  <main class="max-w-6xl mx-auto px-6 py-16">
-    <div class="text-center max-w-3xl mx-auto mb-16">
+  <main class="max-w-6xl mx-auto px-6 py-12">
+    <div class="text-center max-w-3xl mx-auto mb-12">
       <div class="flex justify-center mb-6">
         <div class="relative">
-          <div class="absolute -inset-1 rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 opacity-25 blur-lg"></div>
+          <div id="heroGlow" class="absolute -inset-1 rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 opacity-25 blur-lg"></div>
           <img src="/assets/copra_logo_128.png" alt="Copra Protocol" class="relative w-20 h-20 rounded-full border border-emerald-500/40 object-cover shadow-2xl">
         </div>
       </div>
-      <div class="inline-flex items-center space-x-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs px-3 py-1 rounded-full mb-6 font-mono">
+      <div id="heroTag" class="inline-flex items-center space-x-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs px-3 py-1 rounded-full mb-6 font-mono">
         <span>Autonomous RWA Commodity Protocol</span>
       </div>
       <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight text-white mb-6 leading-tight">
-        The Global Coconut <br/><span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">Commodity Currency</span>
+        The Global Coconut <br/><span id="heroGradientText" class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">Commodity Currency</span>
       </h1>
       <p class="text-slate-400 text-base sm:text-lg leading-relaxed">
-        <strong class="text-white">$COPRA</strong> is an autonomous, ownerless cryptocurrency pegged to the international benchmark value of copra—the dried meat driving the global coconut economy.
+        <strong class="text-white">$COPRA</strong> is an autonomous, ownerless cryptocurrency pegged to the international benchmark value of copra—the dried coconut meat driving a multi-billion dollar real-world trade.
       </p>
     </div>
 
     <!-- Mint & Redeem Card -->
-    <div class="max-w-md mx-auto bg-brand-card border border-brand-border rounded-2xl p-6 shadow-2xl mb-20">
+    <div class="max-w-md mx-auto bg-brand-card border border-brand-border rounded-2xl p-6 shadow-2xl mb-16 relative">
+      <!-- User Balance Bar (Visible when connected) -->
+      <div id="balanceBar" class="hidden mb-4 p-2.5 rounded-xl bg-brand-dark border border-brand-border text-xs font-mono flex justify-between text-slate-400">
+        <div>USDC: <span id="usdcBalance" class="text-white font-bold">0.00</span></div>
+        <div>$COPRA: <span id="copraBalance" class="text-emerald-400 font-bold">0.00</span></div>
+      </div>
+
       <div class="flex rounded-lg bg-brand-dark p-1 mb-6 border border-brand-border text-xs font-semibold">
         <button id="tabMint" class="flex-1 py-2 rounded-md bg-emerald-500 text-black transition">Mint $COPRA</button>
         <button id="tabRedeem" class="flex-1 py-2 rounded-md text-slate-400 hover:text-white transition">Redeem USDC</button>
       </div>
 
-      <!-- Action Panel -->
       <div class="space-y-4">
+        <!-- Input Box -->
         <div>
-          <div class="flex justify-between text-xs text-slate-400 mb-1.5 font-medium">
-            <span id="inputLabel">You Pay (USDC)</span>
-            <span>Balance: <span id="userBalance">100.00</span></span>
-          </div>
-          <div class="relative">
-            <input type="number" id="amountInput" value="14.20" class="w-full bg-brand-dark border border-brand-border rounded-xl px-4 py-3 text-lg font-mono focus:outline-none focus:border-emerald-500 text-white" placeholder="0.0">
-            <div class="absolute right-3 top-3.5 text-xs font-mono font-bold text-slate-400" id="inputTicker">USDC</div>
+          <label id="inputLabel" class="block text-xs font-mono text-slate-400 mb-1">You Pay (USDC)</label>
+          <div class="flex items-center bg-brand-dark border border-brand-border rounded-xl px-4 py-3 focus-within:border-emerald-500 transition">
+            <input id="amountInput" type="number" step="any" value="14.20" class="bg-transparent text-xl font-bold text-white focus:outline-none w-full font-mono">
+            <div id="inputTicker" class="flex items-center space-x-1.5 text-xs font-bold text-slate-300 bg-brand-card px-2.5 py-1 rounded-md border border-brand-border">
+              <span>USDC</span>
+            </div>
           </div>
         </div>
 
-        <div class="flex justify-center -my-1 text-slate-500">
-          ↓
+        <!-- Exchange Icon -->
+        <div class="flex justify-center -my-2">
+          <div id="swapIcon" class="w-8 h-8 rounded-full bg-brand-dark border border-brand-border flex items-center justify-center text-slate-400 text-xs">
+            ↓
+          </div>
         </div>
 
+        <!-- Output Box -->
         <div>
-          <div class="flex justify-between text-xs text-slate-400 mb-1.5 font-medium">
-            <span id="outputLabel">You Receive ($COPRA)</span>
-            <span>1 COPRA = $1.42 USD</span>
-          </div>
-          <div class="relative">
-            <input type="number" id="outputAmount" value="10.0" readonly class="w-full bg-brand-dark/50 border border-brand-border/60 rounded-xl px-4 py-3 text-lg font-mono text-emerald-400 font-bold focus:outline-none" placeholder="0.0">
-            <div class="absolute right-3 top-3.5 flex items-center space-x-1.5 text-xs font-mono font-bold text-emerald-400" id="outputTicker">
+          <label id="outputLabel" class="block text-xs font-mono text-slate-400 mb-1">You Receive ($COPRA)</label>
+          <div class="flex items-center bg-brand-dark border border-brand-border rounded-xl px-4 py-3">
+            <input id="outputAmount" type="text" readonly value="9.9750" class="bg-transparent text-xl font-bold text-slate-300 focus:outline-none w-full font-mono">
+            <div id="outputTicker" class="flex items-center space-x-1.5 text-xs font-bold text-white bg-brand-card px-2.5 py-1 rounded-md border border-brand-border">
               <img src="/assets/copra_logo_32.png" alt="Copra" class="w-4 h-4 rounded-full">
               <span>COPRA</span>
             </div>
@@ -133,7 +184,7 @@
         <div class="bg-brand-dark rounded-xl p-3 border border-brand-border text-xs font-mono space-y-1.5 text-slate-400">
           <div class="flex justify-between">
             <span>Commodity Benchmark</span>
-            <span class="text-white">$1.42 USD / kg</span>
+            <span class="text-white" id="oracleDisplay">$1.42 USD / kg</span>
           </div>
           <div class="flex justify-between">
             <span>Protocol Fee (0.25%)</span>
@@ -141,25 +192,28 @@
           </div>
           <div class="flex justify-between">
             <span>Collateral Reserve Ratio</span>
-            <span class="text-emerald-400 font-bold">100% Backed</span>
+            <span id="reserveDisplay" class="text-emerald-400 font-bold">100% Backed</span>
           </div>
         </div>
 
-        <button id="actionBtn" class="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-3 rounded-xl transition text-sm">
-          Mint $COPRA
+        <!-- Transaction Notification Status Toast -->
+        <div id="txStatus" class="hidden rounded-xl p-3 text-xs font-mono border"></div>
+
+        <button id="actionBtn" class="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-3.5 rounded-xl transition text-sm flex items-center justify-center space-x-2">
+          <span id="actionBtnText">Mint $COPRA</span>
         </button>
       </div>
     </div>
 
     <!-- 3 Pillars Grid -->
-    <div class="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+    <div class="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-16">
       <div class="bg-brand-card border border-brand-border rounded-2xl p-6">
         <div class="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold mb-4">
           🌴
         </div>
         <h3 class="font-bold text-white mb-2 text-base">Biological Cash Flow</h3>
-        <p class="text-slate-400 text-xs leading-relaxed">
-          The coconut palm is a 60-year perennial annuity harvested every 45 days. 100% of physical production yields are mapped to benchmark pricing.
+        <p class="text-slate-400 text-sm leading-relaxed">
+          Backed by the relentless photosynthetic compounding of coconut trees yielding copra crops every 30 to 45 days.
         </p>
       </div>
 
@@ -167,34 +221,134 @@
         <div class="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold mb-4">
           ⚖️
         </div>
-        <h3 class="font-bold text-white mb-2 text-base">Hard Peg Arbitrage</h3>
-        <p class="text-slate-400 text-xs leading-relaxed">
-          Anyone can burn 1 $COPRA at any time to claim 100% of its commodity dollar value from the vault. Hard mathematical floor, zero liquidations.
+        <h3 class="font-bold text-white mb-2 text-base">100% Reserve Backing</h3>
+        <p class="text-slate-400 text-sm leading-relaxed">
+          Every token is minted with full stable collateral. Redeemable permissionlessly at the benchmark price on Base.
         </p>
       </div>
 
       <div class="bg-brand-card border border-brand-border rounded-2xl p-6">
         <div class="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold mb-4">
-          🔒
+          🛡️
         </div>
-        <h3 class="font-bold text-white mb-2 text-base">Zero Governance</h3>
-        <p class="text-slate-400 text-xs leading-relaxed">
-          Immutable smart contracts deployed on Base. No admin keys, no pause switches, and no DAO politics. Code is law.
+        <h3 class="font-bold text-white mb-2 text-base">Sovereign & Autonomous</h3>
+        <p class="text-slate-400 text-sm leading-relaxed">
+          No owner, no governance token, no administrative seizure. A mathematically pure DeFi commodity standard.
         </p>
+      </div>
+    </div>
+
+    <!-- On-Chain Contract Registry Table -->
+    <div class="max-w-5xl mx-auto bg-brand-card border border-brand-border rounded-2xl p-6 text-xs font-mono">
+      <div class="flex items-center justify-between mb-4 border-b border-brand-border pb-3">
+        <span class="text-sm font-bold text-white uppercase tracking-wider">Base Sepolia Contract Registry</span>
+        <span class="text-emerald-400 font-bold flex items-center space-x-1">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-ping"></span>
+          <span>Chain ID: 84532</span>
+        </span>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div class="bg-brand-dark p-3 rounded-lg border border-brand-border flex justify-between items-center">
+          <div>
+            <div class="text-slate-400 text-[10px]">CopraVault (PSM & Reserves)</div>
+            <a href="https://sepolia.basescan.org/address/0x6F8d4948B4be558fc0db547F837a86CE2d88c01b" target="_blank" class="text-emerald-400 hover:underline">0x6F8d...C01b</a>
+          </div>
+          <span class="text-[10px] text-slate-500 bg-brand-card px-2 py-0.5 rounded border border-brand-border">0.25% Fee</span>
+        </div>
+        <div class="bg-brand-dark p-3 rounded-lg border border-brand-border flex justify-between items-center">
+          <div>
+            <div class="text-slate-400 text-[10px]">CopraToken ($COPRA ERC-20)</div>
+            <a href="https://sepolia.basescan.org/address/0xcAdd63DFd49bC1383aA35ace7fa72aba43283a81" target="_blank" class="text-emerald-400 hover:underline">0xcAdd...3a81</a>
+          </div>
+          <span class="text-[10px] text-slate-500 bg-brand-card px-2 py-0.5 rounded border border-brand-border">18 Decimals</span>
+        </div>
+        <div class="bg-brand-dark p-3 rounded-lg border border-brand-border flex justify-between items-center">
+          <div>
+            <div class="text-slate-400 text-[10px]">CopraOracle (Commodity Feed)</div>
+            <a href="https://sepolia.basescan.org/address/0x7Fe0746161eb2e91fB13470fbBca15d4cC0EF522" target="_blank" class="text-emerald-400 hover:underline">0x7Fe0...15d4</a>
+          </div>
+          <span class="text-[10px] text-slate-500 bg-brand-card px-2 py-0.5 rounded border border-brand-border">8 Decimals</span>
+        </div>
+        <div class="bg-brand-dark p-3 rounded-lg border border-brand-border flex justify-between items-center">
+          <div>
+            <div class="text-slate-400 text-[10px]">TestnetUSDC (Collateral + Faucet)</div>
+            <a href="https://sepolia.basescan.org/address/0x1b8a3536F8826Db6Bacbab452366cC75c960E738" target="_blank" class="text-emerald-400 hover:underline">0x1b8a...E738</a>
+          </div>
+          <span class="text-[10px] text-slate-500 bg-brand-card px-2 py-0.5 rounded border border-brand-border">6 Decimals</span>
+        </div>
       </div>
     </div>
   </main>
 
   <!-- Footer -->
   <footer class="border-t border-brand-border py-8 text-center text-xs text-slate-500 font-mono">
-    <p>Copra Protocol • <a href="https://copra.dev" class="text-emerald-400 hover:underline">copra.dev</a> • Autonomous Commodity RWA</p>
+    <p>Copra Protocol • <a href="https://copra.dev" class="text-emerald-400 hover:underline">copra.dev</a> • <a href="https://testnet.copra.dev" class="text-amber-400 hover:underline">testnet.copra.dev</a> • Autonomous Commodity RWA</p>
   </footer>
 
   <script>
-    const PRICE = 1.42;
-    const FEE_BPS = 0.0025;
-    let mode = 'mint';
+    // --- Environment & Dynamic Theme Engine ---
+    const hostname = window.location.hostname;
+    const isTestnet = hostname.includes('testnet') || hostname.includes('localhost') || hostname.includes('127.0.0.1') || window.location.search.includes('testnet');
 
+    // On-Chain Base Sepolia Contract Addresses
+    const CONTRACTS = {
+      chainId: 84532,
+      chainIdHex: '0x14a34',
+      chainName: 'Base Sepolia',
+      rpcUrl: 'https://base-sepolia-rpc.publicnode.com',
+      explorer: 'https://sepolia.basescan.org',
+      usdc: '0x1b8a3536F8826Db6Bacbab452366cC75c960E738',
+      oracle: '0x7Fe0746161eb2e91fB13470fbBca15d4cC0EF522',
+      vault: '0x6F8d4948B4be558fc0db547F837a86CE2d88c01b',
+      token: '0xcAdd63DFd49bC1383aA35ace7fa72aba43283a81'
+    };
+
+    // Contract ABIs
+    const ERC20_ABI = [
+      "function balanceOf(address owner) view returns (uint256)",
+      "function allowance(address owner, address spender) view returns (uint256)",
+      "function approve(address spender, uint256 amount) returns (bool)",
+      "function faucet(address to, uint256 amount) external"
+    ];
+
+    const ORACLE_ABI = [
+      "function getCopraPriceUSD() view returns (uint256 price, uint256 timestamp)"
+    ];
+
+    const VAULT_ABI = [
+      "function quoteMint(uint256 copraAmount) view returns (uint256 collateralRequired, uint256 fee)",
+      "function quoteRedeem(uint256 copraAmount) view returns (uint256 collateralToReturn, uint256 fee)",
+      "function mint(uint256 copraAmount) external",
+      "function redeem(uint256 copraAmount) external",
+      "function protocolFeeBps() view returns (uint256)"
+    ];
+
+    // --- State Variables ---
+    let currentPriceUSD = 1.42;
+    let feeRate = 0.0025; // 0.25%
+    let mode = 'mint';
+    let userAddress = null;
+    let provider = null;
+    let signer = null;
+
+    // --- Apply Theme & Hostname Adaptations ---
+    if (isTestnet) {
+      document.getElementById('bodyEl').classList.add('testnet-theme');
+      document.getElementById('testnetBar').classList.remove('hidden');
+      document.getElementById('testnetBadge').classList.remove('hidden');
+      document.getElementById('networkBadge').textContent = 'Base Sepolia';
+      document.getElementById('networkBadge').className = 'text-xs font-mono bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full';
+      document.getElementById('logoSuffix').className = 'text-amber-400 font-medium';
+      document.getElementById('heroGlow').className = 'absolute -inset-1 rounded-full bg-gradient-to-r from-amber-500 to-orange-400 opacity-25 blur-lg';
+      document.getElementById('heroTag').className = 'inline-flex items-center space-x-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs px-3 py-1 rounded-full mb-6 font-mono';
+      document.getElementById('heroGradientText').className = 'text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-300';
+      document.getElementById('tabMint').className = 'flex-1 py-2 rounded-md bg-amber-500 text-black transition font-bold';
+      document.getElementById('actionBtn').className = 'w-full bg-amber-500 hover:bg-amber-400 text-black font-bold py-3.5 rounded-xl transition text-sm flex items-center justify-center space-x-2';
+      document.getElementById('reserveDisplay').className = 'text-amber-400 font-bold';
+      document.getElementById('connectBtn').className = 'bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs px-4 py-2 rounded-lg transition flex items-center space-x-1.5';
+    }
+
+    // --- DOM Elements ---
     const tabMint = document.getElementById('tabMint');
     const tabRedeem = document.getElementById('tabRedeem');
     const inputLabel = document.getElementById('inputLabel');
@@ -205,54 +359,297 @@
     const outputAmount = document.getElementById('outputAmount');
     const feeDisplay = document.getElementById('feeDisplay');
     const actionBtn = document.getElementById('actionBtn');
+    const actionBtnText = document.getElementById('actionBtnText');
+    const connectBtn = document.getElementById('connectBtn');
+    const connectText = document.getElementById('connectText');
+    const balanceBar = document.getElementById('balanceBar');
+    const usdcBalanceEl = document.getElementById('usdcBalance');
+    const copraBalanceEl = document.getElementById('copraBalance');
+    const txStatus = document.getElementById('txStatus');
+    const faucetBtn = document.getElementById('faucetBtn');
 
+    // --- Price & Calculation Engine ---
     function calculate() {
       const val = parseFloat(amountInput.value) || 0;
       if (mode === 'mint') {
-        const copra = val / (PRICE * (1 + FEE_BPS));
+        const copra = val / (currentPriceUSD * (1 + feeRate));
         outputAmount.value = copra.toFixed(4);
-        feeDisplay.textContent = '$' + (val * FEE_BPS).toFixed(4) + ' USDC';
+        feeDisplay.textContent = '$' + (val * feeRate).toFixed(4) + ' USDC';
       } else {
-        const usdc = (val * PRICE) * (1 - FEE_BPS);
+        const usdc = (val * currentPriceUSD) * (1 - feeRate);
         outputAmount.value = usdc.toFixed(4);
-        feeDisplay.textContent = '$' + (val * PRICE * FEE_BPS).toFixed(4) + ' USDC';
+        feeDisplay.textContent = '$' + (val * currentPriceUSD * feeRate).toFixed(4) + ' USDC';
       }
     }
 
     amountInput.addEventListener('input', calculate);
 
-    tabMint.addEventListener('click', () => {
-      mode = 'mint';
-      tabMint.className = 'flex-1 py-2 rounded-md bg-emerald-500 text-black transition font-semibold';
-      tabRedeem.className = 'flex-1 py-2 rounded-md text-slate-400 hover:text-white transition';
-      inputLabel.textContent = 'You Pay (USDC)';
-      outputLabel.textContent = 'You Receive ($COPRA)';
-      inputTicker.innerHTML = '<span>USDC</span>';
-      outputTicker.innerHTML = '<img src="/assets/copra_logo_32.png" alt="Copra" class="w-4 h-4 rounded-full"><span>COPRA</span>';
-      amountInput.value = '14.20';
-      actionBtn.textContent = 'Mint $COPRA';
+    function setTabStyles() {
+      const activeClass = isTestnet
+        ? 'flex-1 py-2 rounded-md bg-amber-500 text-black transition font-bold'
+        : 'flex-1 py-2 rounded-md bg-emerald-500 text-black transition font-bold';
+      const inactiveClass = 'flex-1 py-2 rounded-md text-slate-400 hover:text-white transition';
+
+      if (mode === 'mint') {
+        tabMint.className = activeClass;
+        tabRedeem.className = inactiveClass;
+        inputLabel.textContent = 'You Pay (USDC)';
+        outputLabel.textContent = 'You Receive ($COPRA)';
+        inputTicker.innerHTML = '<span>USDC</span>';
+        outputTicker.innerHTML = '<img src="/assets/copra_logo_32.png" alt="Copra" class="w-4 h-4 rounded-full"><span>COPRA</span>';
+        amountInput.value = '14.20';
+        actionBtnText.textContent = userAddress ? 'Mint $COPRA' : 'Connect Wallet to Mint';
+      } else {
+        tabRedeem.className = activeClass;
+        tabMint.className = inactiveClass;
+        inputLabel.textContent = 'You Burn ($COPRA)';
+        outputLabel.textContent = 'You Receive (USDC)';
+        inputTicker.innerHTML = '<img src="/assets/copra_logo_32.png" alt="Copra" class="w-4 h-4 rounded-full"><span>COPRA</span>';
+        outputTicker.innerHTML = '<span>USDC</span>';
+        amountInput.value = '10.00';
+        actionBtnText.textContent = userAddress ? 'Redeem USDC' : 'Connect Wallet to Redeem';
+      }
       calculate();
+    }
+
+    tabMint.addEventListener('click', () => { mode = 'mint'; setTabStyles(); checkAllowance(); });
+    tabRedeem.addEventListener('click', () => { mode = 'redeem'; setTabStyles(); });
+
+    // --- Toast / Notification Helper ---
+    function showToast(msg, type = 'info', txHash = null) {
+      txStatus.classList.remove('hidden', 'bg-emerald-500/10', 'border-emerald-500/30', 'text-emerald-300', 'bg-amber-500/10', 'border-amber-500/30', 'text-amber-300', 'bg-red-500/10', 'border-red-500/30', 'text-red-300');
+      let colorClass = 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300';
+      if (type === 'warn' || type === 'pending') colorClass = 'bg-amber-500/10 border-amber-500/30 text-amber-300';
+      if (type === 'error') colorClass = 'bg-red-500/10 border-red-500/30 text-red-300';
+      txStatus.className = 'rounded-xl p-3 text-xs font-mono border ' + colorClass;
+
+      let html = `<div>${msg}</div>`;
+      if (txHash) {
+        html += `<a href="${CONTRACTS.explorer}/tx/${txHash}" target="_blank" class="underline mt-1 inline-block text-[11px] font-bold">View on Basescan ↗</a>`;
+      }
+      txStatus.innerHTML = html;
+    }
+
+    // --- Web3 Blockchain Connection & Interactivity ---
+    async function initWeb3() {
+      if (typeof window.ethereum === 'undefined') {
+        alert('Please install MetaMask, Coinbase Wallet, or Rabby to interact with Copra Protocol on Base Sepolia.');
+        return;
+      }
+
+      try {
+        provider = new ethers.BrowserProvider(window.ethereum);
+        const accounts = await provider.send("eth_requestAccounts", []);
+        userAddress = accounts[0];
+        signer = await provider.getSigner();
+
+        // Check & enforce network
+        const network = await provider.getNetwork();
+        if (Number(network.chainId) !== CONTRACTS.chainId) {
+          try {
+            await window.ethereum.request({
+              method: 'wallet_switchEthereumChain',
+              params: [{ chainId: CONTRACTS.chainIdHex }]
+            });
+          } catch (switchError) {
+            if (switchError.code === 4902) {
+              await window.ethereum.request({
+                method: 'wallet_addEthereumChain',
+                params: [{
+                  chainId: CONTRACTS.chainIdHex,
+                  chainName: CONTRACTS.chainName,
+                  nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+                  rpcUrls: [CONTRACTS.rpcUrl],
+                  blockExplorerUrls: [CONTRACTS.explorer]
+                }]
+              });
+            } else {
+              throw switchError;
+            }
+          }
+        }
+
+        connectText.textContent = `${userAddress.slice(0, 6)}...${userAddress.slice(-4)}`;
+        balanceBar.classList.remove('hidden');
+        await refreshBalances();
+        await readOraclePrice();
+        await checkAllowance();
+      } catch (err) {
+        console.error('Wallet error:', err);
+        showToast('Wallet error: ' + (err.shortMessage || err.message), 'error');
+      }
+    }
+
+    // Read live price from CopraOracle
+    async function readOraclePrice() {
+      try {
+        const readProvider = provider || new ethers.JsonRpcProvider(CONTRACTS.rpcUrl);
+        const oracleContract = new ethers.Contract(CONTRACTS.oracle, ORACLE_ABI, readProvider);
+        const [priceBn] = await oracleContract.getCopraPriceUSD();
+        currentPriceUSD = Number(priceBn) / 1e8;
+        document.getElementById('benchmarkHeader').textContent = `$${currentPriceUSD.toFixed(2)} USD / kg`;
+        document.getElementById('oracleDisplay').textContent = `$${currentPriceUSD.toFixed(2)} USD / kg`;
+        calculate();
+      } catch (e) {
+        console.warn('Could not read oracle price:', e);
+      }
+    }
+
+    // Refresh User Balances
+    async function refreshBalances() {
+      if (!userAddress || !provider) return;
+      try {
+        const usdcContract = new ethers.Contract(CONTRACTS.usdc, ERC20_ABI, provider);
+        const tokenContract = new ethers.Contract(CONTRACTS.token, ERC20_ABI, provider);
+
+        const [usdcRaw, copraRaw] = await Promise.all([
+          usdcContract.balanceOf(userAddress),
+          tokenContract.balanceOf(userAddress)
+        ]);
+
+        usdcBalanceEl.textContent = (Number(usdcRaw) / 1e6).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        copraBalanceEl.textContent = (Number(copraRaw) / 1e18).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+      } catch (e) {
+        console.warn('Balance refresh error:', e);
+      }
+    }
+
+    // Check USDC allowance for Vault
+    async function checkAllowance() {
+      if (!userAddress || !provider || mode !== 'mint') return;
+      try {
+        const usdcContract = new ethers.Contract(CONTRACTS.usdc, ERC20_ABI, provider);
+        const allowance = await usdcContract.allowance(userAddress, CONTRACTS.vault);
+        const amountUSDC = ethers.parseUnits((parseFloat(amountInput.value) || 0).toFixed(6), 6);
+
+        if (allowance < amountUSDC) {
+          actionBtnText.textContent = 'Approve USDC';
+        } else {
+          actionBtnText.textContent = 'Mint $COPRA';
+        }
+      } catch (e) {
+        console.warn('Allowance check error:', e);
+      }
+    }
+
+    amountInput.addEventListener('input', checkAllowance);
+
+    // --- Action Button Click Handler (Approve / Mint / Redeem) ---
+    actionBtn.addEventListener('click', async () => {
+      if (!userAddress || !signer) {
+        await initWeb3();
+        return;
+      }
+
+      actionBtn.disabled = true;
+      const originalText = actionBtnText.textContent;
+      actionBtnText.textContent = 'Confirming in wallet...';
+
+      try {
+        if (mode === 'mint') {
+          const usdcContract = new ethers.Contract(CONTRACTS.usdc, ERC20_ABI, signer);
+          const vaultContract = new ethers.Contract(CONTRACTS.vault, VAULT_ABI, signer);
+
+          // Calculate amount of COPRA to mint
+          const copraAmount = parseFloat(outputAmount.value);
+          const copraWei = ethers.parseUnits(copraAmount.toFixed(18), 18);
+
+          // Get exact quote from vault
+          const [collateralRequired] = await vaultContract.quoteMint(copraWei);
+          const allowance = await usdcContract.allowance(userAddress, CONTRACTS.vault);
+
+          if (allowance < collateralRequired) {
+            showToast('Requesting USDC approval...', 'pending');
+            const appTx = await usdcContract.approve(CONTRACTS.vault, ethers.MaxUint256);
+            showToast(`Approval submitted. Waiting for confirmation...`, 'pending', appTx.hash);
+            await appTx.wait(1);
+            showToast('USDC approved! Now click Mint $COPRA.', 'info');
+            actionBtnText.textContent = 'Mint $COPRA';
+            actionBtn.disabled = false;
+            return;
+          }
+
+          showToast('Minting $COPRA on Base Sepolia...', 'pending');
+          const mintTx = await vaultContract.mint(copraWei);
+          showToast(`Mint transaction broadcast! Waiting for confirmation...`, 'pending', mintTx.hash);
+          await mintTx.wait(1);
+
+          showToast(`🎉 Successfully minted ${copraAmount.toFixed(4)} $COPRA!`, 'info', mintTx.hash);
+          await refreshBalances();
+        } else {
+          // Redeem flow
+          const vaultContract = new ethers.Contract(CONTRACTS.vault, VAULT_ABI, signer);
+          const copraAmount = parseFloat(amountInput.value);
+          const copraWei = ethers.parseUnits(copraAmount.toFixed(18), 18);
+
+          showToast('Redeeming $COPRA for USDC...', 'pending');
+          const redeemTx = await vaultContract.redeem(copraWei);
+          showToast(`Redemption broadcast! Waiting for confirmation...`, 'pending', redeemTx.hash);
+          await redeemTx.wait(1);
+
+          showToast(`🎉 Successfully redeemed for USDC!`, 'info', redeemTx.hash);
+          await refreshBalances();
+        }
+      } catch (err) {
+        console.error('Transaction error:', err);
+        showToast('Transaction error: ' + (err.shortMessage || err.message || 'Cancelled'), 'error');
+      } finally {
+        actionBtn.disabled = false;
+        checkAllowance();
+      }
     });
 
-    tabRedeem.addEventListener('click', () => {
-      mode = 'redeem';
-      tabRedeem.className = 'flex-1 py-2 rounded-md bg-emerald-500 text-black transition font-semibold';
-      tabMint.className = 'flex-1 py-2 rounded-md text-slate-400 hover:text-white transition';
-      inputLabel.textContent = 'You Burn ($COPRA)';
-      outputLabel.textContent = 'You Receive (USDC)';
-      inputTicker.innerHTML = '<img src="/assets/copra_logo_32.png" alt="Copra" class="w-4 h-4 rounded-full"><span>COPRA</span>';
-      outputTicker.innerHTML = '<span>USDC</span>';
-      amountInput.value = '10.00';
-      actionBtn.textContent = 'Redeem USDC';
-      calculate();
+    // --- Testnet Faucet Handler ---
+    faucetBtn.addEventListener('click', async () => {
+      if (!userAddress || !signer) {
+        await initWeb3();
+        if (!userAddress) return;
+      }
+
+      faucetBtn.disabled = true;
+      const originalText = faucetBtn.innerHTML;
+      faucetBtn.innerHTML = '<span>⏳ Claiming...</span>';
+
+      try {
+        const usdcContract = new ethers.Contract(CONTRACTS.usdc, ERC20_ABI, signer);
+        showToast('Claiming 1,000 Testnet USDC from faucet...', 'pending');
+        const tx = await usdcContract.faucet(userAddress, ethers.parseUnits("1000", 6));
+        showToast(`Faucet claim broadcast! Waiting for confirmation...`, 'pending', tx.hash);
+        await tx.wait(1);
+        showToast('💧 1,000 Testnet USDC successfully claimed into your wallet!', 'info', tx.hash);
+        await refreshBalances();
+        checkAllowance();
+      } catch (err) {
+        console.error('Faucet error:', err);
+        showToast('Faucet error: ' + (err.shortMessage || err.message), 'error');
+      } finally {
+        faucetBtn.disabled = false;
+        faucetBtn.innerHTML = originalText;
+      }
     });
 
-    document.getElementById('connectBtn').addEventListener('click', () => {
-      alert('Wallet connection ready for Base network deployment!');
-    });
-    actionBtn.addEventListener('click', () => {
-      alert(`Ready to execute ${mode.toUpperCase()} on CopraVault contract!`);
-    });
+    connectBtn.addEventListener('click', initWeb3);
+
+    // Initial load: read oracle price and perform initial calculation
+    readOraclePrice();
+    calculate();
+
+    // Listen to account changes
+    if (window.ethereum) {
+      window.ethereum.on('accountsChanged', (accounts) => {
+        if (accounts.length > 0) {
+          userAddress = accounts[0];
+          connectText.textContent = `${userAddress.slice(0, 6)}...${userAddress.slice(-4)}`;
+          refreshBalances();
+          checkAllowance();
+        } else {
+          userAddress = null;
+          connectText.textContent = 'Connect Wallet';
+          balanceBar.classList.add('hidden');
+        }
+      });
+      window.ethereum.on('chainChanged', () => window.location.reload());
+    }
   </script>
 </body>
 </html>
