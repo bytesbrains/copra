@@ -1,0 +1,222 @@
+name: Release & Testnet Deployment
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      target_environment:
+        description: 'Target deployment mode (dry-run simulation or live base-sepolia broadcast)'
+        required: true
+        default: 'dry-run'
+        type: choice
+        options:
+          - dry-run
+          - base-sepolia
+      verify_contracts:
+        description: 'Verify contracts on Basescan when broadcasting to base-sepolia'
+        required: false
+        default: true
+        type: boolean
+
+concurrency:
+  group: release-deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  validate-and-simulate:
+    name: Validate, Test & Simulate Deployment
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@908c540300062bd5a7e473851cdb4282204cee09 # v1
+
+      - name: Check formatting & compile contracts
+        run: |
+          forge fmt --check
+          forge build --sizes
+
+      - name: Run full test suite
+        run: forge test -vvv
+
+      - name: Dry-run fork simulation against Base Sepolia
+        env:
+          BASE_SEPOLIA_RPC: ${{ secrets.BASE_SEPOLIA_RPC || 'https://base-sepolia-rpc.publicnode.com' }}
+          PRIVATE_KEY: ${{ secrets.DEPLOYER_PRIVATE_KEY || '1' }}
+        run: |
+          forge script script/DeployCopra.s.sol:DeployCopra --rpc-url "$BASE_SEPOLIA_RPC"
+
+  deploy-base-sepolia:
+    name: Deploy to Base Sepolia Testnet
+    needs: validate-and-simulate
+    if: >-
+      startsWith(github.ref, 'refs/tags/v') && (
+        (github.event_name == 'workflow_dispatch' && github.event.inputs.target_environment == 'base-sepolia') ||
+        (contains(github.ref_name, '-testnet') && vars.AUTO_DEPLOY_TESTNET == 'true')
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: base-sepolia
+      url: https://copra.dev
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@908c540300062bd5a7e473851cdb4282204cee09 # v1
+
+      - name: Broadcast deployment to Base Sepolia
+        env:
+          BASE_SEPOLIA_RPC: ${{ secrets.BASE_SEPOLIA_RPC || 'https://base-sepolia-rpc.publicnode.com' }}
+          PRIVATE_KEY: ${{ secrets.DEPLOYER_PRIVATE_KEY }}
+          BASESCAN_API_KEY: ${{ secrets.BASESCAN_API_KEY }}
+          VERIFY_CONTRACTS: ${{ github.event.inputs.verify_contracts || 'false' }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${PRIVATE_KEY:-}" ]]; then
+            echo "❌ Error: DEPLOYER_PRIVATE_KEY must be configured in the base-sepolia environment or repository secrets."
+            exit 1
+          fi
+
+          VERIFY_ARGS=()
+          if [[ "${VERIFY_CONTRACTS}" == "true" && -n "${BASESCAN_API_KEY:-}" ]]; then
+            VERIFY_ARGS=(--verify --etherscan-api-key "$BASESCAN_API_KEY")
+          fi
+
+          forge script script/DeployCopra.s.sol:DeployCopra \
+            --rpc-url "$BASE_SEPOLIA_RPC" \
+            --broadcast \
+            "${VERIFY_ARGS[@]}"
+
+          echo "### 🚀 Base Sepolia Broadcast Complete" >> "$GITHUB_STEP_SUMMARY"
+          if [[ -f broadcast/DeployCopra.s.sol/84532/run-latest.json ]]; then
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Contract | Deployed Address |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| :--- | :--- |" >> "$GITHUB_STEP_SUMMARY"
+            jq -r '.transactions[] | select(.transactionType == "CREATE") | "| **\(.contractName)** | `\(.contractAddress)` |"' \
+              broadcast/DeployCopra.s.sol/84532/run-latest.json >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  publish-github-release:
+    name: Publish GitHub Release & Artifacts
+    needs: validate-and-simulate
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@908c540300062bd5a7e473851cdb4282204cee09 # v1
+
+      - name: Package ABIs, Deployment Manifest & Publish Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! "${RELEASE_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
+            echo "❌ Error: Invalid semantic version tag '${RELEASE_TAG}'."
+            exit 1
+          fi
+
+          forge build
+
+          DIST_DIR="dist-artifacts"
+          mkdir -p "${DIST_DIR}"
+
+          for contract in CopraToken CopraVault CopraOracle TestnetUSDC; do
+            jq '.abi' "out/${contract}.sol/${contract}.json" > "${DIST_DIR}/${contract}.abi.json"
+            jq '{abi: .abi, bytecode: .bytecode.object, deployedBytecode: .deployedBytecode.object}' \
+              "out/${contract}.sol/${contract}.json" > "${DIST_DIR}/${contract}.artifact.json"
+          done
+
+          MANIFEST_FILE="deployments/base-sepolia.json"
+          if [[ -f "${MANIFEST_FILE}" ]]; then
+            cp "${MANIFEST_FILE}" "${DIST_DIR}/base-sepolia.json"
+          fi
+
+          ARCHIVE_NAME="copra-protocol-${RELEASE_TAG}-artifacts.tar.gz"
+          tar -czf "${ARCHIVE_NAME}" -C "${DIST_DIR}" .
+          cp "${ARCHIVE_NAME}" "${DIST_DIR}/${ARCHIVE_NAME}"
+
+          (
+            cd "${DIST_DIR}"
+            sha256sum ./*.json "${ARCHIVE_NAME}" > SHA256SUMS.txt
+          )
+
+          PRERELEASE_FLAG=()
+          if [[ "${RELEASE_TAG}" == *-* ]]; then
+            PRERELEASE_FLAG=(--prerelease)
+          fi
+
+          NOTES_FILE="release-notes.md"
+          {
+            echo "## Copra Protocol (\`\$COPRA\`) — ${RELEASE_TAG}"
+            echo ""
+            if [[ -f "${MANIFEST_FILE}" ]]; then
+              CHAIN_ID=$(jq -r '.chainId' "${MANIFEST_FILE}")
+              EXPLORER_URL=$(jq -r '.explorers.basescan' "${MANIFEST_FILE}")
+              echo "### Canonical Base Sepolia Deployment (\`chainId: ${CHAIN_ID}\`)"
+              echo ""
+              echo "| Contract | Address | Explorer |"
+              echo "| :--- | :--- | :--- |"
+              jq -r --arg exp "${EXPLORER_URL}" \
+                '.contracts | to_entries[] | "| **\(.key)** | `\(.value)` | [Basescan](\($exp)/address/\(.value)) |"' \
+                "${MANIFEST_FILE}"
+              echo ""
+            fi
+            echo "### Included Release Assets"
+            echo "- \`${ARCHIVE_NAME}\` — Complete bundle of contract ABIs, bytecode artifacts, and deployment manifest"
+            echo "- \`CopraToken.abi.json\`, \`CopraVault.abi.json\`, \`CopraOracle.abi.json\`, \`TestnetUSDC.abi.json\`"
+            if [[ -f "${MANIFEST_FILE}" ]]; then
+              echo "- \`base-sepolia.json\` — Canonical Base Sepolia deployment manifest"
+            fi
+            echo "- \`SHA256SUMS.txt\` — SHA-256 checksums for all release artifacts"
+          } > "${NOTES_FILE}"
+
+          RELEASE_ASSETS=(
+            "${DIST_DIR}/${ARCHIVE_NAME}"
+            "${DIST_DIR}/CopraToken.abi.json"
+            "${DIST_DIR}/CopraVault.abi.json"
+            "${DIST_DIR}/CopraOracle.abi.json"
+            "${DIST_DIR}/TestnetUSDC.abi.json"
+            "${DIST_DIR}/SHA256SUMS.txt"
+          )
+          if [[ -f "${DIST_DIR}/base-sepolia.json" ]]; then
+            RELEASE_ASSETS+=("${DIST_DIR}/base-sepolia.json")
+          fi
+
+          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
+            gh release upload "${RELEASE_TAG}" "${RELEASE_ASSETS[@]}" --clobber
+          else
+            gh release create "${RELEASE_TAG}" "${RELEASE_ASSETS[@]}" \
+              --title "Copra Protocol ${RELEASE_TAG}" \
+              --notes-file "${NOTES_FILE}" \
+              "${PRERELEASE_FLAG[@]}"
+          fi

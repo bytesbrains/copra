@@ -39,3 +39,8 @@ jobs:
 
       - name: Run Forge tests
         run: forge test -vvv
+
+      - name: Simulate deployment script (dry-run)
+        env:
+          PRIVATE_KEY: ${{ secrets.DEPLOYER_PRIVATE_KEY || '1' }}
+        run: forge script script/DeployCopra.s.sol:DeployCopra
