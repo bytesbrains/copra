@@ -359,10 +359,12 @@
     };
 
     // --- Environment & Dynamic Theme Engine ---
-    // Derive testnet mode directly from the active contract deployment chainId (Base Sepolia = 84532)
-    // so visitors on copra.dev and *.workers.dev always have access to the Base Sepolia faucet and badge.
+    // The testnet theme, banner and faucet are chosen by HOSTNAME, never by CONTRACTS.chainId:
+    // the chainId is 84532 on every deployment while only Base Sepolia exists, so keying on it
+    // put the testnet theme on copra.dev too. testnet.copra.dev, Workers preview URLs and local
+    // dev get the testnet UI; copra.dev does not.
     const hostname = window.location.hostname;
-    const isTestnet = CONTRACTS.chainId === 84532 || hostname.includes('testnet') || hostname.includes('localhost') || hostname.includes('127.0.0.1') || window.location.search.includes('testnet');
+    const isTestnet = hostname.includes('testnet') || hostname.endsWith('.workers.dev') || hostname.includes('localhost') || hostname.includes('127.0.0.1') || window.location.search.includes('testnet');
 
     // Contract ABIs
     const ERC20_ABI = [
