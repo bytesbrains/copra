@@ -75,3 +75,18 @@ gitleaks detect --config .gitleaks.toml --verbose
 - **Zero Secrets**: Never write or commit private keys, mnemonic phrases, or live API credentials. Use environment variables via `.env` (gitignored).
 - **Run Formatting**: Always execute `forge fmt` after modifying `.sol` files.
 - **Maintain Test Integrity**: Any modification or addition to smart contracts must include corresponding unit tests in `test/`. All tests must pass before opening a PR.
+
+---
+
+## 6. Brand & Casing Conventions
+
+Always adhere to these exact casing and styling rules:
+
+| Entity | Casing Standard | Example |
+| :--- | :--- | :--- |
+| **Website & Domain Links** | All-lowercase (`copra.dev`) | `https://copra.dev`, `copra.dev/docs` |
+| **Navbar & Header Wordmark** | Title Case (`Copra.dev`) | `Copra` in bold white + `.dev` in emerald accent |
+| **Protocol / Product Name** | Title Case (`Copra Protocol` or `Copra`) | "Copra Protocol is an autonomous currency..." |
+| **Token Ticker Symbol** | All-caps (`$COPRA` or `COPRA`) | "Mint $COPRA with USDC" |
+
+Never write the full domain in all-caps (`COPRA.DEV`); reserve all-caps strictly for the financial token ticker `$COPRA`.

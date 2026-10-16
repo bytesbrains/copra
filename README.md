@@ -106,3 +106,15 @@ A clean, responsive dApp is included in [web/index.html](file:///Users/nandal/De
 - Point your domain `copra.dev` nameservers to Cloudflare or Vercel.
 - Deploy the `/web` folder as the root directory.
 - Instant, zero-cost static hosting with automatic HTTPS.
+
+---
+
+## 8. Brand & Identity Guidelines
+
+| Context | Canonical Format | Example |
+| :--- | :--- | :--- |
+| **Domain & Website Links** | `copra.dev` (lowercase) | [https://copra.dev](https://copra.dev) |
+| **Navigation & Wordmark** | `Copra.dev` (Title Case + accent) | **Copra**<span style="color:#34d399">.dev</span> |
+| **Protocol / Project Name** | `Copra Protocol` or `Copra` | *"Copra Protocol is an autonomous currency..."* |
+| **Token Ticker Symbol** | `$COPRA` (All-caps) | *"1 $COPRA tracks 1 kg of Copra"* |
+
