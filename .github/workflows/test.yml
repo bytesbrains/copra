@@ -39,3 +39,6 @@ jobs:
 
       - name: Run Forge tests
         run: forge test -vvv
+
+      - name: Simulate deployment script (dry-run)
+        run: forge script script/DeployCopra.s.sol:DeployCopra

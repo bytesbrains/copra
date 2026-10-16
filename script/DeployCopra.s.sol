@@ -19,7 +19,7 @@ contract DeployCopra is Script {
     uint256 public constant INITIAL_PRICE = 142000000; // $1.42 USD (8 decimals)
 
     function run() external {
-        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        uint256 deployerPrivateKey = vm.envOr("PRIVATE_KEY", uint256(1));
         address deployerAddress = vm.addr(deployerPrivateKey);
 
         console.log("--------------------------------------------------");
