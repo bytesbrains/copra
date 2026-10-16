@@ -32,6 +32,13 @@ test('quote mirrors match CopraVault for the documented example', () => {
   assert.deepEqual(Q.quoteRedeem(tenCopra, PRICE, BPS), { collateralToReturn: 14164500n, fee: 35500n });
 });
 
+test('quoteMint rounds up like CopraVault, quoteRedeem rounds down', () => {
+  const dust = 714285714285n; // just under 1 micro-USDC at $1.40
+  assert.equal(Q.quoteMint(dust, 140000000n, BPS).collateralRequired, 1n);
+  assert.equal(Q.quoteRedeem(dust, 140000000n, BPS).collateralToReturn, 0n);
+  assert.equal(Q.quoteMint(10n ** 18n, 140000000n, BPS).collateralRequired, 1403500n); // matches test_Vault_DustMintIsNotFree
+});
+
 // Regression for the MAX button: spending the full balance must never require more than the balance.
 test('copraForCollateral never exceeds the USDC budget', () => {
   const budgets = [1n, 999n, 10999999n, 11000000n, 14235500n, 1000000000n, 123456789012n];
