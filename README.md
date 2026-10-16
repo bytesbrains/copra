@@ -5,7 +5,7 @@
   <p><a href="https://copra.dev">copra.dev</a> • Target Network: <strong>Base L2</strong></p>
 </div>
 
-Copra Protocol is an autonomous, ownerless cryptocurrency pegged to the real-world international benchmark value of copra—the dried coconut meat that serves as the global price anchor for the multi-billion dollar coconut economy.
+Copra Protocol is an autonomous cryptocurrency pegged to the real-world international benchmark value of copra—the dried coconut meat that serves as the global price anchor for the multi-billion dollar coconut economy.
 
 ---
 
@@ -16,7 +16,7 @@ Unlike speculative meme tokens or gold-backed stablecoins, **Copra Protocol** br
 - **Perennial Biological Engine**: Coconut palms produce continuous yields every 45 to 60 days for over 60 years.
 - **100% On-Chain Collateral Backing**: Every $COPRA in circulation is backed 100% by stable reserves (USDC) locked in the protocol vault.
 - **Autonomous Peg Stability**: Anyone can mint $COPRA by depositing collateral at the current commodity benchmark price, or burn $COPRA to reclaim full collateral value directly from the vault.
-- **Zero Governance**: The protocol has no admin keys, no pause buttons, and no DAO politics. Once deployed, it runs indefinitely as immutable code on Base.
+- **Immutable, Non-Custodial Contracts**: No proxies, no upgrade path, no pause function, and no function that can withdraw user collateral. Three privileged roles do exist, and the oracle updater is the one you trust most. See [Trust Assumptions](#trust-assumptions).
 
 ---
 
@@ -26,14 +26,29 @@ The protocol codebase is located in [src/](src/):
 
 - [CopraToken.sol](src/CopraToken.sol): Standard ERC-20 token ($COPRA) with minting and burning permissions restricted exclusively to the autonomous vault.
 - [CopraVault.sol](src/CopraVault.sol): The collateral reserve and Peg Stability Module (PSM). Handles permissionless minting, burning, direct redemptions, and autonomous fee capture.
-- [CopraOracle.sol](src/CopraOracle.sol): Decentralized oracle adapter streaming international copra commodity prices (USD, 8 decimals) with price volatility guardrails.
-- [TestnetUSDC.sol](src/TestnetUSDC.sol): Public Base Sepolia testnet collateral token with a permissionless `faucet()` for frictionless testing.
+- [CopraOracle.sol](src/CopraOracle.sol): Price oracle for the international copra benchmark (USD, 8 decimals). A single authorized updater posts prices, limited to a 20% change per update.
+- [CopraRegistry.sol](src/CopraRegistry.sol): On-chain pointer to the live contract set, read by copra.dev, the oracle feeder and the release manifest.
+- [TestnetUSDC.sol](src/testnet/TestnetUSDC.sol): Public Base Sepolia testnet collateral token with a permissionless `faucet()` for frictionless testing.
 
 Further technical documentation:
 - [Whitepaper](docs/WHITEPAPER.md)
 - [Architecture & Security Model](docs/ARCHITECTURE.md)
 - [Contributing Guidelines](CONTRIBUTING.md)
 - [Security Policy](SECURITY.md)
+
+### Trust Assumptions
+
+Copra is **not ownerless**. Three privileged roles exist. On Base Sepolia, all three are held by the deployer, `0x91d3019b38185b517Bb98B7BB4953c137F5EEb8E`:
+
+| Role | Can | Limits |
+| :--- | :--- | :--- |
+| **Oracle updater**<br>`CopraOracle.feedUpdater` (immutable) | Post the copra price that every mint and redeem uses | At most 20% change **per update**, but there is **no minimum interval** between updates, so a run of updates can reach any price, even within one block |
+| **Vault owner**<br>`CopraVault`, `Ownable2Step` | Set the protocol fee and the fee recipient; transfer or renounce ownership | Fee capped at 1.00% (`MAX_FEE_BPS = 100`). `setCopraToken` is one-shot and already used |
+| **Registry owner**<br>`CopraRegistry`, `Ownable2Step` | Choose which contract set copra.dev, the oracle feeder and the release manifest use | The set must be wired to itself (vault ↔ token ↔ oracle ↔ collateral). It cannot change contracts already deployed |
+
+**The oracle updater is the main trust assumption.** No function lets any role withdraw user collateral, and `claimFees()` can only send `accumulatedFees` to `feeRecipient`. But redemptions pay out at the oracle price. An updater that is compromised or malicious can raise the price, redeem its own $COPRA and drain the vault, leaving other holders unable to redeem. If the updater stops posting, the price goes stale after 7 days, and mint and redeem revert until it resumes. Redemptions are always paid from the USDC the vault actually holds: if the price rises after deposits, the vault can be worth less than all $COPRA in circulation, and `redeem` reverts once the vault runs short.
+
+These behaviors are pinned by tests (`test_TrustAssumption_*`, `test_Vault_MintAndRedeemRevertOnStalePrice` and `test_Vault_RedeemCannotLeaveFeesUnbacked` in [test/CopraProtocol.t.sol](test/CopraProtocol.t.sol)), so a change to them also has to change this section.
 
 ---
 

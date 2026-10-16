@@ -14,7 +14,7 @@
 
 ## Abstract
 
-We introduce **Copra Protocol**, a decentralized, autonomous Real-World Asset (RWA) currency that maps the macro value and production yield of the global coconut economy to an on-chain digital asset ($COPRA). Unlike speculative meme coins or fiat stablecoins, $COPRA is anchored to the global spot price of copra—the dried coconut meat that serves as the international price benchmark for the $15 billion coconut derivatives market. Backed 100% by transparent on-chain reserves and governed by zero-admin immutable smart contracts, Copra Protocol eliminates counterparty risk, provides a mathematical hard floor through permissionless redemptions, and creates an autonomous cash-flow engine for protocol participants.
+We introduce **Copra Protocol**, an autonomous Real-World Asset (RWA) currency that maps the macro value and production yield of the global coconut economy to an on-chain digital asset ($COPRA). Unlike speculative meme coins or fiat stablecoins, $COPRA is anchored to the global spot price of copra—the dried coconut meat that serves as the international price benchmark for the $15 billion coconut derivatives market. Backed 100% by transparent on-chain reserves and governed by zero-admin immutable smart contracts, Copra Protocol eliminates counterparty risk, provides a mathematical hard floor through permissionless redemptions, and creates an autonomous cash-flow engine for protocol participants.
 
 ---
 
@@ -77,20 +77,20 @@ This guarantees an inviolable **hard price floor**:
 ## 3. Autonomous Oracle Design
 
 The price feed contract (`CopraOracle.sol`) enforces rigorous stability parameters:
-1. **Maximum Price Shift Guardrail**: Any single price update cannot deviate by more than 20% (2,000 basis points) from the previous price, preventing flash loan or manipulation attacks.
+1. **Maximum Price Shift Guardrail**: A single price update cannot deviate by more than 20% (2,000 basis points) from the previous price. There is no minimum interval between updates, so this limits one faulty update, not the updater (see §6).
 2. **Heartbeat Verification**: A strict 7-day heartbeat requirement ensures that stale pricing data causes transactions to safely revert until fresh data is verified.
-3. **Decentralized Feed Architecture**: Prepared for integration with Chainlink Functions and UMA Optimistic Oracle for automated multi-source consensus.
+3. **Single Updater Today**: Prices are posted by one authorized address (`feedUpdater`, immutable). Moving to a multi-source feed such as Chainlink Functions or UMA's Optimistic Oracle would need a new oracle *and* a new vault, because the vault's `oracle` is immutable too, followed by a registry update.
 
 ---
 
 ## 4. Autonomous Fee Capture
 
-The protocol implements a zero-governance fee distribution engine:
+The protocol implements a capped fee distribution engine:
 - A 0.25% fee is clipped on every mint and redemption (default 25 bps, capped at a maximum of 100 bps / 1.00%).
 - Fees accumulate directly in the reserve collateral token (USDC) inside the smart contract.
 - The designated `feeRecipient` address receives accumulated fees via `claimFees()`.
 - The `feeRecipient` address is updateable via `Ownable2Step`, enabling progressive decentralization (e.g. migrating from creator to a community staking pool or DAO treasury) with zero key-loss risk.
-- No admin key can ever alter user reserve backing, pause redemptions, or confiscate deposited user collateral.
+- No function lets any role withdraw deposited collateral or pause redemptions. The oracle updater can still affect both through the price (see §6).
 
 ---
 
@@ -99,10 +99,22 @@ The protocol implements a zero-governance fee distribution engine:
 1. **Non-Upgradeable**: Contracts do not use proxy patterns. The bytecode is deployed once and remains fixed forever.
 2. **Reentrancy Protection**: All state-modifying functions utilize OpenZeppelin's `ReentrancyGuard`.
 3. **Safe ERC-20 Transfers**: Collateral transfers use OpenZeppelin's `SafeERC20` to guarantee compatibility with non-standard token implementations.
-4. **Zero Administrative Keys**: Once initialized, neither the deployer nor any multi-sig can seize user collateral or halt redemptions.
+4. **No Custody Functions**: No role can call a function that moves user collateral or pauses the vault. Privileged roles do exist; §6 lists them.
 
 ---
 
-## 6. Conclusion
+## 6. Trust Assumptions
 
-Copra Protocol demonstrates how Real-World Assets can be linked to decentralized finance without sacrificing autonomy or decentralization. By anchoring on-chain currency to the renewable, perennial output of the global coconut palm, Copra Protocol introduces a sovereign, self-balancing commodity primitive for the modern Web3 ecosystem.
+Copra is not ownerless. Three privileged roles exist, and on Base Sepolia the deployer holds all three:
+
+1. **Oracle updater** (`CopraOracle.feedUpdater`, immutable): posts the price used by every mint and redeem. Each update may move the price by at most 20%. There is no minimum interval between updates, so a run of updates can reach any price, even within one block. **This is the protocol's main trust assumption.** Redemptions pay out at the oracle price, so a compromised or malicious updater can raise the price, redeem its own $COPRA and drain the vault's collateral. If the updater stops posting, the price goes stale after 7 days and mint and redeem revert until it resumes.
+2. **Vault owner** (`CopraVault`, `Ownable2Step`): sets `protocolFeeBps` (capped at 100 bps, 1.00%) and `feeRecipient`, and can transfer or renounce ownership. `setCopraToken` is one-shot and has already been used.
+3. **Registry owner** (`CopraRegistry`, `Ownable2Step`): chooses which contract set the web app, oracle feeder and release manifest use. The set must be wired to itself, and deployed contracts cannot be changed.
+
+What holds regardless of these roles: the contracts are not upgradeable, there is no pause function, `claimFees()` can only send `accumulatedFees` to `feeRecipient`, and no function lets any role withdraw user collateral. Redemptions are paid from the collateral the vault actually holds. If the price rises after deposits, `redeem` reverts once that collateral runs short.
+
+---
+
+## 7. Conclusion
+
+Copra Protocol demonstrates how Real-World Assets can be linked to decentralized finance with a small, explicit set of trust assumptions. By anchoring on-chain currency to the renewable, perennial output of the global coconut palm, Copra Protocol introduces a sovereign, self-balancing commodity primitive for the modern Web3 ecosystem.

@@ -85,7 +85,8 @@ sequenceDiagram
 | :--- | :--- | :--- | :--- |
 | **`CopraToken`** | `vault` (immutable) | `mint()`, `burnFromVault()` | Restricted to `vault` only |
 | **`CopraVault`** | `collateralToken`, `oracle`, `copraToken`, `accumulatedFees`, `feeRecipient`, `protocolFeeBps` | `mint()`, `redeem()`, `claimFees()`, `quoteMint()`, `quoteRedeem()`, `setFeeRecipient()`, `setProtocolFee()` | Permissionless mint/redeem; `claimFees()` sends to `feeRecipient`; `set*` restricted to `owner` (Ownable2Step) |
-| **`CopraOracle`** | `copraPriceUSD`, `lastUpdatedAt`, `feedUpdater` | `updatePrice()`, `getCopraPriceUSD()` | `updatePrice()` restricted to `feedUpdater` |
+| **`CopraOracle`** | `copraPriceUSD`, `lastUpdatedAt`, `feedUpdater` (immutable) | `updatePrice()`, `getCopraPriceUSD()` | `updatePrice()` restricted to `feedUpdater` |
+| **`CopraRegistry`** | `collateral`, `oracle`, `vault`, `token`, `version`, `updatedAt` | `setDeployment()`, `getDeployment()` | `setDeployment()` restricted to `owner` (Ownable2Step); the set must be wired to itself |
 
 ---
 
@@ -96,6 +97,6 @@ sequenceDiagram
 2. **Flash Loan Resistance**:
    Reentrancy guards on all deposit, redemption, and fee-claiming pathways.
 3. **Price Manipulation Protection**:
-   `MAX_PRICE_CHANGE_BPS = 2000` (max 20% shift per update).
+   `MAX_PRICE_CHANGE_BPS = 2000` (max 20% shift **per update**). There is no minimum interval between updates, so the collar does not bound the updater; see README "Trust Assumptions".
 4. **Heartbeat Protection**:
    `HEARTBEAT = 7 days` (reverts if oracle data is older than 7 days).
