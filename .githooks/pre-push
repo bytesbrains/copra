@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# ----------------------------------------------------------------------------
+# Copra Protocol - Pre-push Git Hook
+# Runs the full test suite before allowing push to remote
+# ----------------------------------------------------------------------------
+
+set -e
+
+echo "🥥 [Copra Hook] Running pre-push test validation..."
+
+if command -v forge >/dev/null 2>&1; then
+    echo "🧪 [Copra Hook] Running forge test suite..."
+    if ! forge test; then
+        echo "❌ [Copra Hook] Tests failed! Push aborted."
+        exit 1
+    fi
+    echo "✅ [Copra Hook] All unit and integration tests passed."
+fi
+
+echo "🚀 [Copra Hook] Ready to push!"
+exit 0

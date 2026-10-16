@@ -1,18 +1,68 @@
-# Compiler files
-cache/
+# ----------------------------------------------------------------------------
+# Copra Protocol - Git Ignore Configuration
+# ----------------------------------------------------------------------------
+
+# Solidity & Foundry compilation artifacts
 out/
+cache/
+artifacts/
+typechain/
+typechain-types/
 
-# Commonly ignored directories
-.logs/
-.ignore/
-
-# Ignores development broadcast logs
+# Broadcast & deployment logs (prevents leaking local run traces)
+broadcast/
 !/broadcast
 /broadcast/*/31337/
 /broadcast/**/dry-run/
 
-
-# Dotenv file
+# Environment, keys, and secret credentials
 .env
 .env.*
 !.env.example
+*.pem
+*.key
+*.keystore
+*.secret
+keystore/
+secrets/
+
+# Node & package manager dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Python cache & virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+.pytest_cache/
+
+# OS-specific metadata
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE & Editor files
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# General logs and temporary directories
+*.log
+.logs/
+tmp/
+temp/
