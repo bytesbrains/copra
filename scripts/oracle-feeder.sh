@@ -49,12 +49,20 @@ echo "Registry        : ${REGISTRY_ADDRESS}"
 echo "Oracle Contract : ${ORACLE_ADDRESS}"
 echo "RPC Endpoint    : ${RPC_URL}"
 
+# A failed `cast call` is either the oracle answering with a revert or the RPC not answering at all.
+# Only the first tells us anything about the oracle, so keep the error to tell them apart.
+CAST_ERR="$(mktemp)"
+trap 'rm -f "${CAST_ERR}"' EXIT
+STALE_PRICE_SELECTOR="0x19abf40e" # CopraOracle.StalePrice()
+
 # 1. Fetch current on-chain state
 echo "📡 Reading current on-chain oracle state..."
-if ONCHAIN_RAW=$(cast call "${ORACLE_ADDRESS}" "getCopraPriceUSD()(uint256,uint256)" --rpc-url "${RPC_URL}" 2>/dev/null); then
+if ONCHAIN_RAW=$(cast call "${ORACLE_ADDRESS}" "getCopraPriceUSD()(uint256,uint256)" --rpc-url "${RPC_URL}" 2>"${CAST_ERR}"); then
     ONCHAIN_PRICE=$(echo "${ONCHAIN_RAW}" | head -n 1 | awk '{print $1}')
     LAST_UPDATED=$(echo "${ONCHAIN_RAW}" | tail -n 1 | awk '{print $1}')
-    CURRENT_TIME=$(date +%s)
+    # Age by chain time, which the oracle's heartbeat and update interval use; fall back to the local clock.
+    CURRENT_TIME=$(cast block latest --field timestamp --rpc-url "${RPC_URL}" 2>/dev/null) || CURRENT_TIME=""
+    [[ "${CURRENT_TIME}" =~ ^[0-9]+$ ]] || CURRENT_TIME=$(date +%s)
     AGE_SECONDS=$((CURRENT_TIME - LAST_UPDATED))
     AGE_HOURS=$((AGE_SECONDS / 3600))
 
@@ -62,12 +70,17 @@ if ONCHAIN_RAW=$(cast call "${ORACLE_ADDRESS}" "getCopraPriceUSD()(uint256,uint2
     ONCHAIN_DISPLAY=$(awk -v p="${ONCHAIN_PRICE}" 'BEGIN {printf "%.4f", p/100000000}')
     echo "Current On-Chain Price : \$${ONCHAIN_DISPLAY} USD / kg (${ONCHAIN_PRICE})"
     echo "Last Updated           : ${AGE_HOURS} hours ago (${AGE_SECONDS}s)"
-else
-    echo "⚠️ Warning: getCopraPriceUSD() reverted (oracle may be stale or uninitialized). Proceeding with recovery update."
+elif grep -q "${STALE_PRICE_SELECTOR}" "${CAST_ERR}"; then
+    # Stale means the last update is older than HEARTBEAT, so MIN_UPDATE_INTERVAL has long passed.
+    echo "⚠️ Warning: getCopraPriceUSD() reverted with StalePrice. Proceeding with recovery update."
     ONCHAIN_PRICE=0
     LAST_UPDATED=0
     AGE_SECONDS=999999
     AGE_HOURS=999
+else
+    # Never broadcast blind: without the oracle's state we cannot honour the interval or the shift guardrail.
+    echo "❌ Error: could not read getCopraPriceUSD() from ${ORACLE_ADDRESS}: $(head -n 1 "${CAST_ERR}")"
+    exit 1
 fi
 
 # 2. Determine target benchmark price
@@ -173,6 +186,26 @@ FORCE_UPDATE="${FORCE:-false}"
 if [[ "${FORCE_UPDATE}" != "true" && "${ONCHAIN_PRICE}" -gt 0 && "${DIFF}" -eq 0 && "${AGE_SECONDS}" -lt 432000 ]]; then
     echo "✅ On-chain oracle is fresh (${AGE_HOURS}h old, within 7-day heartbeat) and price is unchanged. Skipping broadcast."
     echo "   (Set FORCE=true to force broadcast)."
+    exit 0
+fi
+
+# The oracle accepts one update per MIN_UPDATE_INTERVAL and reverts anything sooner, even with FORCE.
+# Oracles deployed before the interval existed have no such getter (the call reverts): treat that as no interval.
+if MIN_INTERVAL=$(cast call "${ORACLE_ADDRESS}" "MIN_UPDATE_INTERVAL()(uint256)" --rpc-url "${RPC_URL}" 2>"${CAST_ERR}"); then
+    MIN_INTERVAL=$(echo "${MIN_INTERVAL}" | awk '{print $1}')
+elif grep -q "execution reverted" "${CAST_ERR}"; then
+    MIN_INTERVAL=0
+else
+    echo "❌ Error: could not read MIN_UPDATE_INTERVAL() from ${ORACLE_ADDRESS}: $(head -n 1 "${CAST_ERR}")"
+    exit 1
+fi
+if [[ ! "${MIN_INTERVAL}" =~ ^[0-9]+$ ]]; then
+    echo "❌ Error: unexpected MIN_UPDATE_INTERVAL() value '${MIN_INTERVAL}'."
+    exit 1
+fi
+if [[ "${LAST_UPDATED}" -gt 0 && "${AGE_SECONDS}" -lt "${MIN_INTERVAL}" ]]; then
+    echo "⏳ Last update was ${AGE_SECONDS}s ago; the oracle accepts one update per ${MIN_INTERVAL}s. Skipping broadcast."
+    echo "   Next update allowed in $((MIN_INTERVAL - AGE_SECONDS))s."
     exit 0
 fi
 

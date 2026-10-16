@@ -101,6 +101,6 @@ sequenceDiagram
 2. **Flash Loan Resistance**:
    Reentrancy guards on all deposit, redemption, and fee-claiming pathways.
 3. **Price Manipulation Protection**:
-   `MAX_PRICE_CHANGE_BPS = 2000` (max 20% shift **per update**). There is no minimum interval between updates, so the collar does not bound the updater; see README "Trust Assumptions".
+   `MAX_PRICE_CHANGE_BPS = 2000` (max 20% shift per update) and `MIN_UPDATE_INTERVAL = 1 days` (one update per day; reverts with `UpdateTooSoon`, and the constructor counts as an update). Together they cap movement at +20% a day, about ×3.6 a week. That slows the updater but does not bound it; see README "Trust Assumptions".
 4. **Heartbeat Protection**:
    `HEARTBEAT = 7 days` (reverts if oracle data is older than 7 days).

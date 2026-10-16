@@ -175,8 +175,7 @@ contract CopraProtocolTest is Test {
     function test_OraclePriceUpdate() public {
         // Commodity price rises from $1.40 to $1.54 (+10%)
         uint256 newPrice = 154000000;
-        vm.prank(oracleUpdater);
-        oracle.updatePrice(newPrice);
+        _postPrice(oracle, newPrice);
 
         (uint256 price,) = oracle.getCopraPriceUSD();
         assertEq(price, newPrice);
@@ -292,6 +291,18 @@ contract CopraProtocolTest is Test {
     // Oracle guardrails
     // ---------------------------------------------------------------------
 
+    /// @dev Wait out MIN_UPDATE_INTERVAL, then post `price` as the updater.
+    function _postPrice(CopraOracle o, uint256 price) internal {
+        vm.warp(block.timestamp + o.MIN_UPDATE_INTERVAL());
+        vm.prank(oracleUpdater);
+        o.updatePrice(price);
+    }
+
+    /// @dev Wait out MIN_UPDATE_INTERVAL so the next updatePrice is not rejected as too soon.
+    function _waitForNextUpdate() internal {
+        vm.warp(block.timestamp + oracle.MIN_UPDATE_INTERVAL());
+    }
+
     function _mintAs(address user, uint256 copraAmount) internal {
         (uint256 requiredUSDC,) = vault.quoteMint(copraAmount);
         vm.startPrank(user);
@@ -340,21 +351,20 @@ contract CopraProtocolTest is Test {
 
     function test_Oracle_PriceShiftAllowedAtExactly20Percent() public {
         // +2000 bps: $1.40 -> $1.68
-        vm.prank(oracleUpdater);
-        oracle.updatePrice(168000000);
+        _postPrice(oracle, 168000000);
         (uint256 price,) = oracle.getCopraPriceUSD();
         assertEq(price, 168000000);
 
         // -2000 bps from a fresh oracle: $1.40 -> $1.12
         CopraOracle down = new CopraOracle(oracleUpdater, INITIAL_PRICE);
-        vm.prank(oracleUpdater);
-        down.updatePrice(112000000);
+        _postPrice(down, 112000000);
         (price,) = down.getCopraPriceUSD();
         assertEq(price, 112000000);
     }
 
     function test_Oracle_PriceShiftAbove20PercentReverts() public {
         // 2001 bps of $1.40 = 28_014_000 (8 decimals)
+        _waitForNextUpdate();
         vm.startPrank(oracleUpdater);
         vm.expectRevert(CopraOracle.PriceChangeExceeded.selector);
         oracle.updatePrice(INITIAL_PRICE + 28014000);
@@ -373,6 +383,7 @@ contract CopraProtocolTest is Test {
         uint256 firstRejected = (INITIAL_PRICE * (oracle.MAX_PRICE_CHANGE_BPS() + 1) + 9999) / 10000;
         assertEq(firstRejected, 28014000);
 
+        _waitForNextUpdate(); // the rejected update below does not restart the interval
         vm.prank(oracleUpdater);
         vm.expectRevert(CopraOracle.PriceChangeExceeded.selector);
         oracle.updatePrice(INITIAL_PRICE + firstRejected);
@@ -390,6 +401,51 @@ contract CopraProtocolTest is Test {
         vm.prank(oracleUpdater);
         vm.expectRevert(CopraOracle.PriceTooLow.selector);
         oracle.updatePrice(0);
+    }
+
+    function test_Oracle_UpdateTooSoonReverts() public {
+        uint256 interval = oracle.MIN_UPDATE_INTERVAL();
+        uint256 deployedAt = block.timestamp;
+
+        // The constructor counts as an update: the first one also waits a full interval.
+        vm.prank(oracleUpdater);
+        vm.expectRevert(CopraOracle.UpdateTooSoon.selector);
+        oracle.updatePrice(INITIAL_PRICE);
+
+        vm.warp(deployedAt + interval - 1);
+        vm.prank(oracleUpdater);
+        vm.expectRevert(CopraOracle.UpdateTooSoon.selector);
+        oracle.updatePrice(INITIAL_PRICE);
+
+        vm.warp(deployedAt + interval);
+        vm.prank(oracleUpdater);
+        oracle.updatePrice(150000000);
+
+        // The accepted update restarts the interval.
+        vm.prank(oracleUpdater);
+        vm.expectRevert(CopraOracle.UpdateTooSoon.selector);
+        oracle.updatePrice(155000000);
+
+        (uint256 price, uint256 updatedAt) = oracle.getCopraPriceUSD();
+        assertEq(price, 150000000);
+        assertEq(updatedAt, deployedAt + interval);
+    }
+
+    /// @dev A rejected update (collar, zero price) must not restart the interval.
+    function test_Oracle_RejectedUpdateDoesNotRestartInterval() public {
+        _waitForNextUpdate();
+        vm.startPrank(oracleUpdater);
+        vm.expectRevert(CopraOracle.PriceChangeExceeded.selector);
+        oracle.updatePrice(INITIAL_PRICE * 2);
+        oracle.updatePrice(150000000);
+        vm.stopPrank();
+        (uint256 price,) = oracle.getCopraPriceUSD();
+        assertEq(price, 150000000);
+    }
+
+    /// @dev If the interval reached the heartbeat, the price would go stale before it could be refreshed.
+    function test_Oracle_IntervalIsShorterThanHeartbeat() public view {
+        assertLt(oracle.MIN_UPDATE_INTERVAL(), oracle.HEARTBEAT());
     }
 
     // ---------------------------------------------------------------------
@@ -449,8 +505,7 @@ contract CopraProtocolTest is Test {
     function test_Vault_RedeemCannotLeaveFeesUnbacked() public {
         _mintAs(alice, 100 * 1e18); // 140.35 USDC: 140.00 backing + 0.35 fee
 
-        vm.prank(oracleUpdater);
-        oracle.updatePrice(140200000); // +0.14%: return 139.8495 fits, return + fee 140.20 does not
+        _postPrice(oracle, 140200000); // +0.14%: return 139.8495 fits, return + fee 140.20 does not
 
         vm.prank(alice);
         vm.expectRevert(CopraVault.InsufficientVaultCollateral.selector);
@@ -487,8 +542,7 @@ contract CopraProtocolTest is Test {
     function testFuzz_QuoteMintCoversRedeemValue(uint256 copraAmount, uint256 priceSeed) public {
         copraAmount = bound(copraAmount, 1, 1e30);
         uint256 target = _boundedPriceMove(priceSeed);
-        vm.prank(oracleUpdater);
-        oracle.updatePrice(target);
+        _postPrice(oracle, target);
 
         (uint256 required, uint256 mintFee) = vault.quoteMint(copraAmount);
         (uint256 returned, uint256 redeemFee) = vault.quoteRedeem(copraAmount);
@@ -536,9 +590,8 @@ contract CopraProtocolTest is Test {
     ) public {
         vault.setProtocolFee(bound(feeBps, 0, vault.MAX_FEE_BPS()));
 
-        uint256 mintTarget = _boundedPriceMove(mintPriceSeed); // computed before prank: it calls the oracle
-        vm.prank(oracleUpdater);
-        oracle.updatePrice(mintTarget);
+        uint256 mintTarget = _boundedPriceMove(mintPriceSeed);
+        _postPrice(oracle, mintTarget);
         (uint256 mintPrice,) = oracle.getCopraPriceUSD();
 
         // <= 5,000 COPRA each: worst case 5,000 * $1.68 * 1.01 < 10,000 USDC funded in setUp
@@ -548,9 +601,8 @@ contract CopraProtocolTest is Test {
         _mintAs(bob, bobMint);
         assertGe(usdc.balanceOf(address(vault)), vault.accumulatedFees());
 
-        uint256 redeemTarget = _boundedPriceMove(redeemPriceSeed); // computed before prank: it calls the oracle
-        vm.prank(oracleUpdater);
-        oracle.updatePrice(redeemTarget);
+        uint256 redeemTarget = _boundedPriceMove(redeemPriceSeed);
+        _postPrice(oracle, redeemTarget);
         (uint256 redeemPrice,) = oracle.getCopraPriceUSD();
 
         bool aliceOut = _redeemAllOrRefuse(alice);
@@ -574,36 +626,48 @@ contract CopraProtocolTest is Test {
     }
 
     // --- Trust assumptions: these pin what README.md and docs/WHITEPAPER.md say the oracle
-    // updater can do. If one fails because the oracle gained a cooldown or a second source,
-    // the docs' "Trust assumptions" sections are out of date too.
+    // updater can do. If one fails because the oracle's limits changed or it gained a second
+    // source, the docs' "Trust assumptions" sections are out of date too.
 
-    /// @dev The 20% collar is per update, with no minimum interval, so it does not bound the price.
-    function test_TrustAssumption_UpdaterMovesPriceAnyDistanceInOneBlock() public {
+    /// @dev One update per MIN_UPDATE_INTERVAL: within one block the price moves at most 20%.
+    function test_TrustAssumption_UpdaterMovesPriceAtMost20PercentPerInterval() public {
+        _postPrice(oracle, (INITIAL_PRICE * 12) / 10);
+
+        vm.prank(oracleUpdater);
+        vm.expectRevert(CopraOracle.UpdateTooSoon.selector);
+        oracle.updatePrice((INITIAL_PRICE * 144) / 100);
+
+        (uint256 live,) = oracle.getCopraPriceUSD();
+        assertEq(live, (INITIAL_PRICE * 12) / 10);
+    }
+
+    /// @dev The interval slows the updater down but does not bound it: given time, any price.
+    function test_TrustAssumption_UpdaterMovesPriceAnyDistanceOverTime() public {
+        uint256 start = block.timestamp;
         uint256 price = INITIAL_PRICE;
-        vm.startPrank(oracleUpdater);
         for (uint256 i = 0; i < 13; i++) {
             price = (price * 12) / 10;
-            oracle.updatePrice(price);
+            _postPrice(oracle, price);
         }
-        vm.stopPrank();
         (uint256 live,) = oracle.getCopraPriceUSD();
-        assertGt(live, INITIAL_PRICE * 10); // x10.7 in one block
+        assertGt(live, INITIAL_PRICE * 10); // x10.7
+        assertEq(block.timestamp - start, 13 * oracle.MIN_UPDATE_INTERVAL()); // in 13 days
     }
 
     /// @dev No function withdraws user collateral, but the updater sets the price redeem pays at.
+    ///      The interval stretches the drain over days, in public, but does not prevent it.
     function test_TrustAssumption_UpdaterCanDrainVaultThroughRedeem() public {
         _mintAs(alice, 1000 * 1e18); // 1,403.50 USDC in
         usdc.mint(oracleUpdater, 140_350_000);
         _mintAs(oracleUpdater, 100 * 1e18); // 140.35 USDC in
 
         uint256 price = INITIAL_PRICE;
-        vm.startPrank(oracleUpdater);
         for (uint256 i = 0; i < 13; i++) {
             price = (price * 12) / 10;
-            oracle.updatePrice(price);
+            _postPrice(oracle, price);
         }
+        vm.prank(oracleUpdater);
         vault.redeem(100 * 1e18);
-        vm.stopPrank();
 
         assertGt(usdc.balanceOf(oracleUpdater), 1400 * 1e6); // 10x what it put in
         vm.prank(alice);

@@ -1,6 +1,6 @@
-.PHONY: all build test test-web fmt fmt-check lint clean
+.PHONY: all build test test-web test-feeder fmt fmt-check lint clean
 
-all: build test test-web
+all: build test test-web test-feeder
 
 build:
 	forge build --sizes
@@ -10,6 +10,9 @@ test:
 
 test-web:
 	node --test test/web/*.test.cjs
+
+test-feeder:
+	./test/feeder/oracle-feeder.test.sh
 
 fmt:
 	forge fmt
