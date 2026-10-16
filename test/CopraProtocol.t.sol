@@ -572,4 +572,42 @@ contract CopraProtocolTest is Test {
             assertEq(usdc.balanceOf(feeRecipient) - before, fees);
         }
     }
+
+    // --- Trust assumptions: these pin what README.md and docs/WHITEPAPER.md say the oracle
+    // updater can do. If one fails because the oracle gained a cooldown or a second source,
+    // the docs' "Trust assumptions" sections are out of date too.
+
+    /// @dev The 20% collar is per update, with no minimum interval, so it does not bound the price.
+    function test_TrustAssumption_UpdaterMovesPriceAnyDistanceInOneBlock() public {
+        uint256 price = INITIAL_PRICE;
+        vm.startPrank(oracleUpdater);
+        for (uint256 i = 0; i < 13; i++) {
+            price = (price * 12) / 10;
+            oracle.updatePrice(price);
+        }
+        vm.stopPrank();
+        (uint256 live,) = oracle.getCopraPriceUSD();
+        assertGt(live, INITIAL_PRICE * 10); // x10.7 in one block
+    }
+
+    /// @dev No function withdraws user collateral, but the updater sets the price redeem pays at.
+    function test_TrustAssumption_UpdaterCanDrainVaultThroughRedeem() public {
+        _mintAs(alice, 1000 * 1e18); // 1,403.50 USDC in
+        usdc.mint(oracleUpdater, 140_350_000);
+        _mintAs(oracleUpdater, 100 * 1e18); // 140.35 USDC in
+
+        uint256 price = INITIAL_PRICE;
+        vm.startPrank(oracleUpdater);
+        for (uint256 i = 0; i < 13; i++) {
+            price = (price * 12) / 10;
+            oracle.updatePrice(price);
+        }
+        vault.redeem(100 * 1e18);
+        vm.stopPrank();
+
+        assertGt(usdc.balanceOf(oracleUpdater), 1400 * 1e6); // 10x what it put in
+        vm.prank(alice);
+        vm.expectRevert(CopraVault.InsufficientVaultCollateral.selector);
+        vault.redeem(1000 * 1e18);
+    }
 }

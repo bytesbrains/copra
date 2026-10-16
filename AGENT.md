@@ -12,7 +12,7 @@ This document provides autonomous coding assistants and contributors with critic
 - **Ticker**: `$COPRA`
 - **Domain**: [copra.dev](https://copra.dev)
 - **Target Network**: Base Layer-2
-- **Core Thesis**: An autonomous, ownerless cryptocurrency pegged to the real-world international benchmark spot price of copra (dried coconut meat). Backed 100% by transparent on-chain stable collateral (USDC).
+- **Core Thesis**: An autonomous cryptocurrency pegged to the real-world international benchmark spot price of copra (dried coconut meat). Backed 100% by transparent on-chain stable collateral (USDC).
 
 ---
 
@@ -21,7 +21,7 @@ This document provides autonomous coding assistants and contributors with critic
 - `src/`: Solidity smart contracts (Solc 0.8.28)
   - `CopraToken.sol`: ERC-20 token with mint/burn hooks restricted to the vault.
   - `CopraVault.sol`: Peg Stability Module (PSM) and collateral reserve engine.
-  - `CopraOracle.sol`: Decentralized commodity pricing adapter.
+  - `CopraOracle.sol`: Commodity price oracle. One immutable `feedUpdater`; at most 20% change per update.
   - `interfaces/ICopraOracle.sol`: Interface for benchmark pricing.
 - `test/`: Foundry unit and integration tests (`CopraProtocol.t.sol`).
 - `script/`: Deployment scripts (`DeployCopra.s.sol`).
@@ -63,8 +63,8 @@ gitleaks detect --config .gitleaks.toml --verbose
    `vaultCollateralBalance >= (totalSupply(COPRA) * copraPriceUSD / 1e8) + accumulatedFees`
 2. **Hard Peg Floor**:
    Any user must always be able to call `vault.redeem(copraAmount)` and receive 100% of the commodity dollar value in collateral minus the protocol fee.
-3. **Immutability & Zero Governance**:
-   Contracts must not use upgradeable proxies. The protocol is designed to run indefinitely as code-is-law without administrative backdoors.
+3. **Immutability & Bounded Privilege**:
+   Contracts must not use upgradeable proxies, and no role may gain a function that moves user collateral or pauses the vault. The privileged roles that exist (oracle updater, vault owner, registry owner) are listed in README "Trust Assumptions". A change to any role's powers must update that section and the `test_TrustAssumption_*` tests.
 4. **Reentrancy Protection**:
    All state-modifying functions handling token transfers must use `nonReentrant`.
 
