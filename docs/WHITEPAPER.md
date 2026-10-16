@@ -45,7 +45,7 @@ The base benchmark unit is **1 kg of standardized commercial-grade Copra** as re
 Every unit of $COPRA is minted against its full value in stable collateral at the price of the moment, locked inside the `CopraVault`. That collateral is a fixed pool of USDC, while the value it backs floats with the oracle price. The vault is fully covered when:
 
 ```
-Reserve_USDC >= Total_Supply(COPRA) × Copra_Price_USD
+Reserve_USDC - Accumulated_Fees >= Total_Supply(COPRA) × Copra_Price_USD
 ```
 
 This holds right after each mint, and a price fall keeps it true. It is **not** maintained programmatically:

@@ -60,7 +60,7 @@ gitleaks detect --config .gitleaks.toml --verbose
 ## 4. Architectural Invariants (Must Never Be Broken)
 
 1. **Full Backing at Mint**:
-   `mint` must take at least the full value of the new $COPRA at the current price (rounded up) plus the fee. This is the only backing the vault guarantees: it is not a solvency invariant, because `vaultCollateralBalance >= totalSupply(COPRA) * copraPriceUSD / 1e8 + accumulatedFees` stops holding as soon as the price rises after deposits.
+   `mint` must take at least the full value of the new $COPRA at the current price (rounded up) plus the fee. This is the only backing the vault guarantees: it is not a solvency invariant, because `vaultCollateralBalance >= totalSupply(COPRA) * copraPriceUSD / 1e8 + accumulatedFees` can stop holding once the price rises after deposits.
 2. **Fees Stay Backed**:
    `redeem` must never pay out collateral that backs `accumulatedFees`: it reverts with `InsufficientVaultCollateral` instead (`test_Vault_RedeemCannotLeaveFeesUnbacked`). Redemption pays 100% of the commodity value minus the fee only while the vault can cover it at the current price; it is not guaranteed after a price rise. See README "Backing & Price Moves".
 3. **Immutability & Bounded Privilege**:

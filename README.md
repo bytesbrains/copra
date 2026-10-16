@@ -67,7 +67,7 @@ Collateral Returned = (COPRA_Amount × Copra_Price_USD) / 1e8 - Protocol_Fee (0.
 ```
 
 ### Backing & Price Moves
-Collateral is a fixed pool of USDC. The value it has to cover is `totalSupply × price`, which moves with the oracle:
+Collateral is a fixed pool of USDC. After setting aside `accumulatedFees`, it has to cover `totalSupply × price`, which moves with the oracle:
 
 - **At mint**: each mint deposits the full value of the new $COPRA at that moment's price (rounded up), plus the fee.
 - **Price falls**: the vault holds more USDC than all $COPRA is worth. The surplus stays in the vault.
