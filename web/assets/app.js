@@ -127,6 +127,20 @@ function calculate() {
 
 amountInput.addEventListener('input', calculate);
 
+// Ticker badges are built as nodes, not HTML strings, so this file has no HTML-string sinks.
+function textSpan(text) {
+  const span = document.createElement('span');
+  span.textContent = text;
+  return span;
+}
+function copraTicker() {
+  const img = document.createElement('img');
+  img.src = '/assets/copra_logo_32.png';
+  img.alt = 'Copra';
+  img.className = 'w-4 h-4 rounded-full';
+  return [img, textSpan('COPRA')];
+}
+
 function setTabStyles() {
   const activeClass = isTestnet
     ? 'flex-1 py-2 rounded-md bg-amber-500 text-black transition font-bold'
@@ -138,8 +152,8 @@ function setTabStyles() {
     tabRedeem.className = inactiveClass;
     inputLabel.textContent = 'You Pay (USDC)';
     outputLabel.textContent = 'You Receive ($COPRA)';
-    inputTicker.innerHTML = '<span>USDC</span>';
-    outputTicker.innerHTML = '<img src="/assets/copra_logo_32.png" alt="Copra" class="w-4 h-4 rounded-full"><span>COPRA</span>';
+    inputTicker.replaceChildren(textSpan('USDC'));
+    outputTicker.replaceChildren(...copraTicker());
     amountInput.value = '14.20';
     actionBtnText.textContent = userAddress ? 'Mint $COPRA' : 'Connect Wallet to Mint';
   } else {
@@ -147,8 +161,8 @@ function setTabStyles() {
     tabMint.className = inactiveClass;
     inputLabel.textContent = 'You Burn ($COPRA)';
     outputLabel.textContent = 'You Receive (USDC)';
-    inputTicker.innerHTML = '<img src="/assets/copra_logo_32.png" alt="Copra" class="w-4 h-4 rounded-full"><span>COPRA</span>';
-    outputTicker.innerHTML = '<span>USDC</span>';
+    inputTicker.replaceChildren(...copraTicker());
+    outputTicker.replaceChildren(textSpan('USDC'));
     amountInput.value = '10.00';
     actionBtnText.textContent = userAddress ? 'Redeem USDC' : 'Connect Wallet to Redeem';
   }
@@ -520,8 +534,8 @@ faucetBtn.addEventListener('click', async () => {
   }
 
   faucetBtn.disabled = true;
-  const originalText = faucetBtn.innerHTML;
-  faucetBtn.innerHTML = '<span>⏳ Claiming...</span>';
+  const originalLabel = [...faucetBtn.childNodes];
+  faucetBtn.replaceChildren(textSpan('⏳ Claiming...'));
 
   try {
     const usdcContract = new ethers.Contract(CONTRACTS.usdc, ERC20_ABI, signer);
@@ -537,7 +551,7 @@ faucetBtn.addEventListener('click', async () => {
     showToast('Faucet error: ' + (err.shortMessage || err.message), 'error');
   } finally {
     faucetBtn.disabled = false;
-    faucetBtn.innerHTML = originalText;
+    faucetBtn.replaceChildren(...originalLabel);
   }
 });
 
