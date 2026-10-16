@@ -54,6 +54,7 @@ jobs:
       - name: Dry-run fork simulation against Base Sepolia
         env:
           BASE_SEPOLIA_RPC: ${{ secrets.BASE_SEPOLIA_RPC || 'https://base-sepolia-rpc.publicnode.com' }}
+          PRIVATE_KEY: ${{ secrets.DEPLOYER_PRIVATE_KEY || '1' }}
         run: |
           forge script script/DeployCopra.s.sol:DeployCopra --rpc-url "$BASE_SEPOLIA_RPC"
 
@@ -61,8 +62,10 @@ jobs:
     name: Deploy to Base Sepolia Testnet
     needs: validate-and-simulate
     if: >-
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.target_environment == 'base-sepolia') ||
-      (startsWith(github.ref, 'refs/tags/v') && contains(github.ref_name, '-testnet') && vars.AUTO_DEPLOY_TESTNET == 'true')
+      startsWith(github.ref, 'refs/tags/v') && (
+        (github.event_name == 'workflow_dispatch' && github.event.inputs.target_environment == 'base-sepolia') ||
+        (contains(github.ref_name, '-testnet') && vars.AUTO_DEPLOY_TESTNET == 'true')
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment:
@@ -83,13 +86,13 @@ jobs:
       - name: Broadcast deployment to Base Sepolia
         env:
           BASE_SEPOLIA_RPC: ${{ secrets.BASE_SEPOLIA_RPC || 'https://base-sepolia-rpc.publicnode.com' }}
-          PRIVATE_KEY: ${{ secrets.DEPLOYER_PRIVATE_KEY || secrets.ORACLE_FEEDER_KEY }}
+          PRIVATE_KEY: ${{ secrets.DEPLOYER_PRIVATE_KEY }}
           BASESCAN_API_KEY: ${{ secrets.BASESCAN_API_KEY }}
           VERIFY_CONTRACTS: ${{ github.event.inputs.verify_contracts || 'false' }}
         run: |
           set -euo pipefail
           if [[ -z "${PRIVATE_KEY:-}" ]]; then
-            echo "❌ Error: DEPLOYER_PRIVATE_KEY (or ORACLE_FEEDER_KEY) must be configured in the base-sepolia environment secrets."
+            echo "❌ Error: DEPLOYER_PRIVATE_KEY must be configured in the base-sepolia environment or repository secrets."
             exit 1
           fi
 
@@ -153,7 +156,10 @@ jobs:
               "out/${contract}.sol/${contract}.json" > "${DIST_DIR}/${contract}.artifact.json"
           done
 
-          cp deployments/base-sepolia.json "${DIST_DIR}/base-sepolia.json"
+          MANIFEST_FILE="deployments/base-sepolia.json"
+          if [[ -f "${MANIFEST_FILE}" ]]; then
+            cp "${MANIFEST_FILE}" "${DIST_DIR}/base-sepolia.json"
+          fi
 
           ARCHIVE_NAME="copra-protocol-${RELEASE_TAG}-artifacts.tar.gz"
           tar -czf "${ARCHIVE_NAME}" -C "${DIST_DIR}" .
@@ -171,45 +177,46 @@ jobs:
 
           NOTES_FILE="release-notes.md"
           {
-            echo "## Copra Protocol (\`$COPRA\`) — ${RELEASE_TAG}"
+            echo "## Copra Protocol (\`\$COPRA\`) — ${RELEASE_TAG}"
             echo ""
-            echo "### Canonical Base Sepolia Deployment (\`chainId: 84532\`)"
-            echo ""
-            echo "| Contract | Address | Explorer |"
-            echo "| :--- | :--- | :--- |"
-            echo "| **CopraToken (\`$COPRA\`)** | \`0xcAdd63DFd49bC1383aA35ace7fa72aba43283a81\` | [Basescan](https://sepolia.basescan.org/address/0xcAdd63DFd49bC1383aA35ace7fa72aba43283a81) |"
-            echo "| **CopraVault (PSM)** | \`0x6F8d4948B4be558fc0db547F837a86CE2d88c01b\` | [Basescan](https://sepolia.basescan.org/address/0x6F8d4948B4be558fc0db547F837a86CE2d88c01b) |"
-            echo "| **CopraOracle** | \`0x7Fe0746161eb2e91fB13470fbBca15d4cC0EF522\` | [Basescan](https://sepolia.basescan.org/address/0x7Fe0746161eb2e91fB13470fbBca15d4cC0EF522) |"
-            echo "| **TestnetUSDC** | \`0x1b8a3536F8826Db6Bacbab452366cC75c960E738\` | [Basescan](https://sepolia.basescan.org/address/0x1b8a3536F8826Db6Bacbab452366cC75c960E738) |"
-            echo ""
+            if [[ -f "${MANIFEST_FILE}" ]]; then
+              CHAIN_ID=$(jq -r '.chainId' "${MANIFEST_FILE}")
+              EXPLORER_URL=$(jq -r '.explorers.basescan' "${MANIFEST_FILE}")
+              echo "### Canonical Base Sepolia Deployment (\`chainId: ${CHAIN_ID}\`)"
+              echo ""
+              echo "| Contract | Address | Explorer |"
+              echo "| :--- | :--- | :--- |"
+              jq -r --arg exp "${EXPLORER_URL}" \
+                '.contracts | to_entries[] | "| **\(.key)** | `\(.value)` | [Basescan](\($exp)/address/\(.value)) |"' \
+                "${MANIFEST_FILE}"
+              echo ""
+            fi
             echo "### Included Release Assets"
             echo "- \`${ARCHIVE_NAME}\` — Complete bundle of contract ABIs, bytecode artifacts, and deployment manifest"
             echo "- \`CopraToken.abi.json\`, \`CopraVault.abi.json\`, \`CopraOracle.abi.json\`, \`TestnetUSDC.abi.json\`"
-            echo "- \`base-sepolia.json\` — Canonical Base Sepolia deployment manifest"
+            if [[ -f "${MANIFEST_FILE}" ]]; then
+              echo "- \`base-sepolia.json\` — Canonical Base Sepolia deployment manifest"
+            fi
             echo "- \`SHA256SUMS.txt\` — SHA-256 checksums for all release artifacts"
           } > "${NOTES_FILE}"
 
+          RELEASE_ASSETS=(
+            "${DIST_DIR}/${ARCHIVE_NAME}"
+            "${DIST_DIR}/CopraToken.abi.json"
+            "${DIST_DIR}/CopraVault.abi.json"
+            "${DIST_DIR}/CopraOracle.abi.json"
+            "${DIST_DIR}/TestnetUSDC.abi.json"
+            "${DIST_DIR}/SHA256SUMS.txt"
+          )
+          if [[ -f "${DIST_DIR}/base-sepolia.json" ]]; then
+            RELEASE_ASSETS+=("${DIST_DIR}/base-sepolia.json")
+          fi
+
           if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
-            gh release upload "${RELEASE_TAG}" \
-              "${DIST_DIR}/${ARCHIVE_NAME}" \
-              "${DIST_DIR}/CopraToken.abi.json" \
-              "${DIST_DIR}/CopraVault.abi.json" \
-              "${DIST_DIR}/CopraOracle.abi.json" \
-              "${DIST_DIR}/TestnetUSDC.abi.json" \
-              "${DIST_DIR}/base-sepolia.json" \
-              "${DIST_DIR}/SHA256SUMS.txt" \
-              --clobber
+            gh release upload "${RELEASE_TAG}" "${RELEASE_ASSETS[@]}" --clobber
           else
-            gh release create "${RELEASE_TAG}" \
-              "${DIST_DIR}/${ARCHIVE_NAME}" \
-              "${DIST_DIR}/CopraToken.abi.json" \
-              "${DIST_DIR}/CopraVault.abi.json" \
-              "${DIST_DIR}/CopraOracle.abi.json" \
-              "${DIST_DIR}/TestnetUSDC.abi.json" \
-              "${DIST_DIR}/base-sepolia.json" \
-              "${DIST_DIR}/SHA256SUMS.txt" \
+            gh release create "${RELEASE_TAG}" "${RELEASE_ASSETS[@]}" \
               --title "Copra Protocol ${RELEASE_TAG}" \
               --notes-file "${NOTES_FILE}" \
-              --generate-notes \
               "${PRERELEASE_FLAG[@]}"
           fi

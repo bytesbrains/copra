@@ -6,6 +6,7 @@ import "../src/CopraToken.sol";
 import "../src/CopraOracle.sol";
 import "../src/CopraVault.sol";
 import "../src/testnet/TestnetUSDC.sol";
+import "../script/DeployCopra.s.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
@@ -202,5 +203,18 @@ contract CopraProtocolTest is Test {
         // Claiming above max reverts
         vm.expectRevert("Amount exceeds max faucet claim");
         testUsdc.faucet(alice, 10001 * 1e6);
+    }
+
+    function test_DeployCopra_RequiresExplicitPrivateKey() public {
+        DeployCopra deployer = new DeployCopra();
+
+        // Zero PRIVATE_KEY must revert instead of silently falling back to a known key
+        vm.setEnv("PRIVATE_KEY", "0");
+        vm.expectRevert("DeployCopra: invalid PRIVATE_KEY");
+        deployer.run();
+
+        // Valid PRIVATE_KEY succeeds
+        vm.setEnv("PRIVATE_KEY", "123456");
+        deployer.run();
     }
 }
