@@ -9,6 +9,7 @@ import "../src/testnet/TestnetUSDC.sol";
 import "../script/DeployCopra.s.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 
 contract MockUSDC is ERC20 {
     constructor() ERC20("USD Coin", "USDC") {}
@@ -297,6 +298,22 @@ contract CopraProtocolTest is Test {
         assertEq(price, INITIAL_PRICE);
     }
 
+    /// @dev The collar compares (diff * 10000) / price with integer division, so the real threshold
+    ///      is diff * 10000 >= 2001 * price: shifts up to 2000.99 bps are accepted. Pin it exactly.
+    function test_Oracle_PriceShiftThresholdIsExact() public {
+        uint256 firstRejected = (INITIAL_PRICE * (oracle.MAX_PRICE_CHANGE_BPS() + 1) + 9999) / 10000;
+        assertEq(firstRejected, 28014000);
+
+        vm.prank(oracleUpdater);
+        vm.expectRevert(CopraOracle.PriceChangeExceeded.selector);
+        oracle.updatePrice(INITIAL_PRICE + firstRejected);
+
+        vm.prank(oracleUpdater);
+        oracle.updatePrice(INITIAL_PRICE + firstRejected - 1);
+        (uint256 price,) = oracle.getCopraPriceUSD();
+        assertEq(price, INITIAL_PRICE + firstRejected - 1);
+    }
+
     function test_Oracle_ZeroPriceReverts() public {
         vm.expectRevert(CopraOracle.PriceTooLow.selector);
         new CopraOracle(oracleUpdater, 0);
@@ -370,8 +387,14 @@ contract CopraProtocolTest is Test {
         vm.expectRevert(CopraVault.InsufficientVaultCollateral.selector);
         vault.redeem(100 * 1e18);
 
-        assertGe(usdc.balanceOf(address(vault)), vault.accumulatedFees());
+        // Pinned: nothing moved. The unfixed vault paid out 139.8495 here, leaving 0.5005 USDC
+        // against 0.7005 USDC of fees.
+        assertEq(usdc.balanceOf(address(vault)), 140_350_000);
+        assertEq(vault.accumulatedFees(), 350_000);
+        assertEq(copraToken.balanceOf(alice), 100 * 1e18);
+
         vault.claimFees();
+        assertEq(usdc.balanceOf(feeRecipient), 350_000);
     }
 
     /// @dev quoteMint rounds collateral up, so no non-zero mint is free.
@@ -380,9 +403,10 @@ contract CopraProtocolTest is Test {
         (uint256 required,) = vault.quoteMint(dust);
         assertEq(required, 1);
 
+        // The vault now pulls 1 unit, which a caller with no allowance cannot pay
         address broke = address(0xD00D);
         vm.prank(broke);
-        vm.expectRevert(); // no USDC, no allowance
+        vm.expectRevert(abi.encodeWithSelector(IERC20Errors.ERC20InsufficientAllowance.selector, address(vault), 0, 1));
         vault.mint(dust);
         assertEq(copraToken.balanceOf(broke), 0);
 

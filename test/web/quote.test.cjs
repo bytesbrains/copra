@@ -61,3 +61,21 @@ test('copraForCollateral spends the budget to within one cent of a unit', () => 
   const { collateralRequired } = Q.quoteMint(Q.copraForCollateral(usdc, PRICE, BPS), PRICE, BPS);
   assert.ok(usdc - collateralRequired <= 1n, `left ${usdc - collateralRequired} unspent`);
 });
+
+// Seeded random property check across fee 0..100 bps, prices and budgets, so the guarantee
+// does not rest on the hand-picked grid above.
+test('copraForCollateral stays within budget on random inputs', () => {
+  let seed = 0x2545f491n;
+  const next = (mod) => {
+    seed = (seed * 6364136223846793005n + 1442695040888963407n) % (1n << 64n);
+    return (seed >> 16n) % mod;
+  };
+  for (let i = 0; i < 20000; i++) {
+    const usdc = next(10n ** 15n) + 1n;
+    const price = next(10n ** 12n) + 1n;
+    const bps = next(101n);
+    const copra = Q.copraForCollateral(usdc, price, bps);
+    const { collateralRequired } = Q.quoteMint(copra, price, bps);
+    assert.ok(collateralRequired <= usdc, `usdc=${usdc} price=${price} bps=${bps}`);
+  }
+});
