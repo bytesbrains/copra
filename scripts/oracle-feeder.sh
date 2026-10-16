@@ -10,8 +10,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-# Load .env if present
-if [[ -f "${ROOT_DIR}/.env" ]]; then
+# Load .env only in local non-CI environments when credentials are not already provided
+if [[ -z "${CI:-}" && -z "${GITHUB_ACTIONS:-}" && -z "${ORACLE_FEEDER_KEY:-}" && -z "${PRIVATE_KEY:-}" && -f "${ROOT_DIR}/.env" ]]; then
     # shellcheck disable=SC1091
     source "${ROOT_DIR}/.env"
 fi
@@ -34,42 +34,67 @@ echo "RPC Endpoint    : ${RPC_URL}"
 
 # 1. Fetch current on-chain state
 echo "📡 Reading current on-chain oracle state..."
-ONCHAIN_RAW=$(cast call "${ORACLE_ADDRESS}" "getCopraPriceUSD()(uint256,uint256)" --rpc-url "${RPC_URL}")
-ONCHAIN_PRICE=$(echo "${ONCHAIN_RAW}" | head -n 1 | awk '{print $1}')
-LAST_UPDATED=$(echo "${ONCHAIN_RAW}" | tail -n 1 | awk '{print $1}')
-CURRENT_TIME=$(date +%s)
-AGE_SECONDS=$((CURRENT_TIME - LAST_UPDATED))
-AGE_HOURS=$((AGE_SECONDS / 3600))
+if ONCHAIN_RAW=$(cast call "${ORACLE_ADDRESS}" "getCopraPriceUSD()(uint256,uint256)" --rpc-url "${RPC_URL}" 2>/dev/null); then
+    ONCHAIN_PRICE=$(echo "${ONCHAIN_RAW}" | head -n 1 | awk '{print $1}')
+    LAST_UPDATED=$(echo "${ONCHAIN_RAW}" | tail -n 1 | awk '{print $1}')
+    CURRENT_TIME=$(date +%s)
+    AGE_SECONDS=$((CURRENT_TIME - LAST_UPDATED))
+    AGE_HOURS=$((AGE_SECONDS / 3600))
 
-# Format on-chain price for display (divide by 1e8)
-ONCHAIN_DISPLAY=$(awk "BEGIN {printf \"%.4f\", ${ONCHAIN_PRICE}/100000000}")
-echo "Current On-Chain Price : \$${ONCHAIN_DISPLAY} USD / kg (${ONCHAIN_PRICE})"
-echo "Last Updated           : ${AGE_HOURS} hours ago (${AGE_SECONDS}s)"
+    # Format on-chain price for display (divide by 1e8)
+    ONCHAIN_DISPLAY=$(awk -v p="${ONCHAIN_PRICE}" 'BEGIN {printf "%.4f", p/100000000}')
+    echo "Current On-Chain Price : \$${ONCHAIN_DISPLAY} USD / kg (${ONCHAIN_PRICE})"
+    echo "Last Updated           : ${AGE_HOURS} hours ago (${AGE_SECONDS}s)"
+else
+    echo "⚠️ Warning: getCopraPriceUSD() reverted (oracle may be stale or uninitialized). Proceeding with recovery update."
+    ONCHAIN_PRICE=0
+    LAST_UPDATED=0
+    AGE_SECONDS=999999
+    AGE_HOURS=999
+fi
 
 # 2. Determine target benchmark price
 # In production, this ingests the latest World Bank Pink Sheet / ICC monthly CIF Rotterdam index.
 # Default benchmark is ~$1.42/kg ($1,420/MT).
-TARGET_PRICE_INPUT="${1:-}"
+TARGET_PRICE_INPUT="${1:-${TARGET_PRICE:-}}"
 
 if [[ -n "${TARGET_PRICE_INPUT}" ]]; then
+    # Strictly validate numeric format before passing to awk
+    if [[ ! "${TARGET_PRICE_INPUT}" =~ ^([0-9]+(\.[0-9]+)?)$ ]]; then
+        echo "❌ Error: Invalid target price format '${TARGET_PRICE_INPUT}'. Expected positive decimal number (e.g. 1.45)."
+        exit 1
+    fi
     # Custom price provided via command line argument (in dollars, e.g. 1.45)
-    NEW_PRICE=$(awk "BEGIN {printf \"%.0f\", ${TARGET_PRICE_INPUT} * 100000000}")
+    NEW_PRICE=$(awk -v p="${TARGET_PRICE_INPUT}" 'BEGIN {printf "%.0f", p * 100000000}')
 else
-    # Autonomous benchmark resolution with defensive schema validation & fallbacks:
-    python3 -c "
-import urllib.request, json, sys, os
+    # Autonomous benchmark resolution with defensive schema validation, URL allowlisting & fallbacks:
+    NEW_PRICE=$(ONCHAIN_PRICE="${ONCHAIN_PRICE}" python3 -c "
+import urllib.request, urllib.parse, json, sys, os
 
 # Absolute sanity guardrails for agricultural copra spot price in USD / kg
 MIN_SAFE_PRICE = 0.50   # \$0.50 / kg floor
 MAX_SAFE_PRICE = 5.00   # \$5.00 / kg ceiling
-DEFAULT_BENCHMARK = float(os.environ.get('DEFAULT_BENCHMARK', '1.42'))
+ALLOWED_HOSTS = {'api.worldbank.org', 'commoditymarkets.org', 'coconutboard.gov.in'}
+
+default_raw = os.environ.get('DEFAULT_BENCHMARK', '1.42')
+try:
+    DEFAULT_BENCHMARK = float(default_raw)
+    if not (MIN_SAFE_PRICE <= DEFAULT_BENCHMARK <= MAX_SAFE_PRICE):
+        DEFAULT_BENCHMARK = 1.42
+except ValueError:
+    DEFAULT_BENCHMARK = 1.42
 
 target_price = DEFAULT_BENCHMARK
 
-# If an external commodity feed URL is configured, attempt retrieval with strict schema validation
-feed_url = os.environ.get('COMMODITY_FEED_API_URL', '')
+# If an external commodity feed URL is configured, enforce HTTPS and strict host allowlist
+feed_url = os.environ.get('COMMODITY_FEED_API_URL', '').strip()
 if feed_url:
     try:
+        parsed_url = urllib.parse.urlparse(feed_url)
+        hostname = (parsed_url.hostname or '').lower()
+        if parsed_url.scheme != 'https' or hostname not in ALLOWED_HOSTS:
+            raise ValueError(f'Untrusted feed URL scheme or host: {parsed_url.scheme}://{hostname}')
+
         req = urllib.request.Request(feed_url, headers={'User-Agent': 'CopraProtocol/1.0'})
         with urllib.request.urlopen(req, timeout=10) as resp:
             data = json.loads(resp.read().decode('utf-8'))
@@ -85,42 +110,50 @@ if feed_url:
                 else:
                     sys.stderr.write(f'⚠️ Warning: External price \${parsed_val} out of safe bounds [\${MIN_SAFE_PRICE}, \${MAX_SAFE_PRICE}]. Using fallback.\n')
     except Exception as e:
-        # Schema change, network error, or unexpected JSON structure: NEVER break protocol
+        # Schema change, untrusted host, network error, or unexpected JSON structure: NEVER break protocol
         sys.stderr.write(f'⚠️ Notice: External feed parsing safely bypassed ({e}). Falling back to verified benchmark \${target_price}.\n')
 
 # Convert to 8 decimals
-print(int(target_price * 100000000))
-" > /tmp/copra_target_price.txt
-    NEW_PRICE=$(cat /tmp/copra_target_price.txt)
+print(int(round(target_price * 100000000)))
+")
 fi
 
-NEW_PRICE_DISPLAY=$(awk "BEGIN {printf \"%.4f\", ${NEW_PRICE}/100000000}")
+if [[ ! "${NEW_PRICE}" =~ ^[0-9]+$ ]] || [[ "${NEW_PRICE}" -lt 50000000 ]] || [[ "${NEW_PRICE}" -gt 500000000 ]]; then
+    echo "❌ Error: Computed target price (${NEW_PRICE}) is outside safe bounds [50000000 (\$0.50), 500000000 (\$5.00)]."
+    exit 1
+fi
+
+NEW_PRICE_DISPLAY=$(awk -v p="${NEW_PRICE}" 'BEGIN {printf "%.4f", p/100000000}')
 echo "Target Feeder Price    : \$${NEW_PRICE_DISPLAY} USD / kg (${NEW_PRICE})"
 
-# 3. Guardrail Verification (20% maximum shift limit)
+# 3. Guardrail Verification (20% maximum shift limit when on-chain price is available)
 DIFF=0
-if [[ ${NEW_PRICE} -gt ${ONCHAIN_PRICE} ]]; then
-    DIFF=$((NEW_PRICE - ONCHAIN_PRICE))
-else
-    DIFF=$((ONCHAIN_PRICE - NEW_PRICE))
-fi
-
-SHIFT_BPS=$(( (DIFF * 10000) / ONCHAIN_PRICE ))
-echo "Calculated Price Shift : ${SHIFT_BPS} bps (Max allowed: 2000 bps)"
-
-if [[ ${SHIFT_BPS} -gt 2000 ]]; then
-    echo "⚠️ Warning: Price shift exceeds 20% guardrail (${SHIFT_BPS} bps). Clamping to 19.5% for safety."
-    if [[ ${NEW_PRICE} -gt ${ONCHAIN_PRICE} ]]; then
-        NEW_PRICE=$(( ONCHAIN_PRICE + (ONCHAIN_PRICE * 1950 / 10000) ))
+if [[ "${ONCHAIN_PRICE}" -gt 0 ]]; then
+    if [[ "${NEW_PRICE}" -gt "${ONCHAIN_PRICE}" ]]; then
+        DIFF=$((NEW_PRICE - ONCHAIN_PRICE))
     else
-        NEW_PRICE=$(( ONCHAIN_PRICE - (ONCHAIN_PRICE * 1950 / 10000) ))
+        DIFF=$((ONCHAIN_PRICE - NEW_PRICE))
     fi
+
+    SHIFT_BPS=$(( (DIFF * 10000) / ONCHAIN_PRICE ))
+    echo "Calculated Price Shift : ${SHIFT_BPS} bps (Max allowed: 2000 bps)"
+
+    if [[ "${SHIFT_BPS}" -gt 2000 ]]; then
+        echo "⚠️ Warning: Price shift exceeds 20% guardrail (${SHIFT_BPS} bps). Clamping to 19.5% for safety."
+        if [[ "${NEW_PRICE}" -gt "${ONCHAIN_PRICE}" ]]; then
+            NEW_PRICE=$(( ONCHAIN_PRICE + (ONCHAIN_PRICE * 1950 / 10000) ))
+        else
+            NEW_PRICE=$(( ONCHAIN_PRICE - (ONCHAIN_PRICE * 1950 / 10000) ))
+        fi
+    fi
+else
+    echo "ℹ️ Skipping shift bps guardrail check (on-chain reference price unavailable)."
 fi
 
 # 4. Check whether an update is necessary
 # If price is identical and age is less than 5 days (heartbeat is 7 days), skip to save gas unless --force is given
 FORCE_UPDATE="${FORCE:-false}"
-if [[ "${FORCE_UPDATE}" != "true" && ${DIFF} -eq 0 && ${AGE_SECONDS} -lt 432000 ]]; then
+if [[ "${FORCE_UPDATE}" != "true" && "${ONCHAIN_PRICE}" -gt 0 && "${DIFF}" -eq 0 && "${AGE_SECONDS}" -lt 432000 ]]; then
     echo "✅ On-chain oracle is fresh (${AGE_HOURS}h old, within 7-day heartbeat) and price is unchanged. Skipping broadcast."
     echo "   (Set FORCE=true to force broadcast)."
     exit 0
