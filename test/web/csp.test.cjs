@@ -67,3 +67,10 @@ test('connect-src covers the RPC endpoint config.js reads from', () => {
   const rpc = config.match(/rpcUrl:\s*'([^']+)'/)[1];
   assert.ok(allows('connect-src', rpc), `connect-src blocks ${rpc}`);
 });
+
+// Cloudflare Web Analytics is switched on in the dashboard, not in this repo: the edge injects the
+// beacon into every page, so index.html never shows it. Found by the #32 browser check.
+test('the CSP allows the Cloudflare Web Analytics beacon the edge injects', () => {
+  assert.ok(allows('script-src', 'https://static.cloudflareinsights.com/beacon.min.js'), 'script-src blocks the beacon');
+  assert.ok(allows('connect-src', '/cdn-cgi/rum'), 'connect-src blocks the beacon\'s same-origin report');
+});
