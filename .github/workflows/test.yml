@@ -43,6 +43,9 @@ jobs:
       - name: Run web quote tests
         run: node --test test/web/*.test.cjs
 
+      - name: Run oracle feeder tests (local anvil)
+        run: ./test/feeder/oracle-feeder.test.sh
+
       - name: Simulate deployment script (dry-run)
         env:
           PRIVATE_KEY: ${{ secrets.DEPLOYER_PRIVATE_KEY || '1' }}
