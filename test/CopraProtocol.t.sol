@@ -60,7 +60,7 @@ contract CopraProtocolTest is Test {
         (uint256 requiredUSDC, uint256 fee) = vault.quoteMint(mintAmount);
 
         assertEq(requiredUSDC, 140_700_000); // $140.70
-        assertEq(fee, 700_000);              // $0.70
+        assertEq(fee, 700_000); // $0.70
 
         vm.startPrank(alice);
         usdc.approve(address(vault), requiredUSDC);
@@ -75,7 +75,7 @@ contract CopraProtocolTest is Test {
     function test_RedeemCopra() public {
         // Alice mints 100 COPRA
         uint256 mintAmount = 100 * 1e18;
-        (uint256 requiredUSDC, ) = vault.quoteMint(mintAmount);
+        (uint256 requiredUSDC,) = vault.quoteMint(mintAmount);
 
         vm.startPrank(alice);
         usdc.approve(address(vault), requiredUSDC);
@@ -90,7 +90,7 @@ contract CopraProtocolTest is Test {
         // Minus 0.5% protocol fee ($0.35) = $69.65 USDC (69_650_000)
         (uint256 redeemCollateral, uint256 fee) = vault.quoteRedeem(50 * 1e18);
         assertEq(redeemCollateral, 69_650_000); // $69.65
-        assertEq(fee, 350_000);                // $0.35
+        assertEq(fee, 350_000); // $0.35
 
         uint256 bobUsdcBefore = usdc.balanceOf(bob);
 
@@ -125,11 +125,11 @@ contract CopraProtocolTest is Test {
         vm.prank(oracleUpdater);
         oracle.updatePrice(newPrice);
 
-        (uint256 price, ) = oracle.getCopraPriceUSD();
+        (uint256 price,) = oracle.getCopraPriceUSD();
         assertEq(price, newPrice);
 
         // Mint quotes now reflect higher coconut price
-        (uint256 requiredUSDC, ) = vault.quoteMint(100 * 1e18);
+        (uint256 requiredUSDC,) = vault.quoteMint(100 * 1e18);
         // 100 * 1.54 = $154 + 0.5% ($0.77) = $154.77
         assertEq(requiredUSDC, 154_770_000);
     }

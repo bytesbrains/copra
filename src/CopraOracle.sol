@@ -48,7 +48,7 @@ contract CopraOracle is ICopraOracle {
      */
     function updatePrice(uint256 _newPrice) external onlyUpdater {
         if (_newPrice == 0) revert PriceTooLow();
-        
+
         // Safeguard against oracle flash crashes / manipulation (max 20% shift per update unless initialized)
         if (copraPriceUSD > 0) {
             uint256 diff = _newPrice > copraPriceUSD ? _newPrice - copraPriceUSD : copraPriceUSD - _newPrice;

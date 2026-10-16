@@ -55,12 +55,7 @@ contract CopraVault is ReentrancyGuard {
      * @param _oracle Address of the CopraOracle contract.
      * @param _feeRecipient Address that receives protocol mint/redeem fee earnings.
      */
-    constructor(
-        address _collateral,
-        uint8 _collateralDecimals,
-        address _oracle,
-        address _feeRecipient
-    ) {
+    constructor(address _collateral, uint8 _collateralDecimals, address _oracle, address _feeRecipient) {
         if (_collateral == address(0) || _oracle == address(0) || _feeRecipient == address(0)) {
             revert ZeroAddress();
         }
@@ -88,11 +83,11 @@ contract CopraVault is ReentrancyGuard {
      * @return fee Portion of collateral allocated to protocol fee.
      */
     function quoteMint(uint256 copraAmount) public view returns (uint256 collateralRequired, uint256 fee) {
-        (uint256 priceUSD, ) = oracle.getCopraPriceUSD();
+        (uint256 priceUSD,) = oracle.getCopraPriceUSD();
         // priceUSD has 8 decimals. copraAmount has 18 decimals.
         // Base collateral value in USD (18 decimals) = (copraAmount * priceUSD) / 1e8
         uint256 valueUSD18 = (copraAmount * priceUSD) / 1e8;
-        
+
         // Convert to collateral decimals
         uint256 baseCollateral;
         if (collateralDecimals < 18) {
@@ -114,7 +109,7 @@ contract CopraVault is ReentrancyGuard {
      * @return fee Portion deducted for protocol fee.
      */
     function quoteRedeem(uint256 copraAmount) public view returns (uint256 collateralToReturn, uint256 fee) {
-        (uint256 priceUSD, ) = oracle.getCopraPriceUSD();
+        (uint256 priceUSD,) = oracle.getCopraPriceUSD();
         uint256 valueUSD18 = (copraAmount * priceUSD) / 1e8;
 
         uint256 baseCollateral;

@@ -9,7 +9,7 @@ import "../src/CopraVault.sol";
 /**
  * @title DeployCopra
  * @notice Forge deployment script for Copra Protocol on Base / Base Sepolia.
- * 
+ *
  * Usage:
  * forge script script/DeployCopra.s.sol:DeployCopra --rpc-url $BASE_SEPOLIA_RPC --broadcast --verify
  */
@@ -20,7 +20,8 @@ contract DeployCopra is Script {
     uint256 public constant INITIAL_PRICE = 142000000; // $1.42 USD (8 decimals)
 
     function run() external {
-        uint256 deployerPrivateKey = vm.envOr("PRIVATE_KEY", uint256(0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80));
+        uint256 deployerPrivateKey =
+            vm.envOr("PRIVATE_KEY", uint256(0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80));
         address deployerAddress = vm.addr(deployerPrivateKey);
 
         console.log("Deploying Copra Protocol from:", deployerAddress);
