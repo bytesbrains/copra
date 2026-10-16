@@ -156,7 +156,7 @@ jobs:
           DIST_DIR="dist-artifacts"
           mkdir -p "${DIST_DIR}"
 
-          for contract in CopraToken CopraVault CopraOracle TestnetUSDC; do
+          for contract in CopraToken CopraVault CopraOracle TestnetUSDC CopraRegistry; do
             jq '.abi' "out/${contract}.sol/${contract}.json" > "${DIST_DIR}/${contract}.abi.json"
             jq '{abi: .abi, bytecode: .bytecode.object, deployedBytecode: .deployedBytecode.object}' \
               "out/${contract}.sol/${contract}.json" > "${DIST_DIR}/${contract}.artifact.json"
@@ -176,8 +176,8 @@ jobs:
                --argjson version "${VERSION}" --argjson updatedAt "${UPDATED_AT}" \
               '.contracts = {TestnetUSDC: $usdc, CopraOracle: $oracle, CopraVault: $vault, CopraToken: $token, CopraRegistry: $registry}
                | .registryVersion = $version
-               | .deployedAt = (($updatedAt | todate))
-               | del(.deployer)' \
+               | .registryUpdatedAt = ($updatedAt | todate)
+               | del(.deployedAt, .deployer)' \
               "${REPO_MANIFEST}" > "${MANIFEST_FILE}"
             echo "Manifest resolved from CopraRegistry v${VERSION}"
           else
@@ -217,7 +217,7 @@ jobs:
             fi
             echo "### Included Release Assets"
             echo "- \`${ARCHIVE_NAME}\` — Complete bundle of contract ABIs, bytecode artifacts, and deployment manifest"
-            echo "- \`CopraToken.abi.json\`, \`CopraVault.abi.json\`, \`CopraOracle.abi.json\`, \`TestnetUSDC.abi.json\`"
+            echo "- \`CopraToken.abi.json\`, \`CopraVault.abi.json\`, \`CopraOracle.abi.json\`, \`TestnetUSDC.abi.json\`, \`CopraRegistry.abi.json\`"
             if [[ -f "${MANIFEST_FILE}" ]]; then
               echo "- \`base-sepolia.json\` — Canonical Base Sepolia deployment manifest"
             fi
@@ -230,6 +230,7 @@ jobs:
             "${DIST_DIR}/CopraVault.abi.json"
             "${DIST_DIR}/CopraOracle.abi.json"
             "${DIST_DIR}/TestnetUSDC.abi.json"
+            "${DIST_DIR}/CopraRegistry.abi.json"
             "${DIST_DIR}/SHA256SUMS.txt"
           )
           RELEASE_ASSETS+=("${MANIFEST_FILE}")
