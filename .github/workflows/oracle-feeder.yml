@@ -43,6 +43,7 @@ jobs:
           ORACLE_FEEDER_KEY: ${{ secrets.ORACLE_FEEDER_KEY }}
           BASE_SEPOLIA_RPC: ${{ secrets.BASE_SEPOLIA_RPC || 'https://base-sepolia-rpc.publicnode.com' }}
           FORCE: ${{ github.event.inputs.force || 'false' }}
+          TARGET_PRICE: ${{ github.event.inputs.target_price }}
         run: |
           chmod +x ./scripts/oracle-feeder.sh
-          ./scripts/oracle-feeder.sh "${{ github.event.inputs.target_price }}"
+          ./scripts/oracle-feeder.sh "$TARGET_PRICE"
