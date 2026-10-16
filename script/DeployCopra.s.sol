@@ -36,7 +36,8 @@ contract DeployCopra is Script {
             BASE_SEPOLIA_USDC,
             USDC_DECIMALS,
             address(oracle),
-            deployerAddress // Fee recipient receives mint/redeem fee earnings
+            deployerAddress, // Fee recipient receives mint/redeem fee earnings
+            deployerAddress // Initial contract owner (Ownable2Step)
         );
         console.log("CopraVault deployed at:", address(vault));
 
