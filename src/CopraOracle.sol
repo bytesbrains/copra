@@ -1,0 +1,74 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "./interfaces/ICopraOracle.sol";
+
+/**
+ * @title CopraOracle
+ * @author Copra Protocol (https://copra.dev)
+ * @notice Oracle contract providing the global benchmark price for Copra commodity in USD.
+ *         Designed for automated feeds from ICC (International Coconut Community) and World Bank Pink Sheets.
+ */
+contract CopraOracle is ICopraOracle {
+    address public immutable feedUpdater;
+    uint256 private copraPriceUSD; // 8 decimals (e.g. $1.42 = 142000000)
+    uint256 private lastUpdatedAt;
+
+    uint8 public constant override decimals = 8;
+    uint256 public constant MAX_PRICE_CHANGE_BPS = 2000; // 20% max single shift safeguard
+    uint256 public constant HEARTBEAT = 7 days;
+
+    event PriceUpdated(uint256 indexed oldPrice, uint256 indexed newPrice, uint256 timestamp);
+
+    error OnlyUpdater();
+    error StalePrice();
+    error PriceTooLow();
+    error PriceChangeExceeded();
+
+    modifier onlyUpdater() {
+        if (msg.sender != feedUpdater) revert OnlyUpdater();
+        _;
+    }
+
+    /**
+     * @param _feedUpdater Address of the automated oracle feeder bot or Chainlink relay.
+     * @param _initialPrice Initial Copra benchmark price in USD with 8 decimals (e.g. 140000000 = $1.40).
+     */
+    constructor(address _feedUpdater, uint256 _initialPrice) {
+        if (_initialPrice == 0) revert PriceTooLow();
+        feedUpdater = _feedUpdater;
+        copraPriceUSD = _initialPrice;
+        lastUpdatedAt = block.timestamp;
+        emit PriceUpdated(0, _initialPrice, block.timestamp);
+    }
+
+    /**
+     * @notice Updates the copra commodity benchmark price.
+     * @param _newPrice New price with 8 decimals.
+     */
+    function updatePrice(uint256 _newPrice) external onlyUpdater {
+        if (_newPrice == 0) revert PriceTooLow();
+        
+        // Safeguard against oracle flash crashes / manipulation (max 20% shift per update unless initialized)
+        if (copraPriceUSD > 0) {
+            uint256 diff = _newPrice > copraPriceUSD ? _newPrice - copraPriceUSD : copraPriceUSD - _newPrice;
+            if ((diff * 10000) / copraPriceUSD > MAX_PRICE_CHANGE_BPS) {
+                revert PriceChangeExceeded();
+            }
+        }
+
+        uint256 oldPrice = copraPriceUSD;
+        copraPriceUSD = _newPrice;
+        lastUpdatedAt = block.timestamp;
+
+        emit PriceUpdated(oldPrice, _newPrice, block.timestamp);
+    }
+
+    /**
+     * @notice Returns the latest validated copra commodity price.
+     */
+    function getCopraPriceUSD() external view override returns (uint256 price, uint256 updatedAt) {
+        if (block.timestamp - lastUpdatedAt > HEARTBEAT) revert StalePrice();
+        return (copraPriceUSD, lastUpdatedAt);
+    }
+}
