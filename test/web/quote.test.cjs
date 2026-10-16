@@ -32,6 +32,13 @@ test('quote mirrors match CopraVault for the documented example', () => {
   assert.deepEqual(Q.quoteRedeem(tenCopra, PRICE, BPS), { collateralToReturn: 14164500n, fee: 35500n });
 });
 
+test('quoteMint rounds up like CopraVault, quoteRedeem rounds down', () => {
+  const dust = 714285714285n; // just under 1 micro-USDC at $1.40
+  assert.equal(Q.quoteMint(dust, 140000000n, BPS).collateralRequired, 1n);
+  assert.equal(Q.quoteRedeem(dust, 140000000n, BPS).collateralToReturn, 0n);
+  assert.equal(Q.quoteMint(10n ** 18n, 140000000n, BPS).collateralRequired, 1403500n); // matches test_Vault_DustMintIsNotFree
+});
+
 // Regression for the MAX button: spending the full balance must never require more than the balance.
 test('copraForCollateral never exceeds the USDC budget', () => {
   const budgets = [1n, 999n, 10999999n, 11000000n, 14235500n, 1000000000n, 123456789012n];
@@ -53,4 +60,22 @@ test('copraForCollateral spends the budget to within one cent of a unit', () => 
   const usdc = 10999999n;
   const { collateralRequired } = Q.quoteMint(Q.copraForCollateral(usdc, PRICE, BPS), PRICE, BPS);
   assert.ok(usdc - collateralRequired <= 1n, `left ${usdc - collateralRequired} unspent`);
+});
+
+// Seeded random property check across fee 0..100 bps, prices and budgets, so the guarantee
+// does not rest on the hand-picked grid above.
+test('copraForCollateral stays within budget on random inputs', () => {
+  let seed = 0x2545f491n;
+  const next = (mod) => {
+    seed = (seed * 6364136223846793005n + 1442695040888963407n) % (1n << 64n);
+    return (seed >> 16n) % mod;
+  };
+  for (let i = 0; i < 20000; i++) {
+    const usdc = next(10n ** 15n) + 1n;
+    const price = next(10n ** 12n) + 1n;
+    const bps = next(101n);
+    const copra = Q.copraForCollateral(usdc, price, bps);
+    const { collateralRequired } = Q.quoteMint(copra, price, bps);
+    assert.ok(collateralRequired <= usdc, `usdc=${usdc} price=${price} bps=${bps}`);
+  }
 });

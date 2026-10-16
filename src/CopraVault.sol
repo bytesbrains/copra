@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "./interfaces/ICopraOracle.sol";
 import "./CopraToken.sol";
@@ -116,13 +117,13 @@ contract CopraVault is ReentrancyGuard, Ownable2Step {
     function quoteMint(uint256 copraAmount) public view returns (uint256 collateralRequired, uint256 fee) {
         (uint256 priceUSD,) = oracle.getCopraPriceUSD();
         // priceUSD has 8 decimals. copraAmount has 18 decimals.
-        // Base collateral value in USD (18 decimals) = (copraAmount * priceUSD) / 1e8
-        uint256 valueUSD18 = (copraAmount * priceUSD) / 1e8;
+        // Rounds UP: every minted unit must be fully backed, so dust mints cannot cost 0 collateral.
+        uint256 valueUSD18 = Math.mulDiv(copraAmount, priceUSD, 1e8, Math.Rounding.Ceil);
 
         // Convert to collateral decimals
         uint256 baseCollateral;
         if (collateralDecimals < 18) {
-            baseCollateral = valueUSD18 / (10 ** (18 - collateralDecimals));
+            baseCollateral = Math.ceilDiv(valueUSD18, 10 ** (18 - collateralDecimals));
         } else if (collateralDecimals > 18) {
             baseCollateral = valueUSD18 * (10 ** (collateralDecimals - 18));
         } else {
@@ -180,8 +181,10 @@ contract CopraVault is ReentrancyGuard, Ownable2Step {
         if (copraAmount == 0) revert ZeroAmount();
         (uint256 collateralToReturn, uint256 fee) = quoteRedeem(copraAmount);
 
+        // The redeem fee stays in the vault as accumulatedFees, so it must be covered by backing
+        // collateral too; otherwise the vault ends up owing more fees than it holds.
         uint256 availableCollateral = collateralToken.balanceOf(address(this)) - accumulatedFees;
-        if (collateralToReturn > availableCollateral) revert InsufficientVaultCollateral();
+        if (collateralToReturn + fee > availableCollateral) revert InsufficientVaultCollateral();
 
         accumulatedFees += fee;
         copraToken.burnFromVault(msg.sender, copraAmount);

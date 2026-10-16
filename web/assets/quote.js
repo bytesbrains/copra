@@ -32,28 +32,35 @@
     return fracDigits > 0 ? `${whole}.${frac}` : `${whole}`;
   }
 
-  function baseCollateral(copraWei, price8) {
-    const valueUSD18 = (copraWei * price8) / PRICE_SCALE;
-    return valueUSD18 / 10n ** BigInt(COPRA_DECIMALS - USDC_DECIMALS);
+  const ceilDiv = (a, b) => (a === 0n ? 0n : (a - 1n) / b + 1n);
+
+  // quoteMint rounds UP (every minted unit fully backed); quoteRedeem rounds DOWN.
+  function baseCollateral(copraWei, price8, roundUp) {
+    const div = roundUp ? ceilDiv : (a, b) => a / b;
+    const valueUSD18 = div(copraWei * price8, PRICE_SCALE);
+    return div(valueUSD18, 10n ** BigInt(COPRA_DECIMALS - USDC_DECIMALS));
   }
 
   function quoteMint(copraWei, price8, feeBps) {
-    const base = baseCollateral(copraWei, price8);
+    const base = baseCollateral(copraWei, price8, true);
     const fee = (base * feeBps) / BPS;
     return { collateralRequired: base + fee, fee };
   }
 
   function quoteRedeem(copraWei, price8, feeBps) {
-    const base = baseCollateral(copraWei, price8);
+    const base = baseCollateral(copraWei, price8, false);
     const fee = (base * feeBps) / BPS;
     return { collateralToReturn: base - fee, fee };
   }
 
-  // Largest-safe $COPRA amount for a USDC budget: quoteMint(result).collateralRequired <= usdcRaw.
+  // Largest $COPRA amount for a USDC budget: quoteMint(result).collateralRequired <= usdcRaw.
+  // Largest base B with B + floor(B * bps / 1e4) <= budget, then the largest amount whose
+  // rounded-up base collateral is <= B, i.e. copra * price <= B * 1e12 * 1e8.
   function copraForCollateral(usdcRaw, price8, feeBps) {
     if (usdcRaw <= 0n || price8 <= 0n) return 0n;
+    const base = (usdcRaw * BPS) / (BPS + feeBps);
     const scale = 10n ** BigInt(COPRA_DECIMALS - USDC_DECIMALS);
-    return (usdcRaw * scale * PRICE_SCALE * BPS) / (price8 * (BPS + feeBps));
+    return (base * scale * PRICE_SCALE) / price8;
   }
 
   const api = { parseUnits, formatUnits, quoteMint, quoteRedeem, copraForCollateral };
