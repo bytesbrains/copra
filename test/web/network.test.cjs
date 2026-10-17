@@ -12,7 +12,8 @@ const env = require('../../scripts/web-env.cjs');
 const { runPage, localScripts } = require('./lib/page.cjs');
 
 const WEB = path.join(__dirname, '../../web');
-const ENVS = ['sepolia', 'local', 'mainnet'];
+// mainnet has no registry until #47 deploys one, so no site is built for it yet.
+const ENVS = ['sepolia', 'local'];
 
 function files(dir, base = dir) {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((d) => {
@@ -22,13 +23,15 @@ function files(dir, base = dir) {
 }
 
 const built = {};
+let tmp;
 test.before(() => {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'copra-web-'));
+  tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'copra-web-'));
   for (const e of ENVS) {
     built[e] = path.join(tmp, e);
     env.build(e, built[e]);
   }
 });
+test.after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 /** Relative paths whose bytes differ between web/ and `dir` (the file sets must match). */
 function differing(dir) {
@@ -54,7 +57,7 @@ test('sepolia settings and headers are what production has served since before #
   assert.equal(csp.trim(), "Content-Security-Policy: default-src 'self'; script-src 'self' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://base-sepolia-rpc.publicnode.com; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'");
 });
 
-for (const e of ['local', 'mainnet']) {
+for (const e of ['local']) {
   test(`${e} differs from web/ only in network.js and the CSP's connect-src`, () => {
     assert.deepEqual(differing(built[e]), ['_headers', 'assets/network.js']);
     const lines = (dir) => fs.readFileSync(path.join(dir, '_headers'), 'utf8').split('\n');
@@ -79,17 +82,23 @@ test('local: the e2e chain, chain id 84532 like the stack, no explorer; --rpc-ur
   assert.throws(() => env.loadNetwork('sepolia', { rpcUrl: 'http://127.0.0.1:9545' }), /local environment only/);
 });
 
-test('mainnet: Base (8453) over https, for #47', () => {
+test('mainnet: Base (8453) over https, no registry until #47, so no site is built', () => {
   const net = env.loadNetwork('mainnet');
   assert.equal(net.chainId, 8453);
   assert.match(net.rpcUrl, /^https:\/\//);
   assert.match(net.explorer, /^https:\/\//);
+  // The Sepolia registry's address has no code on Base: a mainnet page reading it would only fail.
+  assert.equal(net.registry, null);
+  assert.throws(() => env.build('mainnet', path.join(os.tmpdir(), 'copra-mainnet')), /no CopraRegistry on mainnet/);
 });
 
 test('settings are validated: exact keys, https outside local, never written into web/', () => {
   const ok = env.loadNetwork('mainnet');
   assert.doesNotThrow(() => env.validate({ ...ok }));
   assert.throws(() => env.validate({ ...ok, extra: 1 }), /exactly/);
+  const { name, ...rest } = ok;
+  assert.throws(() => env.validate(rest), /exactly/);
+  assert.doesNotThrow(() => env.validate({ ...rest, name }), 'key order does not matter');
   assert.throws(() => env.validate({ ...ok, rpcUrl: 'http://base-rpc.publicnode.com' }), /https/);
   assert.throws(() => env.validate({ ...ok, explorer: 'http://basescan.org' }), /https or null/);
   assert.throws(() => env.validate({ ...ok, registry: '0x1234' }), /registry/);

@@ -71,7 +71,9 @@ test('the app scripts write no HTML strings into the DOM', () => {
 
 test('connect-src covers the RPC endpoint network.js sets', () => {
   const network = fs.readFileSync(path.join(WEB, 'assets/network.js'), 'utf8');
-  const rpc = network.match(/"rpcUrl":\s*"([^"]+)"/)[1];
+  const m = network.match(/"rpcUrl":\s*"([^"]+)"/);
+  assert.ok(m, 'web/assets/network.js declares no rpcUrl');
+  const rpc = m[1];
   assert.ok(allows('connect-src', rpc), `connect-src blocks ${rpc}`);
 });
 

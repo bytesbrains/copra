@@ -22,7 +22,9 @@ const RPC_URL = process.env.RPC_URL || 'http://127.0.0.1:8545';
 const manifest = JSON.parse(fs.readFileSync(path.join(process.env.E2E_OUT_DIR || path.join(REPO, 'e2e/.out'), 'deployment.json'), 'utf8'));
 
 const get = async (p) => {
-  const res = await fetch(new URL(p, WEB_URL));
+  const res = await fetch(new URL(p, WEB_URL)).catch((e) => {
+    throw new Error(`GET ${p}: ${e.cause?.message || e.message} (is the stack's web service up? make e2e-up)`);
+  });
   assert.equal(res.status, 200, `GET ${p}: ${res.status}`);
   return { res, body: Buffer.from(await res.arrayBuffer()) };
 };
@@ -41,17 +43,24 @@ async function main() {
   assert.equal(NETWORK.name, 'local', 'served network is local');
 
   // 1. Every file is the local build of web/, and that build differs from web/ only in network.js.
-  const built = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'copra-web-')), 'web');
-  env.build('local', built, { rpcUrl: NETWORK.rpcUrl });
-  for (const f of files(built).filter((f) => f !== '_headers')) {
-    const { body } = await get('/' + f.split(path.sep).join('/'));
-    assert.ok(body.equals(fs.readFileSync(path.join(built, f))), `${f} is not what web-env.cjs builds`);
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'copra-web-'));
+  const built = path.join(tmp, 'web');
+  let headers;
+  try {
+    env.build('local', built, { rpcUrl: NETWORK.rpcUrl });
+    for (const f of files(built).filter((f) => f !== '_headers')) {
+      const { body } = await get('/' + f.split(path.sep).join('/'));
+      assert.ok(body.equals(fs.readFileSync(path.join(built, f))), `${f} is not what web-env.cjs builds`);
+    }
+    console.log(`PASS: ${files(built).length - 1} served files are web/ built for local (RPC ${NETWORK.rpcUrl})`);
+    headers = fs.readFileSync(path.join(built, '_headers'), 'utf8');
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
   }
-  console.log(`PASS: ${files(built).length - 1} served files are web/ built for local (RPC ${NETWORK.rpcUrl})`);
 
   // 2. Headers: every rule in the build's _headers for /* is served as written.
   const { res } = await get('/');
-  const rules = fs.readFileSync(path.join(built, '_headers'), 'utf8').split(/\n(?=\S)/).find((b) => b.startsWith('/*'));
+  const rules = headers.split(/\n(?=\S)/).find((b) => b.startsWith('/*'));
   const want = rules.split('\n').slice(1).filter((l) => l.trim()).map((l) => l.trim().split(/:\s*(.*)/s).slice(0, 2));
   for (const [name, value] of want) assert.equal(res.headers.get(name), value, `header ${name}`);
   assert.equal(res.headers.get('content-security-policy-report-only'), null, 'the CSP is enforced');
@@ -92,6 +101,7 @@ async function main() {
     });
     const deadline = Date.now() + 15000;
     while (!el('metricVaultReserves').textContent && Date.now() < deadline) await new Promise((r) => setTimeout(r, 100));
+    assert.ok(el('metricVaultReserves').textContent, `the page showed no reserves within 15s; warnings: ${warnings.join(' | ') || 'none'}`);
 
     assert.deepEqual(warnings, [], 'the page logged no warnings');
     assert.ok(urls.length >= 2 && urls.every((u) => u === NETWORK.rpcUrl), `every read uses the page's RPC: ${urls}`);

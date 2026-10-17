@@ -151,8 +151,9 @@ A clean, responsive dApp is included in [web/index.html](web/index.html) and dep
 
 **Network per environment.** The chain, RPC, explorer and registry come from [networks/](networks/) (`sepolia`, `local`, `mainnet`). `web/` as committed is the **Base Sepolia** build: `web/assets/network.js` is generated from `networks/sepolia.json`. To build another environment:
 ```bash
-node scripts/web-env.cjs mainnet dist/web   # a copy of web/ for that network
+node scripts/web-env.cjs local dist/web   # a copy of web/ for that network
 ```
+`mainnet` has no registry yet (`null` until #47 deploys one), so the generator refuses to build it.
 Only `assets/network.js` and the CSP's `connect-src` (that network's RPC) differ from `web/`, and `test/web/network.test.cjs` enforces it. After editing `networks/sepolia.json`, regenerate `web/assets/network.js` with `node scripts/web-env.cjs sepolia <tmp>` and copy it back; the test fails until you do.
 
 ---

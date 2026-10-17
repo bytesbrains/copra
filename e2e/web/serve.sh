@@ -13,6 +13,7 @@ node /repo/scripts/web-env.cjs local "${SITE}/web" --rpc-url "http://127.0.0.1:$
 node -e '
   const fs = require("node:fs");
   const { compatibilityDate } = require("/app/node_modules/workerd");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(compatibilityDate)) throw new Error(`workerd exports no compatibilityDate: ${compatibilityDate}`);
   const config = JSON.parse(fs.readFileSync("/repo/wrangler.jsonc", "utf8"));
   delete config.$schema;
   config.assets.directory = "./web";

@@ -23,14 +23,16 @@ function loadNetwork(env, { rpcUrl } = {}) {
     net.rpcUrl = rpcUrl;
   }
   validate(net);
-  return net;
+  // Canonical key order, so network.js does not depend on how the settings file is ordered.
+  return Object.fromEntries(KEYS.map((k) => [k, net[k]]));
 }
 
 function validate(net) {
   const keys = Object.keys(net);
-  if (keys.join() !== KEYS.join()) throw new Error(`network settings must have exactly ${KEYS.join(', ')}; got ${keys.join(', ')}`);
+  if (keys.length !== KEYS.length || !KEYS.every((k) => keys.includes(k))) throw new Error(`network settings must have exactly ${KEYS.join(', ')}; got ${keys.join(', ')}`);
   if (!Number.isSafeInteger(net.chainId) || net.chainId <= 0) throw new Error(`chainId ${net.chainId}`);
-  if (!/^0x[0-9a-fA-F]{40}$/.test(net.registry)) throw new Error(`registry ${net.registry}`);
+  // null: no CopraRegistry on that network yet. The settings load, but no site is built for it.
+  if (net.registry !== null && !/^0x[0-9a-fA-F]{40}$/.test(net.registry)) throw new Error(`registry ${net.registry}`);
   if (!/^https?:$/.test(new URL(net.rpcUrl).protocol)) throw new Error(`rpcUrl ${net.rpcUrl}`);
   // Only a local chain may be plain http; a public network's RPC and explorer must be https.
   if (net.name !== 'local' && !net.rpcUrl.startsWith('https://')) throw new Error(`rpcUrl must be https: ${net.rpcUrl}`);
@@ -58,6 +60,7 @@ function headersFor(net, headers) {
 
 function build(env, outDir, opts = {}) {
   const net = loadNetwork(env, opts);
+  if (net.registry === null) throw new Error(`no CopraRegistry on ${net.name} yet: set its registry in networks/${net.name}.json once deployed`);
   const out = path.resolve(outDir);
   if (out === WEB || out.startsWith(WEB + path.sep)) throw new Error('outDir must not be inside web/');
   fs.rmSync(out, { recursive: true, force: true });
