@@ -44,9 +44,14 @@ contract DeployCopraMainnet is CopraRegistryScript {
     }
 
     function run() external returns (Deployment memory) {
+        return deploy(configFromEnv(), vm.envUint("PRIVATE_KEY"));
+    }
+
+    /// @notice Every input but the key, from COPRA_* environment variables.
+    function configFromEnv() public view returns (Config memory) {
         uint256 decimals = vm.envUint("COPRA_COLLATERAL_DECIMALS");
         require(decimals <= type(uint8).max, "DeployCopraMainnet: COPRA_COLLATERAL_DECIMALS out of range");
-        Config memory cfg = Config({
+        return Config({
             owner: vm.envAddress("COPRA_OWNER"),
             oracleUpdater: vm.envAddress("COPRA_ORACLE_UPDATER"),
             feeRecipient: vm.envAddress("COPRA_FEE_RECIPIENT"),
@@ -56,7 +61,6 @@ contract DeployCopraMainnet is CopraRegistryScript {
             initialPrice: vm.envUint("COPRA_INITIAL_PRICE"),
             allowDeployerAsUpdater: vm.envOr("COPRA_ALLOW_DEPLOYER_UPDATER", false)
         });
-        return deploy(cfg, vm.envUint("PRIVATE_KEY"));
     }
 
     /// @dev Separate from run() so tests can pass a config without mutating the shared process environment.

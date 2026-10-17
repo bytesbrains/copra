@@ -180,8 +180,9 @@ contract DeployCopraMainnetTest is Test {
         testnet.deploy(123456);
     }
 
-    function test_DeployCopraMainnet_RunReadsTheEnvironment() public {
-        vm.setEnv("PRIVATE_KEY", vm.toString(DEPLOYER_KEY));
+    /// @dev Sets only COPRA_* variables: forge runs suites in parallel and the environment is shared, so
+    ///      touching PRIVATE_KEY here would race test_DeployCopra_RequiresExplicitPrivateKey.
+    function test_DeployCopraMainnet_ConfigFromEnvironment() public {
         vm.setEnv("COPRA_OWNER", vm.toString(owner));
         vm.setEnv("COPRA_ORACLE_UPDATER", vm.toString(updater));
         vm.setEnv("COPRA_FEE_RECIPIENT", vm.toString(feeRecipient));
@@ -190,12 +191,9 @@ contract DeployCopraMainnetTest is Test {
 
         vm.setEnv("COPRA_COLLATERAL_DECIMALS", "262"); // 6 once truncated to uint8: must not slip through
         vm.expectRevert("DeployCopraMainnet: COPRA_COLLATERAL_DECIMALS out of range");
-        script.run();
+        script.configFromEnv();
 
         vm.setEnv("COPRA_COLLATERAL_DECIMALS", "6");
-        DeployCopraMainnet.Deployment memory d = script.run();
-        assertEq(d.registry.owner(), owner);
-        assertEq(d.oracle.feedUpdater(), updater);
-        assertEq(d.vault.feeRecipient(), feeRecipient);
+        assertEq(abi.encode(script.configFromEnv()), abi.encode(_cfg()));
     }
 }
