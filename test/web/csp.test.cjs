@@ -11,8 +11,8 @@ const html = fs.readFileSync(path.join(WEB, 'index.html'), 'utf8');
 const headers = fs.readFileSync(path.join(WEB, '_headers'), 'utf8');
 
 function cspDirectives() {
-  const line = headers.split('\n').find((l) => /^\s*Content-Security-Policy(-Report-Only)?:/.test(l));
-  assert.ok(line, 'web/_headers sets a Content-Security-Policy');
+  const line = headers.split('\n').find((l) => /^\s*Content-Security-Policy:/.test(l));
+  assert.ok(line, 'web/_headers sets an enforced Content-Security-Policy');
   const policy = line.slice(line.indexOf(':') + 1);
   const map = {};
   for (const d of policy.split(';').map((s) => s.trim()).filter(Boolean)) {
@@ -23,6 +23,13 @@ function cspDirectives() {
 }
 
 const csp = cspDirectives();
+
+// Enforced since #32. Going back to report-only would silently drop the protection: a violation
+// would only log, and only in the console of whoever happened to be looking.
+test('the CSP is enforced, not report-only', () => {
+  assert.doesNotMatch(headers, /Content-Security-Policy-Report-Only/);
+});
+
 const allows = (directive, url) => {
   const sources = csp[directive] || csp['default-src'];
   if (!/^https?:/.test(url)) return sources.includes("'self'");
