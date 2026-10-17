@@ -449,8 +449,10 @@ contract CopraProtocolTest is Test {
     }
 
     /// @dev scripts/oracle-feeder.sh reads slots 0 and 1 to clamp a recovery update when the price getter
-    ///      reverts as stale. Moving these variables breaks the feeder's guardrail, so pin the layout.
+    ///      reverts as stale. Moving these variables breaks the feeder's guardrail, so pin the layout, and
+    ///      the HEARTBEAT the feeder hardcodes to sanity-check the stale age it reads.
     function test_Oracle_StorageLayoutReadByFeeder() public {
+        assertEq(oracle.HEARTBEAT(), 604800);
         vm.warp(block.timestamp + oracle.HEARTBEAT() + 1);
         vm.expectRevert(CopraOracle.StalePrice.selector);
         oracle.getCopraPriceUSD();

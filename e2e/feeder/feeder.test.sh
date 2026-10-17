@@ -28,13 +28,14 @@ rpc evm_setIntervalMining 0
 rpc evm_setAutomine true
 rpc anvil_impersonateAccount "${OWNER}"
 
-# Wraps the real cast so one read alone (any cast call whose arguments contain FAKE_ERROR_ON) can fail
-# like an RPC outage or a revert, with FAKE_ERROR as the error.
+# Wraps the real cast so one read alone (any cast call whose arguments contain FAKE_ON) can fail like an
+# RPC outage or a revert, with FAKE_ERROR as the error, or succeed with FAKE_OUTPUT as its answer.
 REAL_CAST="$(command -v cast)"
 mkdir -p "${WORK}/bin"
 cat > "${WORK}/bin/cast" <<EOF
 #!/usr/bin/env bash
-if [[ -n "\${FAKE_ERROR_ON:-}" && "\$*" == *"\${FAKE_ERROR_ON}"* ]]; then
+if [[ -n "\${FAKE_ON:-}" && "\$*" == *"\${FAKE_ON}"* ]]; then
+    if [[ -n "\${FAKE_OUTPUT:-}" ]]; then echo "\${FAKE_OUTPUT}"; exit 0; fi
     echo "\${FAKE_ERROR}" >&2
     exit 1
 fi
@@ -58,6 +59,7 @@ price_events() {
         | python3 -c 'import json,sys
 for l in json.load(sys.stdin): print(int(l["topics"][1],16), int(l["topics"][2],16), int(l["data"],16))'
 }
+event_count() { price_events | wc -l | tr -d ' '; } # BSD wc pads the count
 
 # --- assertions ---
 FAILED=0
@@ -78,7 +80,8 @@ scenario() {
 }
 
 # feed <expected exit> <expected output substring> [env assignments...]: runs the real feeder against
-# the stack. A failing run must never have reached the broadcast.
+# the stack. A failing run must never have reached the broadcast. The assignments follow the defaults on
+# env's command line and env applies them in order, so a scenario can override one (ORACLE_FEEDER_FROM=).
 OUT=""
 feed() {
     local want_exit="$1" want_out="$2" code=0
@@ -96,7 +99,7 @@ feed() {
 # expect_update <old> <new>: the last run landed exactly one update, oldPrice -> newPrice, now.
 expect_update() {
     local events last
-    events=$(price_events | wc -l)
+    events=$(event_count)
     expect_eq "${events}" "$((EVENTS + 1))" "PriceUpdated count"
     last=$(price_events | tail -n 1)
     expect_eq "${last}" "$1 $2 $(now)" "last PriceUpdated (old new timestamp)"
@@ -104,11 +107,11 @@ expect_update() {
     expect_eq "$(updated_at)" "$(now)" "oracle updatedAt"
     EVENTS=$((EVENTS + 1))
 }
-expect_no_update() { expect_eq "$(price_events | wc -l)" "${EVENTS}" "PriceUpdated count"; }
+expect_no_update() { expect_eq "$(event_count)" "${EVENTS}" "PriceUpdated count"; }
 
 ORACLE=$(oracle)
 P0=$(price)
-BASE_EVENTS=$(price_events | wc -l)
+BASE_EVENTS=$(event_count)
 echo "registry ${REGISTRY} -> oracle ${ORACLE}, price ${P0}, ${BASE_EVENTS} PriceUpdated"
 expect_eq "${P0}" 142000000 "deployed price"
 
@@ -155,16 +158,22 @@ warp "${DAY}"
 feed 1 "could not read oracle() from CopraRegistry" TARGET_PRICE=1.45 BASE_SEPOLIA_RPC=http://127.0.0.1:1
 expect_no_update
 
+scenario "oracle state read fails: exit 1, no broadcast"
+warp "${DAY}"
+feed 1 "could not read getCopraPriceUSD()" TARGET_PRICE=1.45 \
+    FAKE_ON="getCopraPriceUSD()" FAKE_ERROR="Error: error sending request for url (${RPC}/)"
+expect_no_update
+
 scenario "interval read fails: exit 1, no broadcast (#38)"
 warp "${DAY}"
 feed 1 "could not read MIN_UPDATE_INTERVAL()" TARGET_PRICE=1.45 \
-    FAKE_ERROR_ON="MIN_UPDATE_INTERVAL()" FAKE_ERROR="Error: error sending request for url (${RPC}/)"
+    FAKE_ON="MIN_UPDATE_INTERVAL()" FAKE_ERROR="Error: error sending request for url (${RPC}/)"
 expect_no_update
 
 scenario "interval getter reverts: treated as a pre-interval oracle, update lands"
 warp "${DAY}"
 feed 0 "successfully updated" TARGET_PRICE=1.45 \
-    FAKE_ERROR_ON="MIN_UPDATE_INTERVAL()" \
+    FAKE_ON="MIN_UPDATE_INTERVAL()" \
     FAKE_ERROR='Error: server returned an error response: error code 3: execution reverted, data: "0x"'
 expect_update 142000000 145000000
 
@@ -191,7 +200,7 @@ send "${NEW_VAULT}" "setCopraToken(address)" "${NEW_TOKEN}"
 send "${REGISTRY}" "setDeployment(address,address,address,address)" "${USDC}" "${NEW_ORACLE}" "${NEW_VAULT}" "${NEW_TOKEN}"
 expect_eq "$(oracle)" "${NEW_ORACLE}" "registry oracle after setDeployment"
 warp "${DAY}"
-EVENTS=$(price_events | wc -l)
+EVENTS=$(event_count)
 feed 0 "successfully updated" TARGET_PRICE=1.55 ORACLE_FEEDER_FROM= ORACLE_FEEDER_KEY="${UPDATER_KEY}"
 [[ "${OUT}" == *"Oracle Contract : ${NEW_ORACLE}"* ]] || fail "feeder did not follow the registry to ${NEW_ORACLE}"
 expect_update 150000000 155000000
@@ -216,7 +225,24 @@ expect_update 142000000 169690000
 
 scenario "stale oracle and its storage unreadable: exit 1, no broadcast"
 warp $((7 * DAY + 1))
-feed 1 "could not read the stale price" TARGET_PRICE=1.45 FAKE_ERROR_ON="storage" FAKE_ERROR="Error: error sending request for url (${RPC}/)"
+feed 1 "could not read the stale price" TARGET_PRICE=1.45 FAKE_ON="storage" FAKE_ERROR="Error: error sending request for url (${RPC}/)"
+expect_no_update
+
+# A moved storage layout must refuse to broadcast, not clamp against whatever the slots now hold.
+scenario "stale oracle and slot 0 no longer the price: exit 1, no broadcast"
+warp $((7 * DAY + 1))
+rpc anvil_setStorageAt "${ORACLE}" 0x0 "$(cast to-uint256 "$(now)")" # a timestamp where the price was
+feed 1 "implausible stale state" TARGET_PRICE=1.45
+expect_no_update
+
+scenario "stale oracle and slot 1 no longer its update time: exit 1, no broadcast"
+warp $((7 * DAY + 1))
+feed 1 "implausible stale state" TARGET_PRICE=1.45 FAKE_ON="storage ${ORACLE} 1 " FAKE_OUTPUT="$(cast to-uint256 "$(now)")"
+expect_no_update
+
+scenario "both ORACLE_FEEDER_FROM and a key: exit 1 before any read, no broadcast"
+warp "${DAY}"
+feed 1 "set only one signer" TARGET_PRICE=1.45 ORACLE_FEEDER_KEY="${UPDATER_KEY}"
 expect_no_update
 
 echo

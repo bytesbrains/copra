@@ -11,7 +11,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # Load .env only in local non-CI environments when credentials are not already provided
-if [[ -z "${CI:-}" && -z "${GITHUB_ACTIONS:-}" && -z "${ORACLE_FEEDER_KEY:-}" && -z "${PRIVATE_KEY:-}" && -f "${ROOT_DIR}/.env" ]]; then
+if [[ -z "${CI:-}" && -z "${GITHUB_ACTIONS:-}" && -z "${ORACLE_FEEDER_KEY:-}" && -z "${PRIVATE_KEY:-}" && -z "${ORACLE_FEEDER_FROM:-}" && -f "${ROOT_DIR}/.env" ]]; then
     # shellcheck disable=SC1091
     source "${ROOT_DIR}/.env"
 fi
@@ -25,7 +25,11 @@ REGISTRY_ADDRESS="${COPRA_REGISTRY_ADDRESS:-0x379cB5FED578D6F485ab1834C81E4F1CF4
 # Local chains only: sign as ORACLE_FEEDER_FROM, an account the node holds unlocked (the e2e stack
 # impersonates the production updater, whose key never leaves the oracle-feeder environment).
 # Mirrors DeployCopra.runUnlocked(). A real RPC holds no unlocked accounts, so this cannot sign there.
-if [[ -n "${ORACLE_FEEDER_FROM:-}" ]]; then
+# Never both: a stray ORACLE_FEEDER_FROM beside a key would otherwise win and fail only at the broadcast.
+if [[ -n "${ORACLE_FEEDER_FROM:-}" && -n "${PRIVATE_KEY}" ]]; then
+    echo "❌ Error: ORACLE_FEEDER_FROM and ORACLE_FEEDER_KEY/PRIVATE_KEY are both set; set only one signer."
+    exit 1
+elif [[ -n "${ORACLE_FEEDER_FROM:-}" ]]; then
     SIGNER_ARGS=(--unlocked --from "${ORACLE_FEEDER_FROM}")
 elif [[ -n "${PRIVATE_KEY}" ]]; then
     SIGNER_ARGS=(--private-key "${PRIVATE_KEY}")
@@ -61,6 +65,7 @@ echo "RPC Endpoint    : ${RPC_URL}"
 CAST_ERR="$(mktemp)"
 trap 'rm -f "${CAST_ERR}"' EXIT
 STALE_PRICE_SELECTOR="0x19abf40e" # CopraOracle.StalePrice()
+HEARTBEAT=604800                   # CopraOracle.HEARTBEAT (7 days), pinned by test_Oracle_StorageLayoutReadByFeeder
 
 # Chain time, which the oracle's heartbeat and update interval use; falls back to the local clock.
 chain_time() {
@@ -87,7 +92,9 @@ elif grep -q "${STALE_PRICE_SELECTOR}" "${CAST_ERR}"; then
     # The oracle still enforces the 20% shift limit against its stored price, so a recovery update must
     # be clamped like any other, or it reverts and leaves the oracle stale. The getter refuses to return
     # a stale price; read it from storage instead (slot 0 copraPriceUSD, slot 1 lastUpdatedAt, pinned by
-    # test_Oracle_StorageLayoutReadByFeeder).
+    # test_Oracle_StorageLayoutReadByFeeder). If the layout ever moves, the reads must fail closed rather
+    # than clamp against garbage: the price must sit in the feeder's own safe band, and the age must agree
+    # with the getter's verdict that the oracle is past HEARTBEAT.
     echo "⚠️ Warning: getCopraPriceUSD() reverted with StalePrice. Proceeding with recovery update."
     if ! ONCHAIN_PRICE=$(cast storage "${ORACLE_ADDRESS}" 0 --rpc-url "${RPC_URL}" 2>"${CAST_ERR}" | cast to-dec) \
         || ! LAST_UPDATED=$(cast storage "${ORACLE_ADDRESS}" 1 --rpc-url "${RPC_URL}" 2>"${CAST_ERR}" | cast to-dec) \
@@ -97,6 +104,10 @@ elif grep -q "${STALE_PRICE_SELECTOR}" "${CAST_ERR}"; then
     fi
     AGE_SECONDS=$(( $(chain_time) - LAST_UPDATED))
     AGE_HOURS=$((AGE_SECONDS / 3600))
+    if [[ "${ONCHAIN_PRICE}" -lt 50000000 || "${ONCHAIN_PRICE}" -gt 500000000 || "${AGE_SECONDS}" -le "${HEARTBEAT}" ]]; then
+        echo "❌ Error: implausible stale state in ${ORACLE_ADDRESS} storage (price ${ONCHAIN_PRICE}, age ${AGE_SECONDS}s); has the storage layout changed?"
+        exit 1
+    fi
     ONCHAIN_DISPLAY=$(awk -v p="${ONCHAIN_PRICE}" 'BEGIN {printf "%.4f", p/100000000}')
     echo "Last On-Chain Price    : \$${ONCHAIN_DISPLAY} USD / kg (${ONCHAIN_PRICE}), stale"
     echo "Last Updated           : ${AGE_HOURS} hours ago (${AGE_SECONDS}s)"
