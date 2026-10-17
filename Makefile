@@ -1,4 +1,4 @@
-.PHONY: all build test test-web fmt fmt-check lint clean e2e e2e-up e2e-check e2e-scenarios e2e-web e2e-feeder e2e-browser e2e-down e2e-fork e2e-fork-up e2e-fork-check e2e-fork-scenarios
+.PHONY: all build test test-web fmt fmt-check lint clean e2e e2e-up e2e-check e2e-scenarios e2e-web e2e-feeder e2e-browser e2e-down e2e-fork e2e-fork-up e2e-fork-check e2e-fork-scenarios e2e-metamask
 
 all: build test test-web
 
@@ -52,6 +52,11 @@ e2e-feeder:
 e2e-browser:
 	mkdir -p e2e/.out/browser
 	$(E2E_COMPOSE) run --rm -T --build browser $(BROWSER_ARGS)
+
+# Tier 2 (#50): real MetaMask in real Chrome against a running stack; failure video in e2e/.out/browser.
+e2e-metamask:
+	mkdir -p e2e/.out/browser
+	$(E2E_COMPOSE) run --rm -T --build metamask $(BROWSER_ARGS)
 
 e2e-down:
 	$(E2E_COMPOSE) down -v --remove-orphans
