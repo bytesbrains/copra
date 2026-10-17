@@ -27,12 +27,13 @@ const PASSWORD = 'copra-e2e-metamask';
 const version = () => JSON.parse(fs.readFileSync(path.join(EXTENSION_DIR, 'manifest.json'), 'utf8')).version;
 
 /** Chromium with MetaMask loaded, in a fresh profile. Returns the context, the extension id and a CDP view. */
-async function launch({ videoDir } = {}) {
+async function launch({ videoDir, baseURL } = {}) {
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'metamask-profile-'));
   const context = await chromium.launchPersistentContext(profile, {
     channel: 'chromium', // the full browser in new headless mode: extensions load without a display
     headless: true,
     viewport: { width: 1280, height: 900 },
+    baseURL,
     locale: 'en-US',
     timezoneId: 'UTC',
     recordVideo: videoDir ? { dir: videoDir } : undefined,
