@@ -1,4 +1,4 @@
-.PHONY: all build test test-web test-feeder fmt fmt-check lint clean e2e e2e-up e2e-check e2e-scenarios e2e-down
+.PHONY: all build test test-web test-feeder fmt fmt-check lint clean e2e e2e-up e2e-check e2e-scenarios e2e-web e2e-down
 
 all: build test test-web test-feeder
 
@@ -32,7 +32,7 @@ E2E_COMPOSE = E2E_UID=$(shell id -u) E2E_GID=$(shell id -g) docker compose -f e2
 
 e2e-up:
 	mkdir -p e2e/.out
-	$(E2E_COMPOSE) up -d --wait chain
+	$(E2E_COMPOSE) up -d --wait --build chain web
 	$(E2E_COMPOSE) run --rm -T deployer
 	@cat e2e/.out/deployment.json
 
@@ -43,12 +43,16 @@ e2e-check:
 e2e-scenarios:
 	$(E2E_COMPOSE) run --rm -T --build scenarios
 
+# The dApp served by the stack (#43): the shipped files and headers, reading the local chain.
+e2e-web:
+	$(E2E_COMPOSE) run --rm -T --build -e WEB_URL=http://web:8787 scenarios node /repo/e2e/web/check-web.cjs
+
 e2e-down:
 	$(E2E_COMPOSE) down -v --remove-orphans
 
 # Always tears the stack down, and keeps the first failure's exit code.
 e2e:
 	@$(MAKE) --no-print-directory e2e-down
-	@status=0; $(MAKE) --no-print-directory e2e-up && $(MAKE) --no-print-directory e2e-check \
+	@status=0; $(MAKE) --no-print-directory e2e-up && $(MAKE) --no-print-directory e2e-check && $(MAKE) --no-print-directory e2e-web \
 		&& $(MAKE) --no-print-directory e2e-scenarios || status=$$?; \
 		$(MAKE) --no-print-directory e2e-down; exit $$status

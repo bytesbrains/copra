@@ -33,7 +33,7 @@ async function initWeb3() {
               chainName: CONTRACTS.chainName,
               nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
               rpcUrls: [CONTRACTS.rpcUrl],
-              blockExplorerUrls: [CONTRACTS.explorer]
+              blockExplorerUrls: CONTRACTS.explorer ? [CONTRACTS.explorer] : null
             }]
           });
         } else {

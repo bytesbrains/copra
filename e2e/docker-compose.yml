@@ -43,6 +43,25 @@ services:
       FOUNDRY_BROADCAST: /tmp/forge/broadcast
     profiles: ["deploy"]
 
+  # The dApp (#43): web/ built for the `local` environment, served by wrangler dev as Cloudflare serves it.
+  web:
+    build: ./web
+    entrypoint: ["bash", "/repo/e2e/web/serve.sh"]
+    volumes:
+      - ..:/repo:ro
+    environment:
+      E2E_RPC_PORT: ${E2E_RPC_PORT:-8545} # host port, written into the page's network settings
+      HOME: /tmp/home
+      WRANGLER_SEND_METRICS: "false"
+      CI: "true" # no interactive prompts
+    ports:
+      - "127.0.0.1:${E2E_WEB_PORT:-8787}:8787"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8787/').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 1s
+      timeout: 3s
+      retries: 60
+
   # Contract scenario suite (#44): real transactions against `chain`, reading the deployer's manifest.
   scenarios:
     build: ./scenarios

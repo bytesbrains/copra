@@ -9,7 +9,8 @@ function renderContractAddresses() {
     const addr = CONTRACTS[el.getAttribute('data-contract')];
     if (!addr) return;
     if (el.tagName === 'A') {
-      el.href = `${CONTRACTS.explorer}/address/${addr}`;
+      if (CONTRACTS.explorer) el.href = `${CONTRACTS.explorer}/address/${addr}`;
+      else el.removeAttribute('href'); // a local chain has no explorer: never link to another network's
       if (el.hasAttribute('data-short')) el.textContent = `${addr.slice(0, 6)}...${addr.slice(-4)}`;
     }
     if (el.hasAttribute('data-copy')) el.setAttribute('data-copy', addr);

@@ -66,9 +66,10 @@ jobs:
           submodules: recursive
 
       # Brings up anvil (chain id 84532, 2s blocks), deploys as production does with the registry at its
-      # canonical address, verifies the deployment through the registry, runs the contract scenario suite
+      # canonical address, serves the dApp built for the local network with wrangler dev, verifies the
+      # deployment through the registry and the served dApp against it, runs the contract scenario suite
       # (real transactions, invariants after each one), and tears everything down.
-      - name: Deploy to a throwaway chain, verify, run contract scenarios
+      - name: Deploy to a throwaway chain, verify it and the served dApp, run contract scenarios
         run: make e2e
 
       - name: Upload deployment manifest

@@ -133,7 +133,7 @@ function showToast(msg, type = 'info', txHash = null) {
   const msgEl = document.createElement('div');
   msgEl.textContent = msg;
   txStatus.replaceChildren(msgEl);
-  if (txHash) {
+  if (txHash && CONTRACTS.explorer) {
     const link = document.createElement('a');
     link.href = `${CONTRACTS.explorer}/tx/${encodeURIComponent(txHash)}`;
     link.target = '_blank';
