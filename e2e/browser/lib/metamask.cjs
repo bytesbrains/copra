@@ -2,7 +2,7 @@
 // full Chromium in new headless mode, onboarded from anvil's public test mnemonic. Nothing about the
 // wallet is mocked: every approval is clicked in MetaMask's own UI.
 //
-// What the trial found about MetaMask 13.49 under automation, and how this file handles it:
+// What the trial (#71) found about MetaMask 13.49 under automation, and how this file handles it:
 //   - Approvals open in MetaMask's side panel, not a popup window. Playwright does not list the side
 //     panel among a context's pages, so the suite also attaches over CDP, where it is an ordinary page.
 //   - LavaMoat blocks evaluation in an extension page's main world: only locators are used there.

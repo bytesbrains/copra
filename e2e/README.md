@@ -10,7 +10,7 @@ make e2e-web        # check the dApp the stack serves: shipped files and headers
 make e2e-scenarios  # run the contract scenario suite against a running stack
 make e2e-feeder     # run the oracle feeder scenarios against a running stack
 make e2e-browser    # run the tier-1 browser suite against a running stack (BROWSER_ARGS="-g mint" to filter)
-make e2e-metamask   # run tier 2 against a running stack: the real MetaMask extension (#50; for now, the trial)
+make e2e-metamask   # run tier 2 against a running stack: the real MetaMask extension (#50)
 make e2e-down       # stop and delete everything
 
 BASE_MAINNET_RPC=<archive RPC> make e2e-fork   # the same scenario suite on a Base-mainnet fork with real USDC (#48)
@@ -97,16 +97,33 @@ Found by the suite and fixed in the dApp:
 ## Tier 2: real MetaMask (`e2e/browser/metamask/`, #50)
 The pinned **MetaMask 13.49.0** extension is loaded into Playwright's full Chromium, in the browser image's `metamask` stage. The image downloads the release zip from MetaMask's GitHub release and checks it against a SHA-256 (`ADD --checksum`). To upgrade, change the version and the checksum together in their own PR.
 
-So far it runs the **trial** #50 asks for before a suite is written (`trial.spec.cjs`):
-1. onboard from anvil's mnemonic;
-2. click Connect in the dApp;
-3. let the dApp add the local network: MetaMask doesn't know chain 84532, so it answers 4902 and the dApp asks to add it;
-4. reload and connect again;
-5. claim from the faucet, confirming in MetaMask.
+**Every test gets a fresh MetaMask**, onboarded from anvil's mnemonic, and its own `evm_snapshot`. A wallet kept across `evm_revert` would sign with nonces the chain never saw. Each test then connects as a new user does: Connect, approve, let the dApp add the local network (MetaMask answers 4902 for 84532), reload on `chainChanged`, connect again.
 
-Every approval is clicked in MetaMask's own UI. The confirmation must show the local network, the dApp's origin and the TestnetUSDC contract. The chain is checked with the suite's own RPC client, never through the wallet. `.github/workflows/e2e-metamask.yml` runs it three times in parallel on `ubuntu-latest`, on PRs that touch the browser harness or the dApp, and by hand.
+**Layers checked for every action**, as in tier 1, plus MetaMask's own screen:
+1. the UI before;
+2. what the page asked the wallet for, recorded by observing `window.ethereum.request` (never mocked);
+3. **what MetaMask showed before the user confirmed**:
+   - the network, the site and the contract;
+   - for an approval, MetaMask's "Spending cap request", with the spender and the **exact** amount. MetaMask's summary rounds the amount (123.456789 reads 123.5), so it is read from the edit dialog, which is then closed without saving;
+4. the chain: receipt, events and invariants, through tier 1's `expectSent`;
+5. the UI after.
 
-What the trial established (details in `lib/metamask.cjs`):
+| Test (`metamask/`) | |
+| :--- | :--- |
+| `flows`: faucet, approve then mint, redeem, MAX in both tabs | each confirmed in MetaMask |
+| `wallet`: rejecting | the connection, an approval and a faucet claim, each rejected in MetaMask (4001); the page stays usable and nothing reaches the chain |
+| `wallet`: Add COPRA | MetaMask shows the symbol, the dApp's logo and a 2.5 COPRA balance at the right decimals, and accepts the token |
+| `wallet`: switching account | pick Account 2 in MetaMask and connect it from its bar: `accountsChanged`, and the page signs as Account 2. Disconnecting empties it |
+| `wallet`: switching network | move the site to Ethereum from MetaMask's bar: the page reloads; Connect switches it back without a prompt |
+| `wallet`: closing MetaMask | closing the side panel mid-confirmation does **not** reject. The page keeps waiting until the request is answered in MetaMask again |
+
+**Two MetaMask behaviours the suite works with:**
+- After the suite changes the chain behind the wallet (funding an account), tests wait until **MetaMask returns the chain's balances** before reloading. MetaMask can answer `latest` from before the change for a while, even after it reports a newer block.
+- With Basic functionality off, MetaMask accepts an added token but did not then list it among its tokens. The suite checks what MetaMask shows before the user accepts, which is what the dApp controls.
+
+`.github/workflows/e2e-metamask.yml` runs the suite nightly, by hand, and on PRs that touch the browser harness or the dApp. The release gate that requires it green is #49.
+
+What the trial (#71) established (details in `lib/metamask.cjs`):
 - **No display needed.** Extensions load in new headless mode (`channel: 'chromium'`), so there is no `xvfb-run`.
 - **Approvals appear in MetaMask's side panel.** Playwright drives it over CDP, where it is an ordinary page. An extension can open its side panel only on a user gesture, so the panel is opened by onboarding's "Open wallet" click and stays open.
 - **A CDP connection does not see a side panel created after it attached.** Lookups reconnect when they miss.
@@ -114,7 +131,7 @@ What the trial established (details in `lib/metamask.cjs`):
 - **MetaMask can come up locked right after onboarding.** The harness types the password, as a user would.
 - **"Basic functionality" is switched off at onboarding**, and metrics are declined. With it on, MetaMask's background is busy with mainnet traffic and wallet calls take up to 30s; off, they take milliseconds.
 - **It cannot run fully offline.** With every external host unresolvable, a connect request is never shown.
-- **Timing:** about 30s per run in the Linux container, of which onboarding is about 12s.
+- **Timing:** about 12s of onboarding per test; the suite takes about 6 minutes.
 
 ## Notes
 - The repo is mounted **read-only**. Build output, cache and broadcast logs stay inside the container, and only the manifest is written back (as your uid).

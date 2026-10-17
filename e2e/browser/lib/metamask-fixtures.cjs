@@ -6,7 +6,8 @@
 //   UI before → what the page asked the wallet (recorded, not mocked) → what MetaMask showed before the
 //   user confirmed → the chain (receipt, events, invariants, via tier 1's expectSent) → UI after.
 const base = require('@playwright/test');
-const { WEB_URL } = require('./env.cjs');
+const path = require('node:path');
+const { REPO, WEB_URL } = require('./env.cjs');
 const mm = require('./metamask.cjs');
 const { h, short, show, open } = require('./fixtures.cjs');
 
@@ -27,15 +28,20 @@ const test = base.test.extend({
     }
   }, { auto: true }],
 
-  // A fresh MetaMask, onboarded, with its side panel open. Screenshots of every page on failure.
+  // A fresh MetaMask, onboarded, with its side panel open. On failure: the trace, a video, and
+  // screenshots of every page and of MetaMask's side panel; the MetaMask version is on every result.
   metamask: async ({}, use, testInfo) => {
     const session = await mm.launch({ videoDir: testInfo.outputPath('video'), baseURL: WEB_URL });
     testInfo.annotations.push({ type: 'metamask', description: mm.version() });
+    await session.context.tracing.start({ screenshots: true, snapshots: true });
     try {
-      const panel = await mm.onboard(session.context, session.extensionId, session.cdp);
-      await use({ ...session, panel });
+      await mm.onboard(session.context, session.extensionId, session.cdp);
+      // A function, not the page: a CDP reconnect closes the page objects of the connection before it.
+      await use({ ...session, panel: () => mm.sidePanel(session.cdp) });
     } finally {
-      if (testInfo.status !== testInfo.expectedStatus) {
+      const failed = testInfo.status !== testInfo.expectedStatus;
+      await session.context.tracing.stop(failed ? { path: testInfo.outputPath('trace.zip') } : undefined);
+      if (failed) {
         for (const [i, p] of session.context.pages().entries()) {
           await testInfo.attach(`page-${i}.png`, { body: await p.screenshot().catch(() => Buffer.alloc(0)), contentType: 'image/png' });
         }
@@ -126,7 +132,7 @@ async function confirmInMetaMask(dapp, { contract, spendingCap, reject = false }
   const { panel, route } = await mm.nextApproval(dapp.metamask.cdp, { seen: dapp.seen });
   dapp.seen.push(route);
   if (process.env.METAMASK_DUMP) await dump(panel, route);
-  const network = require('../../../networks/local.json').chainName;
+  const network = require(path.join(REPO, 'networks/local.json')).chainName;
   await expect(panel.getByTestId('confirmation__details-network-name')).toContainText(network);
   await expect(panel.getByTestId('confirmation__details-origin')).toHaveText(new URL(WEB_URL).host);
   if (contract) {
