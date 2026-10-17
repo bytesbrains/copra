@@ -3,10 +3,11 @@
 A disposable local chain with Copra deployed exactly as on Base Sepolia. It is the base for the end-to-end suites tracked in #41. Docker is the only requirement; Foundry runs inside the containers.
 
 ```bash
-make e2e            # up → deploy → verify → contract scenarios → down (what CI runs)
+make e2e            # up → deploy → verify → contract scenarios → feeder scenarios → down (what CI runs)
 make e2e-up         # bring the chain up, deploy, print the manifest; leaves it running
 make e2e-check      # verify a running stack
 make e2e-scenarios  # run the contract scenario suite against a running stack
+make e2e-feeder     # run the oracle feeder scenarios against a running stack
 make e2e-down       # stop and delete everything
 ```
 
@@ -29,6 +30,15 @@ make e2e-down       # stop and delete everything
 - **Mining.** The suite switches the chain to mine per transaction while it runs, for speed, and restores 2s blocks afterwards.
 
 To iterate from the host: `make e2e-up`, then `cd e2e/scenarios && npm ci && node --test --test-concurrency=1 'tests/*.test.cjs'`.
+
+## Oracle feeder scenarios (`e2e/feeder/`, #45)
+`scripts/oracle-feeder.sh`, unchanged, in its own container (the pinned Foundry image plus `python3`, for the benchmark path).
+- **Through the registry.** No oracle address is passed in: the feeder resolves it from the canonical registry as in production, and one scenario repoints the registry at a new oracle and checks the next run follows it.
+- **No key.** On testnet the updater is the registry owner, whose key never leaves the `oracle-feeder` environment. The suite impersonates it on anvil and runs the feeder with `ORACLE_FEEDER_FROM`, which signs through the node's unlocked account (local chains only, like `DeployCopra.runUnlocked()`). The registry-repoint scenario signs with a key instead, as production does: its new oracle's updater is anvil account 9, whose key is derived at runtime from anvil's public test mnemonic.
+- **Checked on chain.** After each run the oracle's price and age, and the last `PriceUpdated` event, must match exactly; a run that should not broadcast must leave the event count unchanged, and a failing run must not reach the broadcast.
+- **Scenarios:** skip inside `MIN_UPDATE_INTERVAL`; update after a day; clamp to 19.5% both ways; skip an unchanged price within 5 days, `FORCE=true`, refresh after 5 days; stale recovery, clamped too; RPC down, interval read failing or reverting, stale storage unreadable; registry repointed; a non-allowlisted feed host falling back to the benchmark.
+- Each scenario runs in an `evm_snapshot`. It replaces `test/feeder/oracle-feeder.test.sh`, which ran the same checks against a bare oracle.
+- The dApp showing the oracle's new age after a recovery is covered by the browser suite (#46).
 
 ## Notes
 - The repo is mounted **read-only**. Build output, cache and broadcast logs stay inside the container, and only the manifest is written back (as your uid).
