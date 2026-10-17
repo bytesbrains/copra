@@ -63,6 +63,13 @@ async function quoteChanged() {
   showToast('The price or fee changed since your quote. The new quote is shown: check it and submit again.', 'warn');
 }
 
+// A mined transaction that reverted carries no revert data in ethers, so ask the vault: if its quote
+// is now past the bound the user signed (#57), that is what refused it.
+async function revertedPastBound(err, boundCrossed) {
+  if (err?.code !== 'CALL_EXCEPTION' || !err.receipt || !boundCrossed) return false;
+  return boundCrossed().catch(() => false);
+}
+
 // --- Action Button (Approve / Mint / Redeem) ---
 async function submitAction() {
   if (!userAddress || !signer) {
@@ -72,6 +79,7 @@ async function submitAction() {
 
   actionBtn.disabled = true;
   actionBtnText.textContent = 'Confirming in wallet...';
+  let boundCrossed = null; // set once a mint or redeem is signed with its bound
 
   try {
     if (currentPriceRaw === null) {
@@ -105,8 +113,9 @@ async function submitAction() {
       const allowance = await usdcContract.allowance(userAddress, CONTRACTS.vault);
 
       if (allowance < collateralRequired) {
+        // Approve the amount entered, never an unlimited allowance: the mint spends all but its dust.
         showToast('Requesting USDC approval...', 'pending');
-        const appTx = await usdcContract.approve(CONTRACTS.vault, ethers.MaxUint256);
+        const appTx = await usdcContract.approve(CONTRACTS.vault, CopraQuote.parseUnits(amountInput.value, 6));
         showToast(`Approval submitted. Waiting for confirmation...`, 'pending', appTx.hash);
         await appTx.wait(1);
         showToast('USDC approved! Now click Mint $COPRA.', 'info');
@@ -116,7 +125,9 @@ async function submitAction() {
       }
 
       showToast('Minting $COPRA on Base Sepolia...', 'pending');
-      const mintTx = await vaultContract.mint(copraWei);
+      // The quote on screen is the bound: the vault refuses to charge more than the user saw (#57).
+      boundCrossed = async () => (await vaultContract.quoteMint(copraWei))[0] > collateralRequired;
+      const mintTx = await vaultContract.mint(copraWei, collateralRequired);
       showToast(`Mint transaction broadcast! Waiting for confirmation...`, 'pending', mintTx.hash);
       await mintTx.wait(1);
 
@@ -140,7 +151,8 @@ async function submitAction() {
       }
 
       showToast('Redeeming $COPRA for USDC...', 'pending');
-      const redeemTx = await vaultContract.redeem(copraWei);
+      boundCrossed = async () => (await vaultContract.quoteRedeem(copraWei))[0] < collateralToReturn;
+      const redeemTx = await vaultContract.redeem(copraWei, collateralToReturn);
       showToast(`Redemption broadcast! Waiting for confirmation...`, 'pending', redeemTx.hash);
       await redeemTx.wait(1);
 
@@ -150,7 +162,12 @@ async function submitAction() {
     }
   } catch (err) {
     console.error('Transaction error:', err);
-    showToast('Transaction error: ' + errorMessage(err), 'error');
+    if (revertName(err) === 'SlippageExceeded' || await revertedPastBound(err, boundCrossed)) {
+      await readProtocolTelemetry();
+      showToast(REVERT_MESSAGES.SlippageExceeded, 'warn');
+    } else {
+      showToast('Transaction error: ' + errorMessage(err), 'error');
+    }
   } finally {
     actionBtn.disabled = false;
     if (mode === 'mint') {

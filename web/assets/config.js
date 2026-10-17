@@ -51,12 +51,13 @@ const ORACLE_ABI = [
 const VAULT_ABI = [
   "function quoteMint(uint256 copraAmount) view returns (uint256 collateralRequired, uint256 fee)",
   "function quoteRedeem(uint256 copraAmount) view returns (uint256 collateralToReturn, uint256 fee)",
-  "function mint(uint256 copraAmount) external",
-  "function redeem(uint256 copraAmount) external",
+  "function mint(uint256 copraAmount, uint256 maxCollateralIn) external",
+  "function redeem(uint256 copraAmount, uint256 minCollateralOut) external",
   "function protocolFeeBps() view returns (uint256)",
   "function accumulatedFees() view returns (uint256)",
   "error ZeroAmount()",
   "error InsufficientVaultCollateral()",
+  "error SlippageExceeded(uint256 actual, uint256 limit)",
   "error StalePrice()" // the oracle's, raised through the vault's own price read
 ];
 

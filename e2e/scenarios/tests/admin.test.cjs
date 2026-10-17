@@ -3,7 +3,7 @@ const { describe, it, before, after, beforeEach, afterEach } = require('node:tes
 const assert = require('node:assert/strict');
 const h = require('../lib/harness.cjs');
 
-const { contracts: { usdc, oracle, vault, token, registry }, users, OWNER, send, expectRevert, units, ethers } = h;
+const { contracts: { usdc, oracle, vault, token, registry }, users, OWNER, send, expectRevert, units, ethers, NO_MAX, NO_MIN } = h;
 const [alice, bob, carol] = users;
 
 describe('admin and registry', () => {
@@ -72,9 +72,9 @@ describe('admin and registry', () => {
     assert.equal(await registry.version(), 2n);
 
     // Old holders redeem from the vault they minted in; the new set works independently.
-    await send(vault, 'redeem', [units(100, 18)], alice);
+    await send(vault, 'redeem', [units(100, 18), NO_MIN], alice);
     await send(usdc, 'approve', [newVault.target, ethers.MaxUint256], alice);
-    await send(newVault, 'mint', [units(10, 18)], alice);
+    await send(newVault, 'mint', [units(10, 18), NO_MAX], alice);
     assert.equal(await newToken.balanceOf(alice), units(10, 18));
   });
 });

@@ -47,10 +47,15 @@ sequenceDiagram
     Vault-->>User: (collateralRequired, fee)
 
     User->>USDC: approve(Vault, collateralRequired)
-    User->>Vault: mint(copraAmount)
-    Vault->>USDC: safeTransferFrom(User, Vault, collateralRequired)
-    Vault->>Token: mint(User, copraAmount)
-    Note over Vault: Accumulated fees credited
+    User->>Vault: mint(copraAmount, maxCollateralIn = collateralRequired)
+    Note over Vault: re-quotes at the price and fee when it executes
+    alt collateralRequired now > maxCollateralIn
+        Vault-->>User: revert SlippageExceeded(actual, limit)
+    else within the bound
+        Vault->>USDC: safeTransferFrom(User, Vault, collateralRequired)
+        Vault->>Token: mint(User, copraAmount)
+        Note over Vault: Accumulated fees credited
+    end
 ```
 
 ---
@@ -71,8 +76,10 @@ sequenceDiagram
     Oracle-->>Vault: (priceUSD, timestamp)
     Vault-->>User: (collateralToReturn, fee)
 
-    User->>Vault: redeem(copraAmount)
-    alt collateralToReturn + fee > balance - accumulatedFees
+    User->>Vault: redeem(copraAmount, minCollateralOut = collateralToReturn)
+    alt collateralToReturn now < minCollateralOut
+        Vault-->>User: revert SlippageExceeded(actual, limit)
+    else collateralToReturn + fee > balance - accumulatedFees
         Vault-->>User: revert InsufficientVaultCollateral
     else vault can cover it
         Vault->>Token: burnFromVault(User, copraAmount)
