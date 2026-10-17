@@ -195,11 +195,13 @@ async function postPrice(price, oracle = contracts.oracle) {
   return send(oracle, 'updatePrice', [price], OWNER);
 }
 
-/** lastUpdatedAt has no getter; read it from the last PriceUpdated event (works when stale too). */
-async function lastUpdatedAt(oracle = contracts.oracle) {
+/** The last PriceUpdated event's args: lastUpdatedAt has no getter, and the price getter reverts when stale. */
+async function lastPriceUpdate(oracle = contracts.oracle) {
   const logs = await oracle.queryFilter(oracle.filters.PriceUpdated(), 0, 'latest');
-  return logs.at(-1).args.timestamp;
+  return logs.at(-1).args;
 }
+const lastUpdatedAt = async (oracle = contracts.oracle) => (await lastPriceUpdate(oracle)).timestamp;
+const lastPrice = async (oracle = contracts.oracle) => (await lastPriceUpdate(oracle)).newPrice;
 
 const balances = async (addr) => ({
   usdc: await contracts.usdc.balanceOf(addr),
@@ -221,5 +223,5 @@ module.exports = {
   ethers, provider, rpc, manifest, contracts, artifact, users, OWNER, signer,
   latestTimestamp, setNextTimestamp, warp, warpTo, isolate,
   invariants, checkInvariants, send, expectRevert, decodeRevert,
-  fundUsdc, mintCopra, postPrice, lastUpdatedAt, balances, deploy, units,
+  fundUsdc, mintCopra, postPrice, lastUpdatedAt, lastPrice, balances, deploy, units,
 };

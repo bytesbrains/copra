@@ -54,7 +54,7 @@ describe('oracle', () => {
     await expectRevert(vault, 'redeem', [units(1, 18)], alice, 'StalePrice');
     await assert.rejects(oracle.getCopraPriceUSD(), /StalePrice|execution reverted/);
 
-    await send(oracle, 'updatePrice', [await lastPrice()], OWNER); // stale is long past the interval
+    await send(oracle, 'updatePrice', [await h.lastPrice()], OWNER); // stale is long past the interval
     await send(vault, 'redeem', [units(1, 18)], alice);
   });
 
@@ -88,8 +88,3 @@ describe('oracle', () => {
     await expectRevert(vault, 'redeem', [units(1000, 18)], alice, 'InsufficientVaultCollateral');
   });
 });
-
-async function lastPrice() {
-  const logs = await oracle.queryFilter(oracle.filters.PriceUpdated(), 0, 'latest');
-  return logs.at(-1).args.newPrice;
-}
