@@ -58,3 +58,19 @@ services:
       E2E_SEED: ${E2E_SEED:-}
     command: ["node", "--test", "--test-concurrency=1", "--test-reporter=spec", "tests/*.test.cjs"]
     profiles: ["test"]
+
+  # Oracle feeder scenarios (#45): scripts/oracle-feeder.sh against the full deployment, through the registry.
+  feeder:
+    build: ./feeder
+    depends_on:
+      chain:
+        condition: service_healthy
+    entrypoint: ["bash", "/repo/e2e/feeder/feeder.test.sh"]
+    working_dir: /repo
+    volumes:
+      - ..:/repo:ro
+    environment:
+      RPC_URL: http://chain:8545
+      E2E_OUT_DIR: /repo/e2e/.out
+      HOME: /tmp/home
+    profiles: ["test"]
