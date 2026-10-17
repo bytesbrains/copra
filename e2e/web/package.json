@@ -1,0 +1,11 @@
+{
+  "name": "copra-e2e-web",
+  "private": true,
+  "description": "Serves web/ for the local environment with wrangler dev, as Cloudflare serves it (see e2e/README.md)",
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "wrangler": "4.147.0"
+  }
+}

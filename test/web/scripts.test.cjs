@@ -9,68 +9,30 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const { runPage, localScripts: scriptsIn } = require('./lib/page.cjs');
 
 const WEB = path.join(__dirname, '../../web');
 const html = fs.readFileSync(path.join(WEB, 'index.html'), 'utf8');
-const localScripts = [...html.matchAll(/<script\b[^>]*\bsrc="\/assets\/([^"]+)"/g)].map((m) => m[1]);
-
-function fakeElement(id) {
-  const el = {
-    id, tagName: 'DIV', textContent: '', className: '', value: '', disabled: false,
-    children: [], listeners: {}, attrs: {},
-    classList: {
-      set: new Set(),
-      add(...c) { c.forEach((x) => this.set.add(x)); },
-      remove(...c) { c.forEach((x) => this.set.delete(x)); },
-    },
-    get childNodes() { return el.children; },
-    addEventListener(type, fn) { (el.listeners[type] ||= []).push(fn); },
-    replaceChildren(...nodes) { el.children = nodes; },
-    appendChild(node) { el.children.push(node); },
-    getAttribute(name) { return el.attrs[name] ?? null; },
-    setAttribute(name, v) { el.attrs[name] = String(v); },
-    hasAttribute(name) { return name in el.attrs; },
-  };
-  return el;
-}
+const localScripts = scriptsIn(html);
 
 function loadPage({ hostname = 'copra.dev', upTo = localScripts.length } = {}) {
-  const elements = new Map();
   const network = [];
   const failing = () => Promise.reject(new Error('offline'));
-  const ctx = {
-    console: { log() {}, warn() {}, error() {} },
-    setTimeout, Promise, BigInt, Number, Math, Date, Object, Error, URL,
-    window: { location: { hostname, search: '', origin: `https://${hostname}` } },
-    navigator: {},
-    document: {
-      getElementById(id) {
-        if (!elements.has(id)) elements.set(id, fakeElement(id));
-        return elements.get(id);
-      },
-      createElement(tag) { return Object.assign(fakeElement(), { tagName: tag.toUpperCase() }); },
-      querySelectorAll() { return []; },
-    },
-    // Every chain call fails, as if the RPC were unreachable: the page must still load.
-    ethers: {
-      JsonRpcProvider: function JsonRpcProvider(url) { network.push(url); },
-      Contract: function Contract() { return new Proxy({}, { get: () => failing }); },
-      isAddress: () => false,
-      ZeroAddress: '0x0000000000000000000000000000000000000000',
-    },
+  // Every chain call fails, as if the RPC were unreachable: the page must still load.
+  const ethers = {
+    JsonRpcProvider: function JsonRpcProvider(url) { network.push(url); },
+    Contract: function Contract() { return new Proxy({}, { get: () => failing }); },
+    isAddress: () => false,
+    ZeroAddress: '0x0000000000000000000000000000000000000000',
   };
-  vm.createContext(ctx);
-  ctx.CopraQuote = require(path.join(WEB, 'assets/quote.js'));
-  for (const file of localScripts.slice(0, upTo)) {
-    if (file === 'quote.js' || file === 'tailwind-config.js') continue;
-    const code = fs.readFileSync(path.join(WEB, 'assets', file), 'utf8');
-    vm.runInContext(code, ctx, { filename: file });
-  }
-  return { ctx, el: (id) => ctx.document.getElementById(id), network, elements };
+  const scripts = localScripts.slice(0, upTo)
+    .map((file) => ({ file, code: fs.readFileSync(path.join(WEB, 'assets', file), 'utf8') }));
+  const page = runPage({ hostname, scripts, ethers, quote: require(path.join(WEB, 'assets/quote.js')) });
+  return { ...page, network };
 }
 
 test('index.html loads the dApp scripts in dependency order, entry point last', () => {
-  const app = ['config.js', 'ui.js', 'chain.js', 'wallet.js', 'app.js'];
+  const app = ['network.js', 'config.js', 'ui.js', 'chain.js', 'wallet.js', 'app.js'];
   assert.deepEqual(localScripts.filter((f) => app.includes(f)), app);
   assert.equal(localScripts.at(-1), 'app.js');
   assert.ok(localScripts.indexOf('quote.js') < localScripts.indexOf('config.js'));

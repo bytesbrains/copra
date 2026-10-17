@@ -1,4 +1,4 @@
-.PHONY: all build test test-web fmt fmt-check lint clean e2e e2e-up e2e-check e2e-scenarios e2e-feeder e2e-down
+.PHONY: all build test test-web fmt fmt-check lint clean e2e e2e-up e2e-check e2e-scenarios e2e-web e2e-feeder e2e-down
 
 all: build test test-web
 
@@ -29,7 +29,7 @@ E2E_COMPOSE = E2E_UID=$(shell id -u) E2E_GID=$(shell id -g) docker compose -f e2
 
 e2e-up:
 	mkdir -p e2e/.out
-	$(E2E_COMPOSE) up -d --wait chain
+	$(E2E_COMPOSE) up -d --wait --build chain web
 	$(E2E_COMPOSE) run --rm -T deployer
 	@cat e2e/.out/deployment.json
 
@@ -39,6 +39,10 @@ e2e-check:
 # Contract scenarios (#44) against a running stack (make e2e-up first). E2E_SEED replays a random sequence.
 e2e-scenarios:
 	$(E2E_COMPOSE) run --rm -T --build scenarios
+
+# The dApp served by the stack (#43): the shipped files and headers, reading the local chain.
+e2e-web:
+	$(E2E_COMPOSE) run --rm -T --build -e WEB_URL=http://web:8787 scenarios node /repo/e2e/web/check-web.cjs
 
 # Oracle feeder scenarios (#45) against a running stack: the real feeder, resolving the oracle via the registry.
 e2e-feeder:
@@ -50,6 +54,6 @@ e2e-down:
 # Always tears the stack down, and keeps the first failure's exit code.
 e2e:
 	@$(MAKE) --no-print-directory e2e-down
-	@status=0; $(MAKE) --no-print-directory e2e-up && $(MAKE) --no-print-directory e2e-check \
+	@status=0; $(MAKE) --no-print-directory e2e-up && $(MAKE) --no-print-directory e2e-check && $(MAKE) --no-print-directory e2e-web \
 		&& $(MAKE) --no-print-directory e2e-scenarios && $(MAKE) --no-print-directory e2e-feeder || status=$$?; \
 		$(MAKE) --no-print-directory e2e-down; exit $$status

@@ -3,20 +3,25 @@
 // other /assets/*.js files. It only declares; app.js (loaded last) wires events and starts work,
 // so nothing here runs before every file has loaded. Load order is fixed in index.html.
 
-// On-Chain Base Sepolia Contract Addresses.
-// `registry` is permanent (CREATE2). usdc/oracle/vault/token are only fallbacks: the live set is
-// read from CopraRegistry on load, so a protocol redeploy needs no change to this page.
-const CONTRACTS = {
-  registry: '0x379cB5FED578D6F485ab1834C81E4F1CF4EABb25',
-  chainId: 84532,
-  chainIdHex: '0x14a34',
-  chainName: 'Base Sepolia',
-  rpcUrl: 'https://base-sepolia-rpc.publicnode.com',
-  explorer: 'https://sepolia.basescan.org',
+// Network settings (chain, RPC, explorer, registry) come from network.js, loaded just before this
+// file and generated per environment (local, sepolia, mainnet) by scripts/web-env.cjs (#43).
+// `registry` is permanent (CREATE2). usdc/oracle/vault/token are read from CopraRegistry on load, so
+// a protocol redeploy needs no change to this page. On Base Sepolia the set this page shipped with
+// stays as a fallback for when the registry cannot be read; other networks have none.
+const SEPOLIA_FALLBACK = {
   usdc: '0xd6bC2f148b750e47936f8720aF84DDFc061404DF',
   oracle: '0x4F409293636dCf579f12e7627137e62A8a790b9A',
   vault: '0xbB1CDe2B3c2f8F1D6AAFc1718a92192cb3335f54',
   token: '0x53f5Ef67439E8565559f9C450cFF5CB49b4b996C'
+};
+const CONTRACTS = {
+  registry: NETWORK.registry,
+  chainId: NETWORK.chainId,
+  chainIdHex: '0x' + NETWORK.chainId.toString(16),
+  chainName: NETWORK.chainName,
+  rpcUrl: NETWORK.rpcUrl,
+  explorer: NETWORK.explorer, // null on a local chain: no explorer links are rendered
+  ...(NETWORK.name === 'sepolia' ? SEPOLIA_FALLBACK : {})
 };
 
 // --- Environment & Dynamic Theme Engine ---

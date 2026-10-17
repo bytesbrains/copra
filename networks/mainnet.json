@@ -1,0 +1,8 @@
+{
+  "name": "mainnet",
+  "chainId": 8453,
+  "chainName": "Base",
+  "rpcUrl": "https://base-rpc.publicnode.com",
+  "explorer": "https://basescan.org",
+  "registry": null
+}
