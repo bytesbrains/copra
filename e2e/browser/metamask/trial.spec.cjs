@@ -17,7 +17,16 @@ test('MetaMask: onboard, connect, add the local network, confirm a faucet claim'
   const timings = {};
   const t0 = Date.now();
   const mark = (name) => { timings[name] = Date.now() - t0; };
+  // The chain is rolled back whatever fails, including the browser failing to launch or to close.
   const snap = await h.rpc('evm_snapshot');
+  try {
+    await trial(testInfo, mark, timings);
+  } finally {
+    await h.rpc('evm_revert', [snap]);
+  }
+});
+
+async function trial(testInfo, mark, timings) {
   const { context, extensionId, cdp } = await mm.launch({ videoDir: testInfo.outputPath('video') });
   testInfo.annotations.push({ type: 'metamask', description: mm.version() });
   try {
@@ -100,6 +109,5 @@ test('MetaMask: onboard, connect, add the local network, confirm a faucet claim'
     console.log(`MetaMask ${mm.version()} trial timings (ms):`, JSON.stringify(timings));
     await cdp.close();
     await context.close();
-    await h.rpc('evm_revert', [snap]);
   }
-});
+}
