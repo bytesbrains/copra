@@ -65,8 +65,8 @@
         </span>
       </div>
       <div class="flex items-center space-x-2">
-        <button id="faucetBtn" class="bg-amber-500 hover:bg-amber-400 text-black font-bold px-3 py-1 rounded text-xs transition flex items-center space-x-1 shadow-sm">
-          <span>💧 Claim 1,000 Testnet USDC</span>
+        <button id="faucetBtn" data-needs-faucet class="bg-amber-500 hover:bg-amber-400 text-black font-bold px-3 py-1 rounded text-xs transition flex items-center space-x-1 shadow-sm">
+          <span>💧 Claim 1,000 <span data-network="collateralName">Testnet USDC</span></span>
         </button>
       </div>
     </div>
@@ -154,7 +154,7 @@
         </div>
         <div class="flex justify-between items-center pt-1.5 border-t border-brand-border/60 text-[10px]">
           <button id="watchCopraBtn" type="button" class="text-emerald-400 hover:underline flex items-center gap-1">+ Add $COPRA to Wallet</button>
-          <button id="watchUsdcBtn" type="button" class="text-slate-300 hover:underline flex items-center gap-1">+ Add Testnet USDC</button>
+          <button id="watchUsdcBtn" type="button" class="text-slate-300 hover:underline flex items-center gap-1">+ Add <span data-network="collateralName">Testnet USDC</span></button>
         </div>
       </div>
 
@@ -297,7 +297,7 @@
         </div>
         <div class="bg-brand-dark p-3 rounded-lg border border-brand-border flex justify-between items-center">
           <div>
-            <div class="text-slate-400 text-[10px]">TestnetUSDC (Collateral + Faucet)</div>
+            <div class="text-slate-400 text-[10px]"><span data-network="collateralName">Testnet USDC</span> (Collateral<span data-needs-faucet> + Faucet</span>)</div>
             <div class="flex items-center gap-2 mt-0.5">
               <a data-contract="usdc" data-short href="https://sepolia.basescan.org/address/0xd6bC2f148b750e47936f8720aF84DDFc061404DF" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:underline">0xd6bC...04DF</a>
               <button type="button" data-contract="usdc" data-copy="0xd6bC2f148b750e47936f8720aF84DDFc061404DF" class="copy-addr-btn text-[10px] text-slate-400 hover:text-white bg-brand-card px-1.5 py-0.5 rounded border border-brand-border transition">Copy</button>

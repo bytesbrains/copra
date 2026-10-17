@@ -53,6 +53,7 @@ test('sepolia settings and headers are what production has served since before #
     explorer: 'https://sepolia.basescan.org',
     explorerName: 'Basescan',
     registry: '0x379cB5FED578D6F485ab1834C81E4F1CF4EABb25',
+    collateral: 'TestnetUSDC',
   });
   const csp = fs.readFileSync(path.join(WEB, '_headers'), 'utf8').split('\n').find((l) => l.includes('Content-Security-Policy:'));
   assert.equal(csp.trim(), "Content-Security-Policy: default-src 'self'; script-src 'self' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://base-sepolia-rpc.publicnode.com; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'");
@@ -90,6 +91,7 @@ test('mainnet: Base (8453) over https, no registry until #47, so no site is buil
   assert.match(net.explorer, /^https:\/\//);
   // The Sepolia registry's address has no code on Base: a mainnet page reading it would only fail.
   assert.equal(net.registry, null);
+  assert.equal(net.collateral, 'USDC', 'real USDC, as DeployCopraMainnet requires on Base');
   assert.throws(() => env.build('mainnet', path.join(os.tmpdir(), 'copra-mainnet')), /no CopraRegistry on mainnet/);
 });
 
@@ -107,6 +109,11 @@ test('settings are validated: exact keys, https outside local, never written int
   assert.throws(() => env.validate({ ...ok, explorer: null }), /explorerName/, 'a name without an explorer');
   assert.doesNotThrow(() => env.validate({ ...ok, explorer: null, explorerName: null }));
   assert.throws(() => env.validate({ ...ok, registry: '0x1234' }), /registry/);
+  assert.throws(() => env.validate({ ...ok, collateral: 'DAI' }), /collateral must be TestnetUSDC or USDC/);
+  assert.throws(() => env.validate({ ...ok, collateral: 'TestnetUSDC' }), /USDC on Base mainnet/);
+  // The rule follows the chain, not the file's name: an 8453 network under another name is still Base.
+  assert.throws(() => env.validate({ ...ok, name: 'mainnet-preview', collateral: 'TestnetUSDC' }), /USDC on Base mainnet/);
+  assert.doesNotThrow(() => env.validate({ ...env.loadNetwork('sepolia'), collateral: 'USDC' }), 'a testnet may use real USDC');
   assert.throws(() => env.loadNetwork('nowhere'), /no network settings/);
   assert.throws(() => env.build('sepolia', path.join(WEB, 'nested')), /inside web/);
 });
@@ -146,6 +153,46 @@ for (const e of ENVS) {
     vm.runInContext("showToast('done', 'info', '0xabc')", ctx);
     const links = el('txStatus').children.filter((n) => n.tagName === 'A');
     assert.deepEqual(links.map((l) => [l.textContent, l.href]), net.explorer ? [[`View on ${net.explorerName} ↗`, `${net.explorer}/tx/0xabc`]] : []);
+  });
+}
+
+// The collateral copy and the faucet follow the network's collateral, not the hostname (#47): a USDC
+// build served on a testnet hostname (a Workers preview) must name USDC and offer no faucet.
+for (const [collateral, name, faucet] of [['TestnetUSDC', 'Testnet USDC', true], ['USDC', 'USDC', false]]) {
+  test(`${collateral}: the page names its collateral ${name} and ${faucet ? 'offers' : 'hides'} the faucet`, () => {
+    const html = fs.readFileSync(path.join(WEB, 'index.html'), 'utf8');
+    const net = { ...env.loadNetwork('mainnet'), registry: '0x' + '11'.repeat(20), collateral };
+    const scripts = localScripts(html).map((file) => ({
+      file,
+      code: file === 'network.js' ? env.networkJs(net) : fs.readFileSync(path.join(WEB, 'assets', file), 'utf8'),
+    }));
+    const calls = [];
+    const { ctx } = runPage({
+      hostname: 'preview.workers.dev', // a testnet hostname: the theme and banner show either way
+      scripts,
+      quote: require(path.join(WEB, 'assets/quote.js')),
+      ethers: {
+        JsonRpcProvider: function JsonRpcProvider() {},
+        Contract: function Contract() {
+          return new Proxy({}, { get: (_t, fn) => (...args) => { calls.push(fn); return Promise.reject(new Error('offline')); } });
+        },
+        isAddress: () => false,
+        parseUnits: () => 1n, // claimFaucet's amount: without it the handler throws before any call
+        ZeroAddress: '0x0000000000000000000000000000000000000000',
+      },
+    });
+    const labels = [0, 1, 2].map(() => Object.assign(fakeElement(), { attrs: { 'data-network': 'collateralName' }, textContent: 'Testnet USDC' }));
+    const needsFaucet = [0, 1].map(() => Object.assign(fakeElement(), { attrs: { 'data-needs-faucet': '' } }));
+    ctx.document.querySelectorAll = (sel) => ({ '[data-network]': labels, '[data-needs-faucet]': needsFaucet })[sel] || [];
+    vm.runInContext('renderNetwork()', ctx);
+
+    assert.deepEqual(labels.map((l) => l.textContent), [name, name, name]);
+    assert.deepEqual(needsFaucet.map((e) => e.classList.contains('hidden')), [!faucet, !faucet]);
+    if (!faucet) {
+      // Even a click that reaches the handler (a stale page, a script) never calls faucet() on real USDC.
+      vm.runInContext("userAddress = '0x' + 'ab'.repeat(20); signer = {}; claimFaucet()", ctx); // connected
+      assert.ok(!calls.includes('faucet'), 'no faucet call');
+    }
   });
 }
 
@@ -205,7 +252,7 @@ test('index.html has no network-specific copy outside what is rendered from the 
     .replace(/(<a\b[^>]*\bdata-short\b[^>]*>)[^<]*(<\/a>)/g, '$1$2');
   const sepolia = env.loadNetwork('sepolia');
   const fallback = vm.runInNewContext(`(${fs.readFileSync(path.join(WEB, 'assets/config.js'), 'utf8').match(/const SEPOLIA_FALLBACK = (\{[^}]+\})/)[1]})`);
-  for (const literal of [sepolia.chainName, 'Sepolia', String(sepolia.chainId), sepolia.explorerName, new URL(sepolia.explorer).host, sepolia.registry, ...Object.values(fallback)]) {
+  for (const literal of [sepolia.chainName, 'Sepolia', String(sepolia.chainId), sepolia.explorerName, new URL(sepolia.explorer).host, sepolia.registry, 'Testnet USDC', 'TestnetUSDC', ...Object.values(fallback)]) {
     assert.ok(!rendered.toLowerCase().includes(literal.toLowerCase()), `index.html hardcodes ${literal} outside a rendered element`);
   }
 });

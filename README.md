@@ -151,7 +151,7 @@ The live contract set is published on-chain by **CopraRegistry** at a permanent 
 
 A clean, responsive dApp is included in [web/index.html](web/index.html) and deployed via Cloudflare Workers static assets ([wrangler.jsonc](wrangler.jsonc)).
 
-**Network per environment.** The chain, RPC, explorer (and the name its links use) and registry come from [networks/](networks/) (`sepolia`, `local`, `mainnet`). The page renders its network copy from them at load, never from `index.html`'s Base Sepolia text. `web/` as committed is the **Base Sepolia** build: `web/assets/network.js` is generated from `networks/sepolia.json`. To build another environment:
+**Network per environment.** The chain, RPC, explorer (and the name its links use), registry and collateral come from [networks/](networks/) (`sepolia`, `local`, `mainnet`). `collateral` is `TestnetUSDC` or `USDC` (the only choice on Base mainnet): it names the collateral on the page, and only `TestnetUSDC` gets the faucet, whatever the hostname. The page renders its network copy from them at load, never from `index.html`'s Base Sepolia text. `web/` as committed is the **Base Sepolia** build: `web/assets/network.js` is generated from `networks/sepolia.json`. To build another environment:
 ```bash
 node scripts/web-env.cjs local dist/web   # a copy of web/ for that network
 ```
