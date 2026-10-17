@@ -10,9 +10,17 @@ function renderContractAddresses() {
   document.querySelectorAll('[data-contract]').forEach((el) => {
     const addr = CONTRACTS[el.getAttribute('data-contract')];
     if (el.tagName === 'A') {
-      if (addr && CONTRACTS.explorer) el.href = `${CONTRACTS.explorer}/address/${addr}`;
-      else el.removeAttribute('href'); // no explorer (a local chain) or no address: never link to another network's
+      const href = addr && CONTRACTS.explorer ? `${CONTRACTS.explorer}/address/${addr}` : null;
+      if (href) {
+        el.setAttribute('href', href);
+        el.setAttribute('target', '_blank');
+        el.setAttribute('rel', 'noopener noreferrer');
+      } else {
+        // No explorer (a local chain) or no address: never link to another network's, nor half a link.
+        ['href', 'target', 'rel'].forEach((a) => el.removeAttribute(a));
+      }
       if (el.hasAttribute('data-short')) el.textContent = addr ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : '—';
+      else el.classList.toggle('hidden', !href); // "View Contracts on …" with nowhere to go says nothing
     }
     if (el.hasAttribute('data-copy')) {
       el.setAttribute('data-copy', addr || ''); // the copy handler ignores an empty one
