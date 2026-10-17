@@ -111,6 +111,8 @@ test('settings are validated: exact keys, https outside local, never written int
   assert.throws(() => env.validate({ ...ok, registry: '0x1234' }), /registry/);
   assert.throws(() => env.validate({ ...ok, collateral: 'DAI' }), /collateral must be TestnetUSDC or USDC/);
   assert.throws(() => env.validate({ ...ok, collateral: 'TestnetUSDC' }), /USDC on Base mainnet/);
+  // The rule follows the chain, not the file's name: an 8453 network under another name is still Base.
+  assert.throws(() => env.validate({ ...ok, name: 'mainnet-preview', collateral: 'TestnetUSDC' }), /USDC on Base mainnet/);
   assert.doesNotThrow(() => env.validate({ ...env.loadNetwork('sepolia'), collateral: 'USDC' }), 'a testnet may use real USDC');
   assert.throws(() => env.loadNetwork('nowhere'), /no network settings/);
   assert.throws(() => env.build('sepolia', path.join(WEB, 'nested')), /inside web/);

@@ -13,6 +13,9 @@ const path = require('node:path');
 const ROOT = path.join(__dirname, '..');
 const WEB = path.join(ROOT, 'web');
 const KEYS = ['name', 'chainId', 'chainName', 'rpcUrl', 'explorer', 'explorerName', 'registry', 'collateral'];
+// Base mainnet, keyed on the chain as script/DeployCopraMainnet.s.sol's BASE_CHAIN_ID is: whatever a
+// settings file is named, a page on chain 8453 talks to the contracts deployed against real USDC.
+const BASE_CHAIN_ID = 8453;
 
 function loadNetwork(env, { rpcUrl } = {}) {
   const file = path.join(ROOT, 'networks', `${path.basename(env)}.json`);
@@ -44,7 +47,7 @@ function validate(net) {
   // The collateral the network's contract set uses: TestnetUSDC (with its public faucet) or Circle's USDC.
   // Base mainnet takes only USDC, as script/DeployCopraMainnet.s.sol does (#47).
   if (!['TestnetUSDC', 'USDC'].includes(net.collateral)) throw new Error(`collateral must be TestnetUSDC or USDC: ${net.collateral}`);
-  if (net.chainId === 8453 && net.collateral !== 'USDC') throw new Error('collateral must be USDC on Base mainnet (8453)');
+  if (net.chainId === BASE_CHAIN_ID && net.collateral !== 'USDC') throw new Error(`collateral must be USDC on Base mainnet (${BASE_CHAIN_ID})`);
 }
 
 function networkJs(net) {
