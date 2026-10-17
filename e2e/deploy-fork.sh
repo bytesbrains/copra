@@ -24,8 +24,10 @@ cast rpc anvil_setCode "${MULTISIG}" 0x00 --rpc-url "${RPC}" > /dev/null
 for a in "${MULTISIG}" "${UPDATER}" "${FEE_RECIPIENT}" "${USDC_HOLDER}" "$(cast wallet address "${DEPLOYER_KEY}")"; do
     cast rpc anvil_setBalance "${a}" 0x56BC75E2D63100000 --rpc-url "${RPC}" > /dev/null # 100 ETH
 done
+# The suite funds users from this holder: require far more than it ever moves (1,000,000 USDC, 6 decimals).
+MIN_HELD=1000000000000
 HELD=$(cast call "${USDC}" "balanceOf(address)(uint256)" "${USDC_HOLDER}" --rpc-url "${RPC}" | cut -d' ' -f1)
-(( ${#HELD} > 12 )) || { echo "USDC holder ${USDC_HOLDER} has only ${HELD} at this block: pick another"; exit 1; }
+(( HELD >= MIN_HELD )) || { echo "USDC holder ${USDC_HOLDER} holds ${HELD} at this block, under ${MIN_HELD}: pick another"; exit 1; }
 
 FROM_BLOCK=$(( $(cast block-number --rpc-url "${RPC}") + 1 ))
 LOG=$(PRIVATE_KEY="${DEPLOYER_KEY}" COPRA_OWNER="${MULTISIG}" COPRA_ORACLE_UPDATER="${UPDATER}" \
@@ -35,6 +37,11 @@ LOG=$(PRIVATE_KEY="${DEPLOYER_KEY}" COPRA_OWNER="${MULTISIG}" COPRA_ORACLE_UPDAT
 addr() { grep -m1 "$1 deployed at:" <<< "${LOG}" | grep -o '0x[0-9a-fA-F]\{40\}'; }
 REGISTRY=$(addr CopraRegistry) ORACLE=$(addr CopraOracle) VAULT=$(addr CopraVault) TOKEN=$(addr CopraToken)
 [[ -n "${REGISTRY}" ]] || REGISTRY=$(grep -m1 "CopraRegistry" <<< "${LOG}" | grep -o '0x[0-9a-fA-F]\{40\}')
+# The addresses come from the script's log: if its wording changes, stop here, not in a cast call or the manifest.
+for pair in "CopraRegistry ${REGISTRY}" "CopraOracle ${ORACLE}" "CopraVault ${VAULT}" "CopraToken ${TOKEN}"; do
+    read -r name a <<< "${pair}"
+    [[ "${a}" =~ ^0x[0-9a-fA-F]{40}$ ]] || { echo "no ${name} address in DeployCopraMainnet's output"; exit 1; }
+done
 
 # The multisig's batch, as docs/MAINNET_DEPLOY.md has it signed: accept the vault, then go live.
 cast rpc anvil_impersonateAccount "${MULTISIG}" --rpc-url "${RPC}" > /dev/null
