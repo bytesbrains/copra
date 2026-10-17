@@ -54,7 +54,9 @@ jobs:
       - name: Dry-run fork simulation against Base Sepolia
         env:
           BASE_SEPOLIA_RPC: ${{ secrets.BASE_SEPOLIA_RPC || 'https://base-sepolia-rpc.publicnode.com' }}
-          PRIVATE_KEY: ${{ secrets.DEPLOYER_PRIVATE_KEY || '1' }}
+          # The deployer key lives only in the base-sepolia environment. deploy-base-sepolia
+          # simulates with it before broadcasting, so this dry-run uses a throwaway key.
+          PRIVATE_KEY: '1'
         run: |
           forge script script/DeployCopra.s.sol:DeployCopra --rpc-url "$BASE_SEPOLIA_RPC"
 
@@ -92,7 +94,7 @@ jobs:
         run: |
           set -euo pipefail
           if [[ -z "${PRIVATE_KEY:-}" ]]; then
-            echo "❌ Error: DEPLOYER_PRIVATE_KEY must be configured in the base-sepolia environment or repository secrets."
+            echo "❌ Error: DEPLOYER_PRIVATE_KEY must be configured in the base-sepolia environment."
             exit 1
           fi
 

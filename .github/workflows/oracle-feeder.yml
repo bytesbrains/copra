@@ -28,6 +28,8 @@ jobs:
     name: Update Copra Oracle
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # ORACLE_FEEDER_KEY lives only in this environment, which only main can deploy to.
+    environment: oracle-feeder
 
     steps:
       - name: Checkout repository

@@ -48,5 +48,6 @@ jobs:
 
       - name: Simulate deployment script (dry-run)
         env:
-          PRIVATE_KEY: ${{ secrets.DEPLOYER_PRIVATE_KEY || '1' }}
+          # A local simulation needs no real key, and this job runs code from any pushed branch.
+          PRIVATE_KEY: '1'
         run: forge script script/DeployCopra.s.sol:DeployCopra
