@@ -61,8 +61,9 @@ test('approve (first mint) → button becomes "Mint $COPRA" → mint → balance
   await expect(page.locator('#actionBtnText')).toHaveText('Approve USDC');
 
   await page.click('#actionBtn');
-  await expectSent(wallet, { from: user, contract: chain.contracts.usdc, fn: 'approve', args: [chain.contracts.vault.target, ethers.MaxUint256] });
-  expect(await chain.contracts.usdc.allowance(user, chain.contracts.vault.target)).toBe(ethers.MaxUint256);
+  // The amount entered, never an unlimited allowance (#57).
+  await expectSent(wallet, { from: user, contract: chain.contracts.usdc, fn: 'approve', args: [chain.contracts.vault.target, units('14.20', 6)] });
+  expect(await chain.contracts.usdc.allowance(user, chain.contracts.vault.target)).toBe(units('14.20', 6));
   await expect(toast(page)).toContainText('USDC approved');
   await expect(page.locator('#actionBtnText')).toHaveText('Mint $COPRA');
   await expect(page.locator('#actionBtn')).toBeEnabled();
@@ -70,7 +71,8 @@ test('approve (first mint) → button becomes "Mint $COPRA" → mint → balance
   const before = await chain.balances(user);
   await page.click('#actionBtn');
   await expect(toast(page)).toContainText('Waiting for confirmation');
-  const { events } = await expectSent(wallet, { from: user, contract: chain.contracts.vault, fn: 'mint', args: [expected.copra] });
+  // Bounded by the quote on screen: the vault may not charge more than the user saw (#57).
+  const { events } = await expectSent(wallet, { from: user, contract: chain.contracts.vault, fn: 'mint', args: [expected.copra, expected.required] });
   const minted = events.find((e) => e.name === 'Minted').args;
   expect([minted.user, minted.copraAmount, minted.feePaid]).toEqual([user, expected.copra, expected.fee]);
   expect(minted.collateralPaid).toBe(expected.required); // the vault's own quote, which fits in 14.20
@@ -79,7 +81,9 @@ test('approve (first mint) → button becomes "Mint $COPRA" → mint → balance
   expect(after.copra - before.copra).toBe(expected.copra);
 
   await expect(toast(page)).toContainText(`Successfully minted ${fixed(expected.copra, 18, 4)} $COPRA`);
-  await expect(page.locator('#actionBtnText')).toHaveText('Mint $COPRA');
+  // The mint spent the approval but its dust, so the next one asks again.
+  expect(await chain.contracts.usdc.allowance(user, chain.contracts.vault.target)).toBe(units('14.20', 6) - expected.required);
+  await expect(page.locator('#actionBtnText')).toHaveText('Approve USDC');
   await expectPageMatchesChain(page, user);
 });
 
@@ -100,7 +104,7 @@ test('redeem → balances update; the telemetry cards match on-chain values', as
   const before = await chain.balances(user);
   await page.click('#actionBtn');
   await expect(toast(page)).toContainText('Waiting for confirmation');
-  const { events } = await expectSent(wallet, { from: user, contract: chain.contracts.vault, fn: 'redeem', args: [units(4, 18)] });
+  const { events } = await expectSent(wallet, { from: user, contract: chain.contracts.vault, fn: 'redeem', args: [units(4, 18), toReturn] });
   const redeemed = events.find((e) => e.name === 'Redeemed').args;
   expect([redeemed.user, redeemed.copraAmount, redeemed.collateralReturned, redeemed.feePaid]).toEqual([user, units(4, 18), toReturn, fee]);
   const after = await chain.balances(user);
@@ -122,11 +126,11 @@ test('MAX fills the exact balance in both tabs, and that amount mints and redeem
   await page.click('#maxBtn');
   await expect(page.locator('#amountInput')).toHaveValue(quote.formatUnits(123_456_789n, 6)); // 123.456789
   await page.click('#actionBtn'); // approve
-  await expectSent(wallet, { from: user, contract: chain.contracts.usdc, fn: 'approve', args: [chain.contracts.vault.target, ethers.MaxUint256] });
+  await expectSent(wallet, { from: user, contract: chain.contracts.usdc, fn: 'approve', args: [chain.contracts.vault.target, 123_456_789n] });
   await expect(page.locator('#actionBtnText')).toHaveText('Mint $COPRA');
   const expected = await chainMintQuote(123_456_789n);
   await page.click('#actionBtn');
-  await expectSent(wallet, { from: user, contract: chain.contracts.vault, fn: 'mint', args: [expected.copra] });
+  await expectSent(wallet, { from: user, contract: chain.contracts.vault, fn: 'mint', args: [expected.copra, expected.required] });
   await expect(toast(page)).toContainText('Successfully minted');
   // Charged exactly the vault's quote for the largest mint that fits: what is left is the change, no more.
   expect((await chain.balances(user)).usdc).toBe(123_456_789n - expected.required);
@@ -137,7 +141,8 @@ test('MAX fills the exact balance in both tabs, and that amount mints and redeem
   await page.click('#maxBtn');
   await expect(page.locator('#amountInput')).toHaveValue(quote.formatUnits(copra, 18));
   await page.click('#actionBtn');
-  await expectSent(wallet, { from: user, contract: chain.contracts.vault, fn: 'redeem', args: [copra] });
+  const [toReturn] = await chain.contracts.vault.quoteRedeem(copra);
+  await expectSent(wallet, { from: user, contract: chain.contracts.vault, fn: 'redeem', args: [copra, toReturn] });
   await expect(toast(page)).toContainText('Successfully redeemed');
   expect((await chain.balances(user)).copra).toBe(0n);
   await expectPageMatchesChain(page, user);

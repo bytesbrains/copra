@@ -4,7 +4,7 @@ const { describe, it, before, after, beforeEach, afterEach } = require('node:tes
 const assert = require('node:assert/strict');
 const h = require('../lib/harness.cjs');
 
-const { contracts: { oracle, vault, usdc }, users, OWNER, send, expectRevert, units } = h;
+const { contracts: { oracle, vault, usdc }, users, OWNER, send, expectRevert, units, NO_MAX, NO_MIN } = h;
 const [alice] = users;
 
 const price = async () => (await oracle.getCopraPriceUSD())[0];
@@ -43,19 +43,19 @@ describe('oracle', () => {
   it('is fresh at exactly HEARTBEAT and stale 1s later: mint and redeem revert, one update recovers', async () => {
     await h.fundUsdc(alice, units(1000, 6));
     await send(usdc, 'approve', [vault.target, h.ethers.MaxUint256], alice);
-    await send(vault, 'mint', [units(10, 18)], alice);
+    await send(vault, 'mint', [units(10, 18), NO_MAX], alice);
     const stale = (await h.lastUpdatedAt()) + (await oracle.HEARTBEAT());
 
     await h.setNextTimestamp(stale);
-    await send(vault, 'mint', [units(1, 18)], alice); // age == HEARTBEAT: still fresh
+    await send(vault, 'mint', [units(1, 18), NO_MAX], alice); // age == HEARTBEAT: still fresh
 
     await h.setNextTimestamp(stale + 1n);
-    await expectRevert(vault, 'mint', [units(1, 18)], alice, 'StalePrice');
-    await expectRevert(vault, 'redeem', [units(1, 18)], alice, 'StalePrice');
+    await expectRevert(vault, 'mint', [units(1, 18), NO_MAX], alice, 'StalePrice');
+    await expectRevert(vault, 'redeem', [units(1, 18), NO_MIN], alice, 'StalePrice');
     await assert.rejects(oracle.getCopraPriceUSD(), /StalePrice|execution reverted/);
 
     await send(oracle, 'updatePrice', [await h.lastPrice()], OWNER); // stale is long past the interval
-    await send(vault, 'redeem', [units(1, 18)], alice);
+    await send(vault, 'redeem', [units(1, 18), NO_MIN], alice);
   });
 
   it('accepts updates only from the updater, and never 0', async () => {
@@ -82,9 +82,9 @@ describe('oracle', () => {
     assert.ok((await h.latestTimestamp()) - start <= 13 * 86400 + 13, 'within 13 days');
 
     const before = await usdc.balanceOf(OWNER);
-    await send(vault, 'redeem', [units(100, 18)], OWNER);
+    await send(vault, 'redeem', [units(100, 18), NO_MIN], OWNER);
     const out = (await usdc.balanceOf(OWNER)) - before;
     assert.ok(out > ownerPaid * 10n, `updater got ${out} back for ${ownerPaid} in`);
-    await expectRevert(vault, 'redeem', [units(1000, 18)], alice, 'InsufficientVaultCollateral');
+    await expectRevert(vault, 'redeem', [units(1000, 18), NO_MIN], alice, 'InsufficientVaultCollateral');
   });
 });

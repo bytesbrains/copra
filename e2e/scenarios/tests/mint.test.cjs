@@ -3,14 +3,14 @@ const { describe, it, before, after, beforeEach, afterEach } = require('node:tes
 const assert = require('node:assert/strict');
 const h = require('../lib/harness.cjs');
 
-const { contracts: { usdc, vault, token }, users, OWNER, send, expectRevert, units } = h;
+const { contracts: { usdc, vault, token }, users, OWNER, send, expectRevert, units, NO_MAX, NO_MIN } = h;
 const [alice, bob] = users;
 
 describe('mint', () => {
   h.isolate({ before, after, beforeEach, afterEach });
 
   it('rejects 0 with ZeroAmount', async () => {
-    await expectRevert(vault, 'mint', [0n], alice, 'ZeroAmount');
+    await expectRevert(vault, 'mint', [0n, NO_MAX], alice, 'ZeroAmount');
   });
 
   it('charges at least 1 micro-USDC for 1 wei of COPRA (rounds up)', async () => {
@@ -39,7 +39,7 @@ describe('mint', () => {
 
   it('reverts with ERC20InsufficientAllowance without an approval', async () => {
     await h.fundUsdc(alice, units(100, 6));
-    const [, , needed] = await expectRevert(vault, 'mint', [units(10, 18)], alice, 'ERC20InsufficientAllowance');
+    const [, , needed] = await expectRevert(vault, 'mint', [units(10, 18), NO_MAX], alice, 'ERC20InsufficientAllowance');
     const [required] = await vault.quoteMint(units(10, 18));
     assert.equal(needed, required);
   });
@@ -50,7 +50,7 @@ describe('mint', () => {
     const [required, fee] = await vault.quoteMint(amount);
     await send(usdc, 'approve', [vault.target, required], alice);
     const before = await h.balances(alice);
-    await send(vault, 'mint', [amount], alice);
+    await send(vault, 'mint', [amount, NO_MAX], alice);
     const after = await h.balances(alice);
     assert.equal(before.usdc - after.usdc, required);
     assert.equal(after.copra - before.copra, amount);
@@ -61,7 +61,7 @@ describe('mint', () => {
   it('reverts with ERC20InsufficientBalance when the balance is below the quote', async () => {
     await h.fundUsdc(alice, units(1, 6));
     await send(usdc, 'approve', [vault.target, h.ethers.MaxUint256], alice);
-    await expectRevert(vault, 'mint', [units(10, 18)], alice, 'ERC20InsufficientBalance');
+    await expectRevert(vault, 'mint', [units(10, 18), NO_MAX], alice, 'ERC20InsufficientBalance');
   });
 
   it('charges no fee at 0 bps and exactly 1% at MAX_FEE_BPS', async () => {

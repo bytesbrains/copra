@@ -36,6 +36,9 @@ contract CopraProtocolTest is Test {
     address public bob = address(0xB0B);
 
     uint256 public constant INITIAL_PRICE = 140000000; // $1.40 USD (8 decimals)
+    // No slippage bound, for tests about something else (zero amounts, stale prices, collateral limits).
+    uint256 internal constant NO_MAX = type(uint256).max;
+    uint256 internal constant NO_MIN = 0;
 
     function setUp() public {
         usdc = new MockUSDC();
@@ -71,7 +74,7 @@ contract CopraProtocolTest is Test {
 
         vm.startPrank(alice);
         usdc.approve(address(vault), requiredUSDC);
-        vault.mint(mintAmount);
+        vault.mint(mintAmount, requiredUSDC);
         vm.stopPrank();
 
         assertEq(copraToken.balanceOf(alice), mintAmount);
@@ -86,7 +89,7 @@ contract CopraProtocolTest is Test {
 
         vm.startPrank(alice);
         usdc.approve(address(vault), requiredUSDC);
-        vault.mint(mintAmount);
+        vault.mint(mintAmount, requiredUSDC);
 
         // Alice transfers 50 COPRA to Bob
         copraToken.transfer(bob, 50 * 1e18);
@@ -102,7 +105,7 @@ contract CopraProtocolTest is Test {
         uint256 bobUsdcBefore = usdc.balanceOf(bob);
 
         vm.startPrank(bob);
-        vault.redeem(50 * 1e18);
+        vault.redeem(50 * 1e18, redeemCollateral);
         vm.stopPrank();
 
         assertEq(copraToken.balanceOf(bob), 0);
@@ -115,7 +118,7 @@ contract CopraProtocolTest is Test {
 
         vm.startPrank(alice);
         usdc.approve(address(vault), requiredUSDC);
-        vault.mint(mintAmount);
+        vault.mint(mintAmount, requiredUSDC);
         vm.stopPrank();
 
         assertEq(vault.accumulatedFees(), expectedFee);
@@ -307,7 +310,7 @@ contract CopraProtocolTest is Test {
         (uint256 requiredUSDC,) = vault.quoteMint(copraAmount);
         vm.startPrank(user);
         usdc.approve(address(vault), requiredUSDC);
-        vault.mint(copraAmount);
+        vault.mint(copraAmount, requiredUSDC);
         vm.stopPrank();
     }
 
@@ -332,11 +335,11 @@ contract CopraProtocolTest is Test {
 
         vm.prank(alice);
         vm.expectRevert(CopraOracle.StalePrice.selector);
-        vault.mint(1e18);
+        vault.mint(1e18, NO_MAX);
 
         vm.prank(alice);
         vm.expectRevert(CopraOracle.StalePrice.selector);
-        vault.redeem(10 * 1e18);
+        vault.redeem(10 * 1e18, NO_MIN);
     }
 
     function test_Oracle_UpdateRefreshesStalePrice() public {
@@ -484,10 +487,10 @@ contract CopraProtocolTest is Test {
     function test_Vault_ZeroAmountReverts() public {
         vm.startPrank(alice);
         vm.expectRevert(CopraVault.ZeroAmount.selector);
-        vault.mint(0);
+        vault.mint(0, NO_MAX);
 
         vm.expectRevert(CopraVault.ZeroAmount.selector);
-        vault.redeem(0);
+        vault.redeem(0, NO_MIN);
         vm.stopPrank();
 
         assertEq(vault.accumulatedFees(), 0);
@@ -526,7 +529,7 @@ contract CopraProtocolTest is Test {
 
         vm.prank(alice);
         vm.expectRevert(CopraVault.InsufficientVaultCollateral.selector);
-        vault.redeem(100 * 1e18);
+        vault.redeem(100 * 1e18, NO_MIN);
 
         // Pinned: nothing moved. The unfixed vault paid out 139.8495 here, leaving 0.5005 USDC
         // against 0.7005 USDC of fees.
@@ -548,7 +551,7 @@ contract CopraProtocolTest is Test {
         address broke = address(0xD00D);
         vm.prank(broke);
         vm.expectRevert(abi.encodeWithSelector(IERC20Errors.ERC20InsufficientAllowance.selector, address(vault), 0, 1));
-        vault.mint(dust);
+        vault.mint(dust, required);
         assertEq(copraToken.balanceOf(broke), 0);
 
         // Exact amounts are unaffected by the rounding direction
@@ -590,10 +593,10 @@ contract CopraProtocolTest is Test {
         vm.prank(user);
         if (collateralToReturn + fee > available) {
             vm.expectRevert(CopraVault.InsufficientVaultCollateral.selector);
-            vault.redeem(bal);
+            vault.redeem(bal, collateralToReturn);
             return false;
         }
-        vault.redeem(bal);
+        vault.redeem(bal, collateralToReturn);
         assertEq(copraToken.balanceOf(user), 0);
         return true;
     }
@@ -684,11 +687,126 @@ contract CopraProtocolTest is Test {
             _postPrice(oracle, price);
         }
         vm.prank(oracleUpdater);
-        vault.redeem(100 * 1e18);
+        vault.redeem(100 * 1e18, NO_MIN);
 
         assertGt(usdc.balanceOf(oracleUpdater), 1400 * 1e6); // 10x what it put in
         vm.prank(alice);
         vm.expectRevert(CopraVault.InsufficientVaultCollateral.selector);
-        vault.redeem(1000 * 1e18);
+        vault.redeem(1000 * 1e18, NO_MIN);
+    }
+
+    // ---------------------------------------------------------------------
+    // Slippage bounds (#57)
+    // ---------------------------------------------------------------------
+
+    /// @dev A price update lands between Alice's quote and her mint: the bound refuses the new cost.
+    function test_Vault_MintRevertsAboveMaxCollateralIn() public {
+        (uint256 quoted,) = vault.quoteMint(1000 * 1e18);
+        vm.prank(alice);
+        usdc.approve(address(vault), type(uint256).max);
+
+        _postPrice(oracle, (INITIAL_PRICE * 12) / 10);
+        (uint256 now_,) = vault.quoteMint(1000 * 1e18);
+
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSelector(CopraVault.SlippageExceeded.selector, now_, quoted));
+        vault.mint(1000 * 1e18, quoted);
+        assertEq(usdc.balanceOf(alice), 10000 * 1e6);
+        assertEq(copraToken.balanceOf(alice), 0);
+    }
+
+    /// @dev A fee raise alone moves the cost too, and is refused the same way.
+    function test_Vault_MintRevertsOnFeeRaise() public {
+        (uint256 quoted,) = vault.quoteMint(1000 * 1e18);
+        vm.prank(alice);
+        usdc.approve(address(vault), type(uint256).max);
+        vault.setProtocolFee(vault.MAX_FEE_BPS());
+
+        vm.prank(alice);
+        vm.expectPartialRevert(CopraVault.SlippageExceeded.selector);
+        vault.mint(1000 * 1e18, quoted);
+    }
+
+    /// @dev The bound is inclusive, and a move in the caller's favour still executes at the new price.
+    function test_Vault_MintAtOrBelowBoundExecutes() public {
+        (uint256 quoted,) = vault.quoteMint(100 * 1e18);
+        vm.startPrank(alice);
+        usdc.approve(address(vault), type(uint256).max);
+        vault.mint(100 * 1e18, quoted); // exactly the bound
+        vm.stopPrank();
+
+        _postPrice(oracle, (INITIAL_PRICE * 9) / 10);
+        (uint256 cheaper,) = vault.quoteMint(100 * 1e18);
+        uint256 before = usdc.balanceOf(alice);
+        vm.prank(alice);
+        vault.mint(100 * 1e18, quoted);
+        assertEq(before - usdc.balanceOf(alice), cheaper);
+        assertLt(cheaper, quoted);
+    }
+
+    /// @dev A price drop lands between the quote and the redeem: minCollateralOut refuses it.
+    function test_Vault_RedeemRevertsBelowMinCollateralOut() public {
+        _mintAs(alice, 1000 * 1e18);
+        (uint256 quoted,) = vault.quoteRedeem(1000 * 1e18);
+
+        _postPrice(oracle, (INITIAL_PRICE * 8) / 10);
+        (uint256 now_,) = vault.quoteRedeem(1000 * 1e18);
+
+        uint256 before = usdc.balanceOf(alice);
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSelector(CopraVault.SlippageExceeded.selector, now_, quoted));
+        vault.redeem(1000 * 1e18, quoted);
+        assertEq(usdc.balanceOf(alice), before);
+        assertEq(copraToken.balanceOf(alice), 1000 * 1e18);
+    }
+
+    /// @dev Its own bound is the caller's first refusal: a redeem below it never reaches the collateral check.
+    function test_Vault_RedeemBoundCheckedBeforeCollateral() public {
+        _mintAs(alice, 100 * 1e18);
+        vm.prank(alice);
+        vm.expectPartialRevert(CopraVault.SlippageExceeded.selector);
+        vault.redeem(100 * 1e18, NO_MAX);
+    }
+
+    /// @dev Whatever the price did since the quote, a bounded mint never charges more than its bound
+    ///      and a bounded redeem never pays less; either executes or reverts with nothing moved.
+    function testFuzz_BoundsHoldAcrossPriceMoves(uint256 copraAmount, uint256 priceSeed) public {
+        copraAmount = bound(copraAmount, 1e12, 5000 * 1e18);
+        (uint256 maxIn,) = vault.quoteMint(copraAmount);
+        _postPrice(oracle, _boundedPriceMove(priceSeed));
+
+        vm.prank(alice);
+        usdc.approve(address(vault), type(uint256).max);
+        (uint256 cost,) = vault.quoteMint(copraAmount);
+        uint256 before = usdc.balanceOf(alice);
+        vm.prank(alice);
+        if (cost > maxIn) {
+            vm.expectPartialRevert(CopraVault.SlippageExceeded.selector);
+            vault.mint(copraAmount, maxIn);
+            assertEq(usdc.balanceOf(alice), before);
+            return;
+        }
+        vault.mint(copraAmount, maxIn);
+        assertLe(before - usdc.balanceOf(alice), maxIn);
+
+        (uint256 minOut,) = vault.quoteRedeem(copraAmount);
+        _postPrice(oracle, _boundedPriceMove(uint256(keccak256(abi.encode(priceSeed)))));
+        (uint256 out, uint256 fee) = vault.quoteRedeem(copraAmount);
+        uint256 available = usdc.balanceOf(address(vault)) - vault.accumulatedFees();
+        before = usdc.balanceOf(alice);
+        vm.prank(alice);
+        if (out < minOut) {
+            vm.expectPartialRevert(CopraVault.SlippageExceeded.selector);
+            vault.redeem(copraAmount, minOut);
+            assertEq(usdc.balanceOf(alice), before);
+        } else if (out + fee > available) {
+            // A rise past the backing: refused for the vault's sake, not the bound's.
+            vm.expectRevert(CopraVault.InsufficientVaultCollateral.selector);
+            vault.redeem(copraAmount, minOut);
+        } else {
+            vault.redeem(copraAmount, minOut);
+            assertGe(usdc.balanceOf(alice) - before, minOut);
+        }
     }
 }
+

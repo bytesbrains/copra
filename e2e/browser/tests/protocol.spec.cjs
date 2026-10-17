@@ -74,7 +74,7 @@ test('vault short of collateral → readable InsufficientVaultCollateral message
   await chain.mintCopra(user, units(10, 18));
   // +19.5%, the feeder's clamp: 10 $COPRA are now worth more than the vault holds for them.
   await chain.postPrice(169_690_000n);
-  expect(await revertOf(chain.contracts.vault.connect(await chain.signer(user)).redeem.staticCall(units(10, 18)))).toBe('InsufficientVaultCollateral');
+  expect(await revertOf(chain.contracts.vault.connect(await chain.signer(user)).redeem.staticCall(units(10, 18), 0n))).toBe('InsufficientVaultCollateral');
 
   await open(page);
   await connect(page, wallet);
@@ -112,9 +112,82 @@ test('the oracle moves between page load and submit → the user sees the new pr
 
   // Submitting again signs exactly what is now shown.
   await page.click('#actionBtn');
-  const { events } = await expectSent(wallet, { from: user, contract: chain.contracts.vault, fn: 'mint', args: [after.copra] });
+  const { events } = await expectSent(wallet, { from: user, contract: chain.contracts.vault, fn: 'mint', args: [after.copra, after.required] });
   expect(events.find((e) => e.name === 'Minted').args.feePaid).toBe(after.fee);
   await expect(toast(page)).toContainText(`Successfully minted ${fixed(after.copra, 18, 4)} $COPRA`);
+  await expectPageMatchesChain(page, user);
+});
+
+const SLIPPAGE = 'The price or fee moved past your quote before the transaction ran, so the vault refused it and no USDC or $COPRA moved. The new quote is shown: check it and submit again.';
+
+/** The one transaction the page had signed: mined, reverted on chain with SlippageExceeded(actual, limit). */
+async function expectRefusedOnChain(wallet, chain, { fn, args, limit }) {
+  await expect.poll(() => wallet.sent.length, { message: `the page sends ${fn}` }).toBe(1);
+  const [tx] = wallet.sent;
+  const call = chain.contracts.vault.interface.parseTransaction({ data: tx.data });
+  expect([call.name, ...call.args.toArray()]).toEqual([fn, ...args]);
+  const receipt = await chain.provider.waitForTransaction(tx.hash);
+  expect(receipt.status, `${fn} reverted on chain`).toBe(0);
+  const trace = await chain.rpc('debug_traceTransaction', [tx.hash, { tracer: 'callTracer' }]);
+  const err = chain.decodeRevert(trace.output);
+  expect(err.name).toBe('SlippageExceeded');
+  expect(err.args[1]).toBe(limit);
+  await chain.checkInvariants();
+}
+
+// #57: the guard above catches a move before signing; this is the window it cannot see. The wallet
+// lets the oracle move after the user signs and before it broadcasts, so the vault itself must refuse.
+test('the oracle moves after the user signs a mint → the vault refuses it on chain, nothing moves, the page says why', async ({ page, wallet, chain, guard }) => {
+  guard.allow(/^Transaction error:/);
+  const user = wallet.selected;
+  await chain.fundUsdc(user, units(100, 6));
+  // An unlimited approval from elsewhere: only the bound stands between the user and the new price.
+  await chain.send(chain.contracts.usdc, 'approve', [chain.contracts.vault.target, ethers.MaxUint256], user);
+  await open(page);
+  await connect(page, wallet);
+  await expect(page.locator('#actionBtnText')).toHaveText('Mint $COPRA');
+  const quoted = await chainMintQuote(units('14.20', 6));
+  await expect(page.locator('#outputAmount')).toHaveValue(fixed(quoted.copra, 18, 4));
+
+  await afterTelemetryPoll(page);
+  wallet.beforeSend = async () => { wallet.beforeSend = null; await chain.postPrice(155_000_000n); }; // $1.42 → $1.55
+  const before = await chain.balances(user);
+  await page.click('#actionBtn');
+  await expectRefusedOnChain(wallet, chain, { fn: 'mint', args: [quoted.copra, quoted.required], limit: quoted.required });
+  expect(await chain.balances(user)).toEqual(before);
+
+  await expect(toast(page)).toHaveText(SLIPPAGE);
+  await expect(page.locator('#benchmarkHeader')).toHaveText('$1.55 USD / kg');
+  const fresh = await chainMintQuote(units('14.20', 6));
+  await expect(page.locator('#outputAmount')).toHaveValue(fixed(fresh.copra, 18, 4));
+  await expect(page.locator('#actionBtn')).toBeEnabled();
+  await expectPageMatchesChain(page, user);
+});
+
+test('the oracle drops after the user signs a redeem → the vault refuses it on chain, nothing moves, the page says why', async ({ page, wallet, chain, guard }) => {
+  guard.allow(/^Transaction error:/);
+  const user = wallet.selected;
+  await chain.fundUsdc(user, units(100, 6));
+  await chain.mintCopra(user, units(10, 18));
+  await open(page);
+  await connect(page, wallet);
+  await page.click('#tabRedeem');
+  await setAmount(page, '4');
+  const [quoted] = await chain.contracts.vault.quoteRedeem(units(4, 18));
+  await expect(page.locator('#outputAmount')).toHaveValue(fixed(quoted, 6, 4));
+
+  await afterTelemetryPoll(page);
+  wallet.beforeSend = async () => { wallet.beforeSend = null; await chain.postPrice(130_000_000n); }; // $1.42 → $1.30
+  const before = await chain.balances(user);
+  await page.click('#actionBtn');
+  await expectRefusedOnChain(wallet, chain, { fn: 'redeem', args: [units(4, 18), quoted], limit: quoted });
+  expect(await chain.balances(user)).toEqual(before);
+
+  await expect(toast(page)).toHaveText(SLIPPAGE);
+  await expect(page.locator('#benchmarkHeader')).toHaveText('$1.30 USD / kg');
+  const [fresh] = await chain.contracts.vault.quoteRedeem(units(4, 18));
+  await expect(page.locator('#outputAmount')).toHaveValue(fixed(fresh, 6, 4));
+  await expect(page.locator('#actionBtnText')).toHaveText('Redeem USDC');
   await expectPageMatchesChain(page, user);
 });
 

@@ -75,12 +75,12 @@ async function main() {
     const holder = manifest.users[0];
     const signer = await chain.getSigner(holder);
     const usdc = new ethers.Contract(manifest.contracts.usdc, ['function faucet(address,uint256)', 'function approve(address,uint256)'], signer);
-    const vault = new ethers.Contract(manifest.contracts.vault, ['function mint(uint256)', 'function quoteMint(uint256) view returns (uint256,uint256)'], signer);
+    const vault = new ethers.Contract(manifest.contracts.vault, ['function mint(uint256,uint256)', 'function quoteMint(uint256) view returns (uint256,uint256)'], signer);
     const amount = ethers.parseUnits('10', 18);
     const [required] = await vault.quoteMint(amount);
     await (await usdc.faucet(holder, required)).wait();
     await (await usdc.approve(vault.target, required)).wait();
-    await (await vault.mint(amount)).wait();
+    await (await vault.mint(amount, required)).wait();
 
     const html = (await get('/')).body.toString();
     const scripts = [];

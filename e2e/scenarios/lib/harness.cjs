@@ -185,7 +185,7 @@ async function fundUsdc(user, amount) {
 async function mintCopra(user, copraAmount, { approve = true } = {}) {
   const [required] = await contracts.vault.quoteMint(copraAmount);
   if (approve) await send(contracts.usdc, 'approve', [C.vault, required], user);
-  return send(contracts.vault, 'mint', [copraAmount], user);
+  return send(contracts.vault, 'mint', [copraAmount, required], user);
 }
 
 /** Posts a price as the oracle updater after waiting out MIN_UPDATE_INTERVAL, as the feeder would. */
@@ -218,10 +218,13 @@ async function deploy(name, args, from = OWNER) {
 }
 
 const units = (v, d) => ethers.parseUnits(String(v), d);
+// No slippage bound (#57), for scenarios about something else: a mint that pays anything, a redeem that takes anything.
+const NO_MAX = ethers.MaxUint256;
+const NO_MIN = 0n;
 
 module.exports = {
   ethers, provider, rpc, manifest, contracts, artifact, users, OWNER, signer,
   latestTimestamp, setNextTimestamp, warp, warpTo, isolate,
   invariants, checkInvariants, send, expectRevert, decodeRevert,
-  fundUsdc, mintCopra, postPrice, lastUpdatedAt, lastPrice, balances, deploy, units,
+  fundUsdc, mintCopra, postPrice, lastUpdatedAt, lastPrice, balances, deploy, units, NO_MAX, NO_MIN,
 };

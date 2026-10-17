@@ -57,6 +57,8 @@ contract CopraVault is ReentrancyGuard, Ownable2Step {
     error ZeroAddress();
     error InsufficientVaultCollateral();
     error FeeExceedsMax();
+    /// @notice The price or fee moved past the caller's bound between their quote and execution.
+    error SlippageExceeded(uint256 actual, uint256 limit);
 
     /**
      * @param _collateral Address of the reserve collateral token (e.g. USDC).
@@ -160,11 +162,16 @@ contract CopraVault is ReentrancyGuard, Ownable2Step {
 
     /**
      * @notice Permissionlessly mint $COPRA by depositing collateral at the current benchmark price.
+     *         The cost is computed when the transaction executes, so a price update or fee change
+     *         landing after the caller's quote changes it; maxCollateralIn bounds what they pay.
      * @param copraAmount The quantity of $COPRA tokens to mint (18 decimals).
+     * @param maxCollateralIn The most collateral, fee included, the caller accepts to pay (usually
+     *        quoteMint(copraAmount).collateralRequired). Reverts with SlippageExceeded above it.
      */
-    function mint(uint256 copraAmount) external nonReentrant {
+    function mint(uint256 copraAmount, uint256 maxCollateralIn) external nonReentrant {
         if (copraAmount == 0) revert ZeroAmount();
         (uint256 collateralRequired, uint256 fee) = quoteMint(copraAmount);
+        if (collateralRequired > maxCollateralIn) revert SlippageExceeded(collateralRequired, maxCollateralIn);
 
         accumulatedFees += fee;
         collateralToken.safeTransferFrom(msg.sender, address(this), collateralRequired);
@@ -179,10 +186,13 @@ contract CopraVault is ReentrancyGuard, Ownable2Step {
      *         the vault can hold less than all $COPRA is worth, and this reverts with
      *         InsufficientVaultCollateral once it runs short.
      * @param copraAmount The quantity of $COPRA tokens to burn (18 decimals).
+     * @param minCollateralOut The least collateral, after the fee, the caller accepts to receive
+     *        (usually quoteRedeem(copraAmount).collateralToReturn). Reverts with SlippageExceeded below it.
      */
-    function redeem(uint256 copraAmount) external nonReentrant {
+    function redeem(uint256 copraAmount, uint256 minCollateralOut) external nonReentrant {
         if (copraAmount == 0) revert ZeroAmount();
         (uint256 collateralToReturn, uint256 fee) = quoteRedeem(copraAmount);
+        if (collateralToReturn < minCollateralOut) revert SlippageExceeded(collateralToReturn, minCollateralOut);
 
         // The redeem fee stays in the vault as accumulatedFees, so it must be covered by backing
         // collateral too; otherwise the vault ends up owing more fees than it holds.

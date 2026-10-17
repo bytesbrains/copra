@@ -43,6 +43,7 @@ async function loadDeployment() {
 const REVERT_MESSAGES = {
   StalePrice: 'The oracle price is stale, so minting and redeeming are paused until it is updated.',
   InsufficientVaultCollateral: 'The vault does not hold enough USDC to pay this redemption right now. Try a smaller amount.',
+  SlippageExceeded: 'The price or fee moved past your quote before the transaction ran, so the vault refused it and no USDC or $COPRA moved. The new quote is shown: check it and submit again.',
   ZeroAmount: 'Enter an amount greater than zero.',
   ERC20InsufficientBalance: 'Your balance is too low for this amount.',
   ERC20InsufficientAllowance: 'The vault is not approved to spend this much USDC.'

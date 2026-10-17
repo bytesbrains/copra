@@ -39,6 +39,7 @@ class Wallet {
     this.connected = false;
     this.requests = []; // every request the page made, in order: { method, params }
     this.reject = new Set(); // methods the "user" rejects (4001)
+    this.beforeSend = null; // async (tx) => {}: runs after the user signs, before the wallet broadcasts
     this.nextId = 1;
   }
 
@@ -102,6 +103,7 @@ class Wallet {
         if (!this.connected || from !== this.selected) {
           throw rpcError(4100, `The requested account ${from} has not been authorized by the user.`);
         }
+        if (this.beforeSend) await this.beforeSend(params[0]);
         entry.hash = await this.rpc(method, params);
         return entry.hash;
       }

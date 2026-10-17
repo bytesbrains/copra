@@ -3,7 +3,7 @@ const { describe, it, before, after, beforeEach, afterEach } = require('node:tes
 const assert = require('node:assert/strict');
 const h = require('../lib/harness.cjs');
 
-const { contracts: { usdc, oracle, vault, token }, users, OWNER, send, expectRevert, units, ethers } = h;
+const { contracts: { usdc, oracle, vault, token }, users, OWNER, send, expectRevert, units, ethers, NO_MAX, NO_MIN } = h;
 const [alice, bob, carol] = users;
 
 // Deterministic PRNG (mulberry32), so a failing sequence replays exactly. Override with E2E_SEED.
@@ -23,11 +23,11 @@ async function redeemAsPredicted(who, copra) {
   const [out, fee] = await vault.quoteRedeem(copra);
   const available = (await usdc.balanceOf(vault.target)) - (await vault.accumulatedFees());
   if (out + fee > available) {
-    await expectRevert(vault, 'redeem', [copra], who, 'InsufficientVaultCollateral');
+    await expectRevert(vault, 'redeem', [copra, out], who, 'InsufficientVaultCollateral');
     return false;
   }
   const before = await usdc.balanceOf(who);
-  await send(vault, 'redeem', [copra], who);
+  await send(vault, 'redeem', [copra, out], who);
   assert.equal((await usdc.balanceOf(who)) - before, out);
   return true;
 }
@@ -40,12 +40,12 @@ describe('lifecycle', () => {
     const amount = units(250, 18);
     const [required] = await vault.quoteMint(amount);
     await send(usdc, 'approve', [vault.target, required], alice);
-    await send(vault, 'mint', [amount], alice);
+    await send(vault, 'mint', [amount, required], alice);
     await send(token, 'transfer', [bob, units(100, 18)], alice);
 
     const [out] = await vault.quoteRedeem(units(100, 18));
     const before = await usdc.balanceOf(bob);
-    await send(vault, 'redeem', [units(100, 18)], bob); // no approval needed to redeem
+    await send(vault, 'redeem', [units(100, 18), out], bob); // no approval needed to redeem
     assert.equal((await usdc.balanceOf(bob)) - before, out);
     assert.equal(await token.balanceOf(alice), units(150, 18));
   });
@@ -53,12 +53,12 @@ describe('lifecycle', () => {
   it('the owner changes the fee and the recipient; quotes, mints and claims follow', async () => {
     await h.fundUsdc(alice, units(5000, 6));
     await send(usdc, 'approve', [vault.target, ethers.MaxUint256], alice);
-    await send(vault, 'mint', [units(1000, 18)], alice);
+    await send(vault, 'mint', [units(1000, 18), NO_MAX], alice);
     const feeAt25 = await vault.accumulatedFees();
 
     await send(vault, 'setProtocolFee', [80n], OWNER);
     const [, fee80] = await vault.quoteMint(units(1000, 18));
-    await send(vault, 'mint', [units(1000, 18)], alice);
+    await send(vault, 'mint', [units(1000, 18), NO_MAX], alice);
     assert.equal((await vault.accumulatedFees()) - feeAt25, fee80);
     assert.ok(fee80 > feeAt25 * 3n, 'fee quote follows the new rate');
 
@@ -88,7 +88,7 @@ describe('lifecycle', () => {
         const copra = amountUpTo(units(2000, 18));
         const [required] = await vault.quoteMint(copra);
         if (required > (await usdc.balanceOf(who))) continue;
-        await send(vault, 'mint', [copra], who);
+        await send(vault, 'mint', [copra, required], who);
         counts.mint++;
       } else if (r < 0.62) {
         const held = await token.balanceOf(who);

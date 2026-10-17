@@ -3,14 +3,14 @@ const { describe, it, before, after, beforeEach, afterEach } = require('node:tes
 const assert = require('node:assert/strict');
 const h = require('../lib/harness.cjs');
 
-const { contracts: { usdc, vault, token }, users, OWNER, send, expectRevert, units, rpc } = h;
+const { contracts: { usdc, vault, token }, users, OWNER, send, expectRevert, units, rpc, NO_MAX, NO_MIN } = h;
 const [alice, bob, carol] = users;
 
 describe('redeem', () => {
   h.isolate({ before, after, beforeEach, afterEach });
 
   it('rejects 0 with ZeroAmount', async () => {
-    await expectRevert(vault, 'redeem', [0n], alice, 'ZeroAmount');
+    await expectRevert(vault, 'redeem', [0n, NO_MIN], alice, 'ZeroAmount');
   });
 
   it('rejects more than the balance with ERC20InsufficientBalance, even when the vault could pay', async () => {
@@ -18,7 +18,7 @@ describe('redeem', () => {
     await h.fundUsdc(bob, units(1000, 6));
     await h.mintCopra(alice, units(10, 18));
     await h.mintCopra(bob, units(100, 18));
-    await expectRevert(vault, 'redeem', [units(11, 18)], alice, 'ERC20InsufficientBalance');
+    await expectRevert(vault, 'redeem', [units(11, 18), NO_MIN], alice, 'ERC20InsufficientBalance');
   });
 
   it('pays the quote exactly and keeps the redeem fee in the vault', async () => {
@@ -27,7 +27,7 @@ describe('redeem', () => {
     const feesBefore = await vault.accumulatedFees();
     const [out, fee] = await vault.quoteRedeem(units(20, 18));
     const before = await h.balances(alice);
-    await send(vault, 'redeem', [units(20, 18)], alice);
+    await send(vault, 'redeem', [units(20, 18), NO_MIN], alice);
     const after = await h.balances(alice);
     assert.equal(after.usdc - before.usdc, out);
     assert.equal(before.copra - after.copra, units(20, 18));
@@ -37,7 +37,7 @@ describe('redeem', () => {
   it('lets the last holder exit in full: the vault keeps the fees plus rounding dust only', async (t) => {
     await h.fundUsdc(alice, units(2000, 6));
     await h.mintCopra(alice, units(777.123456789, 18));
-    await send(vault, 'redeem', [await token.balanceOf(alice)], alice);
+    await send(vault, 'redeem', [await token.balanceOf(alice), NO_MIN], alice);
     assert.equal(await token.totalSupply(), 0n);
 
     const dust = (await usdc.balanceOf(vault.target)) - (await vault.accumulatedFees());
@@ -56,14 +56,14 @@ describe('redeem', () => {
     const p = (await h.contracts.oracle.getCopraPriceUSD())[0];
     await h.postPrice((p * 12n) / 10n);
 
-    await send(vault, 'redeem', [units(1000, 18)], alice); // first: paid in full at the new price
-    await expectRevert(vault, 'redeem', [units(1000, 18)], bob, 'InsufficientVaultCollateral');
+    await send(vault, 'redeem', [units(1000, 18), NO_MIN], alice); // first: paid in full at the new price
+    await expectRevert(vault, 'redeem', [units(1000, 18), NO_MIN], bob, 'InsufficientVaultCollateral');
 
     // Bob can still take what is left, minus the fees the vault must keep.
     const available = (await usdc.balanceOf(vault.target)) - (await vault.accumulatedFees());
     const [perCopra, perFee] = await vault.quoteRedeem(units(1, 18));
     const partial = (available * units(1, 18)) / (perCopra + perFee) - units(1, 18);
-    await send(vault, 'redeem', [partial], bob);
+    await send(vault, 'redeem', [partial, NO_MIN], bob);
     await send(vault, 'claimFees', [], bob);
     assert.ok((await token.balanceOf(bob)) > 0n, 'bob is left holding COPRA the vault cannot pay for');
   });
@@ -77,7 +77,7 @@ describe('redeem', () => {
     await h.mintCopra(bob, units(1000, 18));
     const p = (await h.contracts.oracle.getCopraPriceUSD())[0];
     await h.postPrice((p * 12n) / 10n);
-    await send(vault, 'redeem', [units(1000, 18)], alice);
+    await send(vault, 'redeem', [units(1000, 18), NO_MIN], alice);
 
     // Smallest amount whose payout + fee exceeds the free collateral (binary search over view quotes).
     const available = (await usdc.balanceOf(vault.target)) - (await vault.accumulatedFees());
@@ -89,8 +89,8 @@ describe('redeem', () => {
     }
     const [out, fee] = await vault.quoteRedeem(hi);
     assert.ok(out <= available && out + fee > available, 'found an amount inside the fee-reserve window');
-    await expectRevert(vault, 'redeem', [hi], bob, 'InsufficientVaultCollateral');
-    await send(vault, 'redeem', [lo], bob); // one wei less fits, fee included
+    await expectRevert(vault, 'redeem', [hi, NO_MIN], bob, 'InsufficientVaultCollateral');
+    await send(vault, 'redeem', [lo, NO_MIN], bob); // one wei less fits, fee included
     await send(vault, 'claimFees', [], bob);
   });
 
@@ -105,7 +105,7 @@ describe('redeem', () => {
       [bob, 'redeem', 120.5], [carol, 'redeem', 0.000001], [alice, 'redeem', 200.01], [carol, 'redeem', 333.333332],
     ];
     for (const [who, method, amount] of steps) {
-      await send(vault, method, [units(amount, 18)], who);
+      await send(vault, method, [units(amount, 18), method === 'mint' ? NO_MAX : NO_MIN], who);
       if (method === 'redeem' && (await vault.accumulatedFees()) > 0n) {
         const snap = await rpc('evm_snapshot');
         await send(vault, 'claimFees', [], who);
@@ -119,7 +119,7 @@ describe('redeem', () => {
     await h.mintCopra(alice, units(10, 18));
     await send(token, 'burn', [units(4, 18)], alice);
     assert.equal(await token.totalSupply(), units(6, 18));
-    await send(vault, 'redeem', [units(6, 18)], alice);
+    await send(vault, 'redeem', [units(6, 18), NO_MIN], alice);
     assert.ok((await usdc.balanceOf(vault.target)) > (await vault.accumulatedFees()), 'burned COPRA leaves its USDC behind');
   });
 

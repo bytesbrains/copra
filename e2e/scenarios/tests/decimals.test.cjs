@@ -5,7 +5,7 @@ const { describe, it, before, after, beforeEach, afterEach } = require('node:tes
 const assert = require('node:assert/strict');
 const h = require('../lib/harness.cjs');
 
-const { users, OWNER, send, expectRevert, units, ethers } = h;
+const { users, OWNER, send, expectRevert, units, ethers, NO_MAX, NO_MIN } = h;
 const [alice, bob] = users;
 const PRICE = 142000000n; // $1.42, 8 decimals
 const FEE_BPS = 25n;
@@ -43,11 +43,11 @@ describe('collateral decimals', () => {
       for (const copra of [1n, units(1, 18), units(123.456789, 18), units(5000, 18)]) {
         const m = model(copra, decimals);
         const before = await collateral.balanceOf(alice);
-        await send(vault, 'mint', [copra], alice);
+        await send(vault, 'mint', [copra, NO_MAX], alice);
         assert.equal(before - (await collateral.balanceOf(alice)), m.mintPaid, `mint ${copra}`);
 
         const mid = await collateral.balanceOf(alice);
-        await send(vault, 'redeem', [copra], alice);
+        await send(vault, 'redeem', [copra, NO_MIN], alice);
         assert.equal((await collateral.balanceOf(alice)) - mid, m.redeemOut, `redeem ${copra}`);
       }
       assert.equal(await token.totalSupply(), 0n);
@@ -71,8 +71,8 @@ describe('collateral decimals', () => {
       await send(s.collateral, 'mint', [alice, units(1000, 18)], alice);
       await send(s.collateral, 'approve', [s.vault.target, ethers.MaxUint256], alice);
     }
-    await send(a.vault, 'mint', [units(100, 18)], alice);
+    await send(a.vault, 'mint', [units(100, 18), NO_MAX], alice);
     await send(b.collateral, 'mint', [bob, units(1000, 18)], bob);
-    await expectRevert(b.vault, 'redeem', [units(100, 18)], alice, 'InsufficientVaultCollateral');
+    await expectRevert(b.vault, 'redeem', [units(100, 18), NO_MIN], alice, 'InsufficientVaultCollateral');
   });
 });

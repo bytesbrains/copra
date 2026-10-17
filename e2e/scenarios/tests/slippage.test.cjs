@@ -1,20 +1,14 @@
-// Slippage (#44 ⚠️): mint and redeem take no bound on what the user pays or receives, and the dApp
-// approves MaxUint256. These tests MEASURE what happens when the price or fee moves between the quote
-// the user saw and the transaction landing, and pin today's behaviour, so a fix shows up as a diff.
+// Slippage (#44 ⚠️, fixed in #57): mint takes maxCollateralIn and redeem minCollateralOut. These tests
+// move the price or fee between the quote the user saw and the transaction landing, as the feeder or the
+// owner can, and assert the bound refuses it with nothing moved. Before #57 the same moves charged up to
+// +20.9% over the quote and paid −20.0% under it; the last test pins that this is now the caller's choice.
 const { describe, it, before, after, beforeEach, afterEach } = require('node:test');
 const assert = require('node:assert/strict');
 const h = require('../lib/harness.cjs');
 
-const { contracts: { usdc, oracle, vault }, users, OWNER, send, expectRevert, units, ethers } = h;
+const { contracts: { usdc, oracle, vault, token }, users, OWNER, send, expectRevert, units, ethers, NO_MAX } = h;
 const [alice] = users;
 const AMOUNT = units(1000, 18);
-const pct = (a, b) => `${((Number(a - b) * 100) / Number(b)).toFixed(4)}%`;
-
-async function paidForMint(user, copra) {
-  const before = await usdc.balanceOf(user);
-  await send(vault, 'mint', [copra], user);
-  return before - (await usdc.balanceOf(user));
-}
 
 /** The largest price the collar accepts from the current one (2000.99 bps, see oracle.test.cjs). */
 async function maxCollarPrice(up = true) {
@@ -23,58 +17,84 @@ async function maxCollarPrice(up = true) {
   return up ? p + firstRejected - 1n : p - firstRejected + 1n;
 }
 
+/** Alice, funded and with an unlimited approval: only the bound stands between her and the new price. */
+async function unlimitedAlice() {
+  await h.fundUsdc(alice, units(5000, 6));
+  await send(usdc, 'approve', [vault.target, ethers.MaxUint256], alice);
+}
+
+async function expectRefusedMint(quoted) {
+  const before = await h.balances(alice);
+  const [now] = await vault.quoteMint(AMOUNT);
+  const [actual, limit] = await expectRevert(vault, 'mint', [AMOUNT, quoted], alice, 'SlippageExceeded');
+  assert.deepEqual([actual, limit], [now, quoted]);
+  assert.deepEqual(await h.balances(alice), before, 'a refused mint moves nothing');
+}
+
 describe('slippage between quote and transaction', () => {
   h.isolate({ before, after, beforeEach, afterEach });
 
-  it('MaxUint256 approval: a price update landing first makes the mint cost up to ~20% more than quoted', async (t) => {
-    await h.fundUsdc(alice, units(5000, 6));
-    await send(usdc, 'approve', [vault.target, ethers.MaxUint256], alice); // what the dApp does
+  it('a price update at the collar landing first: the mint reverts instead of costing ~20% more', async () => {
+    await unlimitedAlice();
     const [quoted] = await vault.quoteMint(AMOUNT);
-
     await h.postPrice(await maxCollarPrice(true)); // lands between the quote and the user's tx
-    const paid = await paidForMint(alice, AMOUNT);
-    t.diagnostic(`quoted ${ethers.formatUnits(quoted, 6)} USDC, paid ${ethers.formatUnits(paid, 6)} USDC (+${pct(paid, quoted)})`);
-    assert.ok(paid > (quoted * 12n) / 10n, 'paid over 20% more than the quote, with no way to refuse');
+    await expectRefusedMint(quoted);
   });
 
-  it('MaxUint256 approval: a fee raise to MAX_FEE_BPS landing first adds 0.75%', async (t) => {
-    await h.fundUsdc(alice, units(5000, 6));
-    await send(usdc, 'approve', [vault.target, ethers.MaxUint256], alice);
+  it('a fee raise to MAX_FEE_BPS landing first: the mint reverts instead of costing 0.75% more', async () => {
+    await unlimitedAlice();
     const [quoted] = await vault.quoteMint(AMOUNT);
     await send(vault, 'setProtocolFee', [100n], OWNER);
-    const paid = await paidForMint(alice, AMOUNT);
-    t.diagnostic(`quoted ${ethers.formatUnits(quoted, 6)} USDC, paid ${ethers.formatUnits(paid, 6)} USDC (+${pct(paid, quoted)})`);
-    assert.ok(paid > quoted);
+    await expectRefusedMint(quoted);
   });
 
-  it('worst case, price and fee both moved: the user pays ~20.9% over the quote', async (t) => {
-    await h.fundUsdc(alice, units(5000, 6));
-    await send(usdc, 'approve', [vault.target, ethers.MaxUint256], alice);
+  it('price and fee both moved: the mint reverts instead of costing ~20.9% more', async () => {
+    await unlimitedAlice();
     const [quoted] = await vault.quoteMint(AMOUNT);
     await send(vault, 'setProtocolFee', [100n], OWNER);
     await h.postPrice(await maxCollarPrice(true));
-    const paid = await paidForMint(alice, AMOUNT);
-    t.diagnostic(`quoted ${ethers.formatUnits(quoted, 6)} USDC, paid ${ethers.formatUnits(paid, 6)} USDC (+${pct(paid, quoted)})`);
-    assert.ok(paid > (quoted * 1209n) / 1000n);
+    await expectRefusedMint(quoted);
   });
 
-  it('exact approval of the quote already protects the user: the same mint reverts instead', async () => {
-    await h.fundUsdc(alice, units(5000, 6));
-    const [quoted] = await vault.quoteMint(AMOUNT);
-    await send(usdc, 'approve', [vault.target, quoted], alice);
-    await h.postPrice(await maxCollarPrice(true));
-    await expectRevert(vault, 'mint', [AMOUNT], alice, 'ERC20InsufficientAllowance');
-  });
-
-  it('redeem has no minimum out: a price drop landing first pays ~20% less, and approvals cannot help', async (t) => {
+  it('a price drop landing first: the redeem reverts instead of paying ~20% less', async () => {
     await h.fundUsdc(alice, units(5000, 6));
     await h.mintCopra(alice, AMOUNT);
     const [quoted] = await vault.quoteRedeem(AMOUNT);
     await h.postPrice(await maxCollarPrice(false));
+    const [now] = await vault.quoteRedeem(AMOUNT);
+    const before = await h.balances(alice);
+    const [actual, limit] = await expectRevert(vault, 'redeem', [AMOUNT, quoted], alice, 'SlippageExceeded');
+    assert.deepEqual([actual, limit], [now, quoted]);
+    assert.deepEqual(await h.balances(alice), before, 'a refused redeem moves nothing');
+  });
+
+  it('a move in the user\'s favour still executes, at the new price', async () => {
+    await unlimitedAlice();
+    const [quotedIn] = await vault.quoteMint(AMOUNT);
+    await h.postPrice(await maxCollarPrice(false));
+    const [cheaper] = await vault.quoteMint(AMOUNT);
     const before = await usdc.balanceOf(alice);
-    await send(vault, 'redeem', [AMOUNT], alice);
-    const got = (await usdc.balanceOf(alice)) - before;
-    t.diagnostic(`quoted ${ethers.formatUnits(quoted, 6)} USDC, received ${ethers.formatUnits(got, 6)} USDC (${pct(got, quoted)})`);
-    assert.ok(got < (quoted * 8n) / 10n + units(1, 6));
+    await send(vault, 'mint', [AMOUNT, quotedIn], alice);
+    assert.equal(before - (await usdc.balanceOf(alice)), cheaper);
+    assert.ok(cheaper < quotedIn);
+
+    const [quotedOut] = await vault.quoteRedeem(units(10, 18));
+    const [price] = await oracle.getCopraPriceUSD();
+    await h.postPrice(price + price / 100n); // +1%: 10 of 1000 $COPRA, well inside the backing
+    const [better] = await vault.quoteRedeem(units(10, 18));
+    const got = await usdc.balanceOf(alice);
+    await send(vault, 'redeem', [units(10, 18), quotedOut], alice);
+    assert.equal((await usdc.balanceOf(alice)) - got, better);
+    assert.ok(better >= quotedOut);
+  });
+
+  it('the bound is the caller\'s: one who passes none still takes whatever the price is when it lands', async () => {
+    await unlimitedAlice();
+    const [quoted] = await vault.quoteMint(AMOUNT);
+    await h.postPrice(await maxCollarPrice(true));
+    const before = await usdc.balanceOf(alice);
+    await send(vault, 'mint', [AMOUNT, NO_MAX], alice);
+    assert.ok(before - (await usdc.balanceOf(alice)) > (quoted * 12n) / 10n, 'unbounded: over 20% above the quote');
+    assert.equal(await token.balanceOf(alice), AMOUNT);
   });
 });
