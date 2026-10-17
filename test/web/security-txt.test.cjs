@@ -40,3 +40,8 @@ test('every security.txt URL is https', () => {
     }
   }
 });
+
+test('web/_headers serves security.txt as text/plain; charset=utf-8 (RFC 9116)', () => {
+  const headers = fs.readFileSync(path.join(ROOT, 'web/_headers'), 'utf8');
+  assert.match(headers, /^\/\.well-known\/security\.txt\n\s+Content-Type: text\/plain; charset=utf-8$/m);
+});
