@@ -1,6 +1,6 @@
-.PHONY: all build test test-web test-feeder fmt fmt-check lint clean e2e e2e-up e2e-check e2e-scenarios e2e-web e2e-down
+.PHONY: all build test test-web fmt fmt-check lint clean e2e e2e-up e2e-check e2e-scenarios e2e-web e2e-feeder e2e-down
 
-all: build test test-web test-feeder
+all: build test test-web
 
 build:
 	forge build --sizes
@@ -10,9 +10,6 @@ test:
 
 test-web:
 	node --test test/web/*.test.cjs
-
-test-feeder:
-	./test/feeder/oracle-feeder.test.sh
 
 fmt:
 	forge fmt
@@ -47,6 +44,10 @@ e2e-scenarios:
 e2e-web:
 	$(E2E_COMPOSE) run --rm -T --build -e WEB_URL=http://web:8787 scenarios node /repo/e2e/web/check-web.cjs
 
+# Oracle feeder scenarios (#45) against a running stack: the real feeder, resolving the oracle via the registry.
+e2e-feeder:
+	$(E2E_COMPOSE) run --rm -T --build feeder
+
 e2e-down:
 	$(E2E_COMPOSE) down -v --remove-orphans
 
@@ -54,5 +55,5 @@ e2e-down:
 e2e:
 	@$(MAKE) --no-print-directory e2e-down
 	@status=0; $(MAKE) --no-print-directory e2e-up && $(MAKE) --no-print-directory e2e-check && $(MAKE) --no-print-directory e2e-web \
-		&& $(MAKE) --no-print-directory e2e-scenarios || status=$$?; \
+		&& $(MAKE) --no-print-directory e2e-scenarios && $(MAKE) --no-print-directory e2e-feeder || status=$$?; \
 		$(MAKE) --no-print-directory e2e-down; exit $$status

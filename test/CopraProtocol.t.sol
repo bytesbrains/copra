@@ -448,6 +448,23 @@ contract CopraProtocolTest is Test {
         assertLt(oracle.MIN_UPDATE_INTERVAL(), oracle.HEARTBEAT());
     }
 
+    /// @dev scripts/oracle-feeder.sh reads slots 0 and 1 to clamp a recovery update when the price getter
+    ///      reverts as stale. Moving these variables breaks the feeder's guardrail, so pin the layout, and
+    ///      the HEARTBEAT the feeder hardcodes to sanity-check the stale age it reads.
+    function test_Oracle_StorageLayoutReadByFeeder() public {
+        assertEq(oracle.HEARTBEAT(), 604800);
+        vm.warp(block.timestamp + oracle.HEARTBEAT() + 1);
+        vm.expectRevert(CopraOracle.StalePrice.selector);
+        oracle.getCopraPriceUSD();
+        assertEq(uint256(vm.load(address(oracle), bytes32(uint256(0)))), INITIAL_PRICE);
+
+        vm.prank(oracleUpdater);
+        oracle.updatePrice(150000000);
+        (uint256 price, uint256 updatedAt) = oracle.getCopraPriceUSD();
+        assertEq(uint256(vm.load(address(oracle), bytes32(uint256(0)))), price);
+        assertEq(uint256(vm.load(address(oracle), bytes32(uint256(1)))), updatedAt);
+    }
+
     // ---------------------------------------------------------------------
     // Vault & token guardrails
     // ---------------------------------------------------------------------

@@ -11,7 +11,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # Load .env only in local non-CI environments when credentials are not already provided
-if [[ -z "${CI:-}" && -z "${GITHUB_ACTIONS:-}" && -z "${ORACLE_FEEDER_KEY:-}" && -z "${PRIVATE_KEY:-}" && -f "${ROOT_DIR}/.env" ]]; then
+if [[ -z "${CI:-}" && -z "${GITHUB_ACTIONS:-}" && -z "${ORACLE_FEEDER_KEY:-}" && -z "${PRIVATE_KEY:-}" && -z "${ORACLE_FEEDER_FROM:-}" && -f "${ROOT_DIR}/.env" ]]; then
     # shellcheck disable=SC1091
     source "${ROOT_DIR}/.env"
 fi
@@ -22,7 +22,18 @@ PRIVATE_KEY="${ORACLE_FEEDER_KEY:-${PRIVATE_KEY:-}}"
 # Permanent CopraRegistry (CREATE2) — the oracle address is resolved from it, so redeploys need no edit here.
 REGISTRY_ADDRESS="${COPRA_REGISTRY_ADDRESS:-0x379cB5FED578D6F485ab1834C81E4F1CF4EABb25}"
 
-if [[ -z "${PRIVATE_KEY}" ]]; then
+# Local chains only: sign as ORACLE_FEEDER_FROM, an account the node holds unlocked (the e2e stack
+# impersonates the production updater, whose key never leaves the oracle-feeder environment).
+# Mirrors DeployCopra.runUnlocked(). A real RPC holds no unlocked accounts, so this cannot sign there.
+# Never both: a stray ORACLE_FEEDER_FROM beside a key would otherwise win and fail only at the broadcast.
+if [[ -n "${ORACLE_FEEDER_FROM:-}" && -n "${PRIVATE_KEY}" ]]; then
+    echo "❌ Error: ORACLE_FEEDER_FROM and ORACLE_FEEDER_KEY/PRIVATE_KEY are both set; set only one signer."
+    exit 1
+elif [[ -n "${ORACLE_FEEDER_FROM:-}" ]]; then
+    SIGNER_ARGS=(--unlocked --from "${ORACLE_FEEDER_FROM}")
+elif [[ -n "${PRIVATE_KEY}" ]]; then
+    SIGNER_ARGS=(--private-key "${PRIVATE_KEY}")
+else
     echo "❌ Error: ORACLE_FEEDER_KEY or PRIVATE_KEY must be set."
     exit 1
 fi
@@ -54,16 +65,22 @@ echo "RPC Endpoint    : ${RPC_URL}"
 CAST_ERR="$(mktemp)"
 trap 'rm -f "${CAST_ERR}"' EXIT
 STALE_PRICE_SELECTOR="0x19abf40e" # CopraOracle.StalePrice()
+HEARTBEAT=604800                   # CopraOracle.HEARTBEAT (7 days), pinned by test_Oracle_StorageLayoutReadByFeeder
+
+# Chain time, which the oracle's heartbeat and update interval use; falls back to the local clock.
+chain_time() {
+    local t
+    t=$(cast block latest --field timestamp --rpc-url "${RPC_URL}" 2>/dev/null) || t=""
+    [[ "${t}" =~ ^[0-9]+$ ]] || t=$(date +%s)
+    echo "${t}"
+}
 
 # 1. Fetch current on-chain state
 echo "📡 Reading current on-chain oracle state..."
 if ONCHAIN_RAW=$(cast call "${ORACLE_ADDRESS}" "getCopraPriceUSD()(uint256,uint256)" --rpc-url "${RPC_URL}" 2>"${CAST_ERR}"); then
     ONCHAIN_PRICE=$(echo "${ONCHAIN_RAW}" | head -n 1 | awk '{print $1}')
     LAST_UPDATED=$(echo "${ONCHAIN_RAW}" | tail -n 1 | awk '{print $1}')
-    # Age by chain time, which the oracle's heartbeat and update interval use; fall back to the local clock.
-    CURRENT_TIME=$(cast block latest --field timestamp --rpc-url "${RPC_URL}" 2>/dev/null) || CURRENT_TIME=""
-    [[ "${CURRENT_TIME}" =~ ^[0-9]+$ ]] || CURRENT_TIME=$(date +%s)
-    AGE_SECONDS=$((CURRENT_TIME - LAST_UPDATED))
+    AGE_SECONDS=$(( $(chain_time) - LAST_UPDATED))
     AGE_HOURS=$((AGE_SECONDS / 3600))
 
     # Format on-chain price for display (divide by 1e8)
@@ -72,11 +89,28 @@ if ONCHAIN_RAW=$(cast call "${ORACLE_ADDRESS}" "getCopraPriceUSD()(uint256,uint2
     echo "Last Updated           : ${AGE_HOURS} hours ago (${AGE_SECONDS}s)"
 elif grep -q "${STALE_PRICE_SELECTOR}" "${CAST_ERR}"; then
     # Stale means the last update is older than HEARTBEAT, so MIN_UPDATE_INTERVAL has long passed.
+    # The oracle still enforces the 20% shift limit against its stored price, so a recovery update must
+    # be clamped like any other, or it reverts and leaves the oracle stale. The getter refuses to return
+    # a stale price; read it from storage instead (slot 0 copraPriceUSD, slot 1 lastUpdatedAt, pinned by
+    # test_Oracle_StorageLayoutReadByFeeder). If the layout ever moves, the reads must fail closed rather
+    # than clamp against garbage: the price must sit in the feeder's own safe band, and the age must agree
+    # with the getter's verdict that the oracle is past HEARTBEAT.
     echo "⚠️ Warning: getCopraPriceUSD() reverted with StalePrice. Proceeding with recovery update."
-    ONCHAIN_PRICE=0
-    LAST_UPDATED=0
-    AGE_SECONDS=999999
-    AGE_HOURS=999
+    if ! ONCHAIN_PRICE=$(cast storage "${ORACLE_ADDRESS}" 0 --rpc-url "${RPC_URL}" 2>"${CAST_ERR}" | cast to-dec) \
+        || ! LAST_UPDATED=$(cast storage "${ORACLE_ADDRESS}" 1 --rpc-url "${RPC_URL}" 2>"${CAST_ERR}" | cast to-dec) \
+        || [[ ! "${ONCHAIN_PRICE}" =~ ^[1-9][0-9]*$ ]] || [[ ! "${LAST_UPDATED}" =~ ^[0-9]+$ ]]; then
+        echo "❌ Error: could not read the stale price from ${ORACLE_ADDRESS} storage: $(head -n 1 "${CAST_ERR}")"
+        exit 1
+    fi
+    AGE_SECONDS=$(( $(chain_time) - LAST_UPDATED))
+    AGE_HOURS=$((AGE_SECONDS / 3600))
+    if [[ "${ONCHAIN_PRICE}" -lt 50000000 || "${ONCHAIN_PRICE}" -gt 500000000 || "${AGE_SECONDS}" -le "${HEARTBEAT}" ]]; then
+        echo "❌ Error: implausible stale state in ${ORACLE_ADDRESS} storage (price ${ONCHAIN_PRICE}, age ${AGE_SECONDS}s); has the storage layout changed?"
+        exit 1
+    fi
+    ONCHAIN_DISPLAY=$(awk -v p="${ONCHAIN_PRICE}" 'BEGIN {printf "%.4f", p/100000000}')
+    echo "Last On-Chain Price    : \$${ONCHAIN_DISPLAY} USD / kg (${ONCHAIN_PRICE}), stale"
+    echo "Last Updated           : ${AGE_HOURS} hours ago (${AGE_SECONDS}s)"
 else
     # Never broadcast blind: without the oracle's state we cannot honour the interval or the shift guardrail.
     echo "❌ Error: could not read getCopraPriceUSD() from ${ORACLE_ADDRESS}: $(head -n 1 "${CAST_ERR}")"
@@ -213,7 +247,7 @@ fi
 echo "🚀 Broadcasting updatePrice(${NEW_PRICE}) to Base Sepolia..."
 TX_OUTPUT=$(cast send "${ORACLE_ADDRESS}" "updatePrice(uint256)" "${NEW_PRICE}" \
     --rpc-url "${RPC_URL}" \
-    --private-key "${PRIVATE_KEY}")
+    "${SIGNER_ARGS[@]}")
 
 TX_HASH=$(echo "${TX_OUTPUT}" | grep -o '0x[a-fA-F0-9]\{64\}' | tail -n 1)
 echo "✅ Oracle price successfully updated!"
