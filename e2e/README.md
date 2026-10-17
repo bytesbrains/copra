@@ -53,11 +53,12 @@ Playwright `1.63.0` drives **Chrome** (Playwright's full Chromium build in new h
 - **No noise passes.** Every test fails on a `pageerror`, a `securitypolicyviolation`, or a `console.error` it did not declare.
 - **Isolation.** Each test runs in an `evm_snapshot`; pending transactions are dropped before the revert, so one failure cannot stall the next test. Blocks stay at 2s, so pending states are real.
 - **Flows:** connect and faucet; approve then mint; redeem; MAX in both tabs, minting and redeeming the exact balance; `wallet_watchAsset` for both tokens; the real oracle feeder moving the price mid-session, and recovering it after a stale spell.
-- **Corner cases:** no wallet; wrong and unknown chain; rejections; account changes; `chainChanged`; a stale oracle, before load and mid-session; a vault short of collateral; the price moving between quote and signature, and between signature and mining (the vault's bound, #57); the registry unreachable; input edge cases; the displayed quote against the vault's own.
+- **Corner cases:** no wallet; wrong and unknown chain; rejections; account changes; `chainChanged`; a stale oracle, before load and mid-session; a vault short of collateral; the price moving between quote and signature, and between signature and mining (the vault's bound, #57); the registry unreachable; the vault's fee unreadable; input edge cases; the displayed quote against the vault's own.
 - **On failure** the trace, screenshot and video of each failing test, and the HTML report, are in `e2e/.out/browser/`. `make e2e` also keeps the chain and web logs in `e2e/.out/stack.log`, and CI uploads both.
 
 Found by the suite and fixed in the dApp:
 - the page showed its built-in $1.42 when the oracle was stale or unreachable, and quoted against it;
+- the same for the fee: an unreadable `protocolFeeBps()` left quotes on the built-in 25 bps (#64);
 - reverts showed as "unknown custom error";
 - the price never refreshed mid-session;
 - an account switch kept the old account's signer;

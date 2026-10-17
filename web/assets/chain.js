@@ -103,6 +103,13 @@ function telemetryIsLatest(seq) {
   return true;
 }
 
+// No readable fee: quote nothing rather than the built-in 25 bps (#64). The next read that gets it resumes.
+function showFeeUnavailable() {
+  feeBps = null;
+  feeLabel.textContent = 'Protocol Fee (unavailable)';
+  document.getElementById('metricFeeRate').textContent = 'Fee unavailable';
+}
+
 // Read live price, total supply, vault reserves, and protocol fee metrics from the chain
 async function readProtocolTelemetry() {
   await deploymentReady;
@@ -144,6 +151,8 @@ async function readProtocolTelemetry() {
       const pct = (bps / 100).toFixed(2);
       feeLabel.textContent = `Protocol Fee (${pct}%)`;
       document.getElementById('metricFeeRate').textContent = `${pct}% (${bps} bps) Fee`;
+    } else {
+      showFeeUnavailable();
     }
 
     if (totalSupplyRaw !== null) {
@@ -171,6 +180,7 @@ async function readProtocolTelemetry() {
       if (el.textContent === 'Loading...') el.textContent = 'Unavailable';
     }
     showOracleUnavailable(e);
+    showFeeUnavailable();
     calculate();
   }
 }

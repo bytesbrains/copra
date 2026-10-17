@@ -118,3 +118,51 @@ test('an older telemetry read that resolves last never overwrites a newer price'
   assert.equal(el('benchmarkHeader').textContent, '$1.50 USD / kg');
   assert.equal(vm.runInContext('currentPriceRaw', ctx), 150_000_000n);
 });
+
+test('an unreadable fee quotes nothing, says why on submit, and the next read that gets it resumes (#64)', async () => {
+  let feeReadable = false;
+  const now = BigInt(Math.floor(Date.now() / 1000));
+  const results = {
+    getCopraPriceUSD: () => Promise.resolve([142_000_000n, now]),
+    protocolFeeBps: () => (feeReadable ? Promise.resolve(30n) : Promise.reject(new Error('fee read failed'))),
+  };
+  const ethers = {
+    JsonRpcProvider: function JsonRpcProvider() {},
+    Contract: function Contract() {
+      return new Proxy({}, { get: (_t, name) => results[name] || (() => Promise.reject(new Error('offline'))) });
+    },
+    isAddress: () => false,
+    ZeroAddress: '0x0000000000000000000000000000000000000000',
+  };
+  const scripts = localScripts.map((file) => ({ file, code: fs.readFileSync(path.join(WEB, 'assets', file), 'utf8') }));
+  const { ctx, el } = runPage({ scripts, ethers, quote: require(path.join(WEB, 'assets/quote.js')) });
+  el('amountInput').value = '14.20';
+  await vm.runInContext('readProtocolTelemetry()', ctx);
+
+  assert.equal(el('benchmarkHeader').textContent, '$1.42 USD / kg', 'the price itself was read');
+  assert.equal(vm.runInContext('feeBps', ctx), null, 'not the built-in 25 bps');
+  assert.equal(el('outputAmount').value, '');
+  assert.equal(el('feeDisplay').textContent, '—');
+  assert.equal(el('feeLabel').textContent, 'Protocol Fee (unavailable)');
+  assert.equal(el('metricFeeRate').textContent, 'Fee unavailable');
+  assert.equal(vm.runInContext('quoteProblem()', ctx), 'The protocol fee cannot be read right now, so minting and redeeming are paused.');
+  // Typing runs the input handlers, not a telemetry read: still no quote while the fee is unknown.
+  el('amountInput').value = '50';
+  for (const fn of el('amountInput').listeners.input) await fn();
+  assert.equal(el('outputAmount').value, '');
+  assert.equal(el('feeDisplay').textContent, '—');
+
+  feeReadable = true;
+  await vm.runInContext('readProtocolTelemetry()', ctx);
+  assert.equal(vm.runInContext('feeBps', ctx), 30n);
+  assert.equal(vm.runInContext('quoteProblem()', ctx), null);
+  assert.equal(el('metricFeeRate').textContent, '0.30% (30 bps) Fee');
+  assert.notEqual(el('outputAmount').value, '');
+});
+
+test('no price is never "no problem", even if its reason was never set', () => {
+  const { ctx } = loadPage();
+  vm.runInContext('currentPriceRaw = null; priceProblem = null;', ctx);
+  assert.ok(vm.runInContext('quoteProblem()', ctx));
+  assert.equal(vm.runInContext('mintCopraWei()', ctx), 0n);
+});

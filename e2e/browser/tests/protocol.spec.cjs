@@ -191,6 +191,46 @@ test('the oracle drops after the user signs a redeem → the vault refuses it on
   await expectPageMatchesChain(page, user);
 });
 
+// #64: the price reads fine but the vault's fee does not. The page used to quote against its built-in
+// 25 bps; now it quotes nothing, says why, and resumes on the first poll that reads the fee.
+test('the fee cannot be read → no quote against a built-in fee, a stated reason on submit, and recovery on the next read', async ({ page, wallet, chain }) => {
+  const user = wallet.selected;
+  await chain.fundUsdc(user, units(100, 6));
+  await chain.send(chain.contracts.usdc, 'approve', [chain.contracts.vault.target, ethers.MaxUint256], user);
+  await chain.send(chain.contracts.vault, 'setProtocolFee', [40n], chain.OWNER); // not the page's built-in 25
+  const feeCall = chain.contracts.vault.interface.getFunction('protocolFeeBps').selector.slice(2);
+  let failFee = true;
+  // ethers batches its reads, so fail only the fee's entry in the batch and let every other answer through.
+  await page.route((url) => url.origin === PAGE_RPC_URL, async (route) => {
+    const body = route.request().postData() || '';
+    if (!failFee || !body.includes(feeCall)) return route.continue();
+    const res = await route.fetch();
+    const sent = JSON.parse(body);
+    const failed = new Set([sent].flat().filter((r) => JSON.stringify(r.params ?? []).includes(feeCall)).map((r) => r.id));
+    const fail = (r) => (failed.has(r.id) ? { jsonrpc: '2.0', id: r.id, error: { code: -32603, message: 'fee read failed (test)' } } : r);
+    const answer = await res.json();
+    return route.fulfill({ response: res, json: Array.isArray(answer) ? answer.map(fail) : fail(answer) });
+  });
+
+  await open(page);
+  await connect(page, wallet);
+  await expect(page.locator('#benchmarkHeader')).toHaveText('$1.42 USD / kg'); // the price was read
+  await expect(page.locator('#metricFeeRate')).toHaveText('Fee unavailable');
+  await expect(page.locator('#feeLabel')).toHaveText('Protocol Fee (unavailable)');
+  await expect(page.locator('#outputAmount')).toHaveValue('');
+  await expect(page.locator('#feeDisplay')).toHaveText('—');
+  await page.click('#actionBtn');
+  await expect(toast(page)).toHaveText('The protocol fee cannot be read right now, so minting and redeeming are paused.');
+  await expect(page.locator('#actionBtn')).toBeEnabled();
+  expect(wallet.calls('eth_sendTransaction')).toEqual([]);
+
+  failFee = false; // the RPC recovers: the next poll reads the fee, and the quote is the vault's at 40 bps
+  await expect(page.locator('#metricFeeRate')).toHaveText('0.40% (40 bps) Fee', { timeout: 20_000 });
+  const expected = await chainMintQuote(units('14.20', 6));
+  await expect(page.locator('#outputAmount')).toHaveValue(fixed(expected.copra, 18, 4));
+  await expect(page.locator('#feeDisplay')).toHaveText(`$${fixed(expected.fee, 6, 4)} USDC`);
+});
+
 test('registry unreachable → the page uses no address it was not given, warns, and says it is unavailable', async ({ page, wallet, chain, guard }) => {
   guard.allow(/Failed to load resource/); // the aborted registry read, as the browser reports it
   const registryCall = chain.contracts.registry.interface.getFunction('getDeployment').selector.slice(2);
