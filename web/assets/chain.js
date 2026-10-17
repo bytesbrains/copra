@@ -37,9 +37,75 @@ async function loadDeployment() {
   }
 }
 
-// Read live price, total supply, vault reserves, and protocol fee metrics from Base Sepolia
+// --- Readable contract errors ---
+// What a user is told when a call reverts with one of the protocol's custom errors. Found by the
+// browser suite (#46): without the error fragments, ethers reported "unknown custom error".
+const REVERT_MESSAGES = {
+  StalePrice: 'The oracle price is stale, so minting and redeeming are paused until it is updated.',
+  InsufficientVaultCollateral: 'The vault does not hold enough USDC to pay this redemption right now. Try a smaller amount.',
+  ZeroAmount: 'Enter an amount greater than zero.',
+  ERC20InsufficientBalance: 'Your balance is too low for this amount.',
+  ERC20InsufficientAllowance: 'The vault is not approved to spend this much USDC.'
+};
+
+// The protocol's custom errors, parsed once. Built on first use, not at load, so a page whose ethers
+// failed to load still degrades to "Unavailable" instead of dying here.
+let revertInterface = null;
+function protocolErrors() {
+  if (!revertInterface) {
+    const errors = [...ERC20_ABI, ...ORACLE_ABI, ...VAULT_ABI].filter((f) => f.startsWith('error '));
+    revertInterface = new ethers.Interface([...new Set(errors)]);
+  }
+  return revertInterface;
+}
+
+// The custom error a failed call or transaction reverted with, or null. ethers decodes it for calls
+// through a Contract (err.revert); a failed gas estimate only carries the raw revert data.
+function revertName(err) {
+  if (err?.revert?.name) return err.revert.name;
+  const data = err?.data ?? err?.info?.error?.data ?? err?.error?.data;
+  if (typeof data !== 'string' || data.length < 10) return null;
+  try {
+    return protocolErrors().parseError(data)?.name ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function errorMessage(err) {
+  if (err?.code === 'ACTION_REJECTED' || err?.code === 4001 || err?.info?.error?.code === 4001) return 'You rejected the request in your wallet.';
+  const name = revertName(err);
+  if (name) return REVERT_MESSAGES[name] || `The contract rejected it (${name}).`;
+  return err?.shortMessage || err?.message || 'Cancelled';
+}
+
+// No usable oracle price: say so instead of quoting against a price the chain did not give.
+function showOracleUnavailable(err) {
+  currentPriceRaw = null;
+  const stale = revertName(err) === 'StalePrice';
+  priceProblem = stale ? REVERT_MESSAGES.StalePrice : 'The protocol cannot be read right now, so minting and redeeming are paused.';
+  const label = stale ? 'Price stale' : 'Price unavailable';
+  document.getElementById('benchmarkHeader').textContent = label;
+  document.getElementById('oracleDisplay').textContent = label;
+  document.getElementById('metricOracleAge').textContent = stale ? 'Stale: no update within the 7-day heartbeat' : 'Oracle unreachable';
+  document.getElementById('metricOracleUpdated').textContent = 'Minting and redeeming are paused';
+}
+
+// Reads overlap (the 15s poll, a quote re-check, the refresh after a transaction) and can resolve out
+// of order on a slow RPC. Only a read newer than the last one applied may change the page, so an old
+// response never puts back a price the chain has since moved from.
+let telemetryStarted = 0;
+let telemetryApplied = 0;
+function telemetryIsLatest(seq) {
+  if (seq < telemetryApplied) return false;
+  telemetryApplied = seq;
+  return true;
+}
+
+// Read live price, total supply, vault reserves, and protocol fee metrics from the chain
 async function readProtocolTelemetry() {
   await deploymentReady;
+  const seq = ++telemetryStarted;
   try {
     const readProvider = new ethers.JsonRpcProvider(CONTRACTS.rpcUrl);
     const oracleContract = new ethers.Contract(CONTRACTS.oracle, ORACLE_ABI, readProvider);
@@ -47,13 +113,15 @@ async function readProtocolTelemetry() {
     const tokenContract = new ethers.Contract(CONTRACTS.token, ERC20_ABI, readProvider);
     const usdcContract = new ethers.Contract(CONTRACTS.usdc, ERC20_ABI, readProvider);
 
+    let oracleError = null;
     const [oracleData, totalSupplyRaw, vaultUsdcRaw, accFeesRaw, feeBpsRaw] = await Promise.all([
-      oracleContract.getCopraPriceUSD().catch(() => null),
+      oracleContract.getCopraPriceUSD().catch((e) => { oracleError = e; return null; }),
       tokenContract.totalSupply().catch(() => null),
       usdcContract.balanceOf(CONTRACTS.vault).catch(() => null),
       vaultContract.accumulatedFees().catch(() => null),
       vaultContract.protocolFeeBps().catch(() => null)
     ]);
+    if (!telemetryIsLatest(seq)) return;
 
     if (oracleData) {
       const [priceBn, updatedAtBn] = oracleData;
@@ -65,6 +133,8 @@ async function readProtocolTelemetry() {
       document.getElementById('metricOracleAge').textContent = `Updated ${formatAge(updatedAtSec)}`;
       const dateStr = new Date(updatedAtSec * 1000).toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
       document.getElementById('metricOracleUpdated').textContent = dateStr;
+    } else {
+      showOracleUnavailable(oracleError);
     }
 
     if (feeBpsRaw !== null) {
@@ -93,6 +163,14 @@ async function readProtocolTelemetry() {
     calculate();
   } catch (e) {
     console.warn('Could not read protocol telemetry:', e);
+    if (!telemetryIsLatest(seq)) return;
+    // Nothing could be read (no deployment known, RPC down): say so rather than "Loading..." forever.
+    for (const id of ['metricTotalSupply', 'metricVaultReserves', 'metricAccumulatedFees']) {
+      const el = document.getElementById(id);
+      if (el.textContent === 'Loading...') el.textContent = 'Unavailable';
+    }
+    showOracleUnavailable(e);
+    calculate();
   }
 }
 

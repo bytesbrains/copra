@@ -52,8 +52,15 @@ async function initWeb3() {
     await checkAllowance();
   } catch (err) {
     console.error('Wallet error:', err);
-    showToast('Wallet error: ' + (err.shortMessage || err.message), 'error');
+    showToast('Wallet error: ' + errorMessage(err), 'error');
   }
+}
+
+// The price or fee moved since the quote on screen. Never ask for a signature on a quote the user has
+// not seen: show the new one and let them submit again. (The contract itself has no bound yet: #57.)
+async function quoteChanged() {
+  await readProtocolTelemetry();
+  showToast('The price or fee changed since your quote. The new quote is shown: check it and submit again.', 'warn');
 }
 
 // --- Action Button (Approve / Mint / Redeem) ---
@@ -67,6 +74,10 @@ async function submitAction() {
   actionBtnText.textContent = 'Confirming in wallet...';
 
   try {
+    if (currentPriceRaw === null) {
+      showToast(priceProblem, 'warn');
+      return;
+    }
     if (mode === 'mint') {
       const usdcContract = new ethers.Contract(CONTRACTS.usdc, ERC20_ABI, signer);
       const vaultContract = new ethers.Contract(CONTRACTS.vault, VAULT_ABI, signer);
@@ -79,7 +90,13 @@ async function submitAction() {
       }
 
       // Get exact quote from vault — the oracle may have moved since the preview
-      const [collateralRequired] = await vaultContract.quoteMint(copraWei);
+      // Both the amount and the fee must be the ones shown: a fee change can leave the total unchanged.
+      const [collateralRequired, mintFee] = await vaultContract.quoteMint(copraWei);
+      const shownMint = CopraQuote.quoteMint(copraWei, currentPriceRaw, feeBps);
+      if (collateralRequired !== shownMint.collateralRequired || mintFee !== shownMint.fee) {
+        await quoteChanged();
+        return;
+      }
       const usdcBalance = await usdcContract.balanceOf(userAddress);
       if (usdcBalance < collateralRequired) {
         showToast(`Insufficient USDC: this mint needs ${CopraQuote.formatUnits(collateralRequired, 6)} USDC at the current oracle price.`, 'warn');
@@ -115,6 +132,13 @@ async function submitAction() {
         return;
       }
 
+      const [collateralToReturn, redeemFee] = await vaultContract.quoteRedeem(copraWei);
+      const shownRedeem = CopraQuote.quoteRedeem(copraWei, currentPriceRaw, feeBps);
+      if (collateralToReturn !== shownRedeem.collateralToReturn || redeemFee !== shownRedeem.fee) {
+        await quoteChanged();
+        return;
+      }
+
       showToast('Redeeming $COPRA for USDC...', 'pending');
       const redeemTx = await vaultContract.redeem(copraWei);
       showToast(`Redemption broadcast! Waiting for confirmation...`, 'pending', redeemTx.hash);
@@ -126,7 +150,7 @@ async function submitAction() {
     }
   } catch (err) {
     console.error('Transaction error:', err);
-    showToast('Transaction error: ' + (err.shortMessage || err.message || 'Cancelled'), 'error');
+    showToast('Transaction error: ' + errorMessage(err), 'error');
   } finally {
     actionBtn.disabled = false;
     if (mode === 'mint') {
@@ -159,7 +183,7 @@ async function claimFaucet() {
     checkAllowance();
   } catch (err) {
     console.error('Faucet error:', err);
-    showToast('Faucet error: ' + (err.shortMessage || err.message), 'error');
+    showToast('Faucet error: ' + errorMessage(err), 'error');
   } finally {
     faucetBtn.disabled = false;
     faucetBtn.replaceChildren(...originalLabel);

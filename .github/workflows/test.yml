@@ -52,7 +52,7 @@ jobs:
   e2e-stack:
     name: E2E stack (local chain)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     permissions:
       contents: read
     steps:
@@ -65,16 +65,19 @@ jobs:
       # Brings up anvil (chain id 84532, 2s blocks), deploys as production does with the registry at its
       # canonical address, serves the dApp built for the local network with wrangler dev, verifies the
       # deployment through the registry and the served dApp against it, runs the contract scenario suite
-      # (real transactions, invariants after each one) and the oracle feeder scenarios (the real feeder,
-      # resolving the oracle through the registry), and tears everything down.
-      - name: Deploy to a throwaway chain, verify it and the served dApp, run contract and oracle feeder scenarios
+      # (real transactions, invariants after each one), the oracle feeder scenarios (the real feeder,
+      # resolving the oracle through the registry) and the tier-1 browser suite (real Chrome against the
+      # served dApp, every transaction real), and tears everything down.
+      - name: Deploy to a throwaway chain, verify it and the served dApp, run contract, feeder and browser suites
         run: make e2e
 
-      - name: Upload deployment manifest
+      # The manifest always; on failure also the browser suite's traces, screenshots and videos
+      # (e2e/.out/browser) and the chain and web logs (e2e/.out/stack.log).
+      - name: Upload deployment manifest and failure artifacts
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: e2e-deployment-manifest
+          name: e2e-output
           path: e2e/.out/
           include-hidden-files: true # e2e/.out is a dot-directory, skipped by default
           if-no-files-found: warn

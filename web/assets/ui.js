@@ -5,7 +5,8 @@
 
 // --- State Variables ---
 let currentPriceUSD = 1.42;
-let currentPriceRaw = 142000000n; // oracle price, 8 decimals
+let currentPriceRaw = 142000000n; // oracle price, 8 decimals; null when the oracle gives none
+let priceProblem = null; // why there is no price (stale, unreachable), told to a user who tries to submit
 let feeBps = 25n; // 0.25%
 let mode = 'mint';
 let userAddress = null;
@@ -61,11 +62,17 @@ const watchUsdcBtn = document.getElementById('watchUsdcBtn');
 // Mint: the input is the total USDC paid, fee included, so the $COPRA amount is the largest
 // one whose quoteMint().collateralRequired fits inside it.
 function mintCopraWei() {
+  if (currentPriceRaw === null) return 0n;
   const usdcRaw = CopraQuote.parseUnits(amountInput.value, 6) ?? 0n;
   return CopraQuote.copraForCollateral(usdcRaw, currentPriceRaw, feeBps);
 }
 
 function calculate() {
+  if (currentPriceRaw === null) {
+    outputAmount.value = '';
+    feeDisplay.textContent = '—';
+    return;
+  }
   if (mode === 'mint') {
     const copraWei = mintCopraWei();
     const { fee } = CopraQuote.quoteMint(copraWei, currentPriceRaw, feeBps);

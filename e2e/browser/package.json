@@ -1,0 +1,15 @@
+{
+  "name": "copra-e2e-browser",
+  "private": true,
+  "description": "Tier-1 browser suite: real Chrome against the served dApp, real transactions on the e2e chain (see e2e/README.md)",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "@playwright/test": "1.63.0",
+    "ethers": "6.17.0"
+  }
+}

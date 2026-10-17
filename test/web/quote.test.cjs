@@ -56,6 +56,25 @@ test('copraForCollateral never exceeds the USDC budget', () => {
   assert.equal(Q.copraForCollateral(1000n, 0n, BPS), 0n);
 });
 
+// The largest amount, not just one within budget: one more wei must cost more than the budget.
+// 14.20 USDC at $1.42 and 25 bps is the case the browser suite (#46) caught a micro-USDC short.
+test('copraForCollateral is the largest amount the budget buys', () => {
+  assert.equal(Q.copraForCollateral(14200000n, PRICE, BPS), 9975062676056338028n);
+  assert.equal(Q.quoteMint(9975062676056338028n, PRICE, BPS).collateralRequired, 14200000n);
+  let seed = 0x9e3779b9n;
+  const next = (mod) => {
+    seed = (seed * 6364136223846793005n + 1442695040888963407n) % (1n << 64n);
+    return (seed >> 16n) % mod;
+  };
+  for (let i = 0; i < 20000; i++) {
+    const usdc = next(10n ** 15n) + 1n;
+    const price = next(10n ** 12n) + 1n;
+    const bps = next(101n);
+    const copra = Q.copraForCollateral(usdc, price, bps);
+    assert.ok(Q.quoteMint(copra + 1n, price, bps).collateralRequired > usdc, `usdc=${usdc} price=${price} bps=${bps}: ${copra} is not the largest`);
+  }
+});
+
 test('copraForCollateral spends the budget to within one cent of a unit', () => {
   const usdc = 10999999n;
   const { collateralRequired } = Q.quoteMint(Q.copraForCollateral(usdc, PRICE, BPS), PRICE, BPS);

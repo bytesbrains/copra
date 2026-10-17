@@ -38,11 +38,14 @@ const ERC20_ABI = [
   "function totalSupply() view returns (uint256)",
   "function allowance(address owner, address spender) view returns (uint256)",
   "function approve(address spender, uint256 amount) returns (bool)",
-  "function faucet(address to, uint256 amount) external"
+  "function faucet(address to, uint256 amount) external",
+  "error ERC20InsufficientBalance(address sender, uint256 balance, uint256 needed)",
+  "error ERC20InsufficientAllowance(address spender, uint256 allowance, uint256 needed)"
 ];
 
 const ORACLE_ABI = [
-  "function getCopraPriceUSD() view returns (uint256 price, uint256 timestamp)"
+  "function getCopraPriceUSD() view returns (uint256 price, uint256 timestamp)",
+  "error StalePrice()"
 ];
 
 const VAULT_ABI = [
@@ -51,7 +54,10 @@ const VAULT_ABI = [
   "function mint(uint256 copraAmount) external",
   "function redeem(uint256 copraAmount) external",
   "function protocolFeeBps() view returns (uint256)",
-  "function accumulatedFees() view returns (uint256)"
+  "function accumulatedFees() view returns (uint256)",
+  "error ZeroAmount()",
+  "error InsufficientVaultCollateral()",
+  "error StalePrice()" // the oracle's, raised through the vault's own price read
 ];
 
 const REGISTRY_ABI = [

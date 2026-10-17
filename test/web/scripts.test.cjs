@@ -85,3 +85,36 @@ test('switching tabs across files updates the shared state and the form', () => 
   assert.deepEqual(el('outputTicker').children.map((n) => n.tagName), ['IMG', 'SPAN']);
   assert.notEqual(el('outputAmount').value, '', 'quote preview ran');
 });
+
+test('an older telemetry read that resolves last never overwrites a newer price', async () => {
+  const pending = []; // getCopraPriceUSD calls, in the order the page made them
+  const ethers = {
+    JsonRpcProvider: function JsonRpcProvider() {},
+    Contract: function Contract() {
+      return new Proxy({}, {
+        get: (_t, name) => () => (name === 'getCopraPriceUSD'
+          ? new Promise((resolve) => pending.push(resolve))
+          : Promise.reject(new Error('offline'))),
+      });
+    },
+    isAddress: () => false,
+    ZeroAddress: '0x0000000000000000000000000000000000000000',
+  };
+  const scripts = localScripts.map((file) => ({ file, code: fs.readFileSync(path.join(WEB, 'assets', file), 'utf8') }));
+  const { ctx, el } = runPage({ scripts, ethers, quote: require(path.join(WEB, 'assets/quote.js')) });
+  const settle = () => new Promise((r) => setImmediate(r));
+  await settle();
+  const now = BigInt(Math.floor(Date.now() / 1000));
+  pending.shift()(null); // the load-time read: no price
+
+  const older = vm.runInContext('readProtocolTelemetry()', ctx);
+  const newer = vm.runInContext('readProtocolTelemetry()', ctx);
+  await settle();
+  const [resolveOlder, resolveNewer] = pending;
+  resolveNewer([150_000_000n, now]);
+  await newer;
+  resolveOlder([142_000_000n, now - 60n]);
+  await older;
+  assert.equal(el('benchmarkHeader').textContent, '$1.50 USD / kg');
+  assert.equal(vm.runInContext('currentPriceRaw', ctx), 150_000_000n);
+});

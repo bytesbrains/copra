@@ -58,7 +58,10 @@
   // rounded-up base collateral is <= B, i.e. copra * price <= B * 1e12 * 1e8.
   function copraForCollateral(usdcRaw, price8, feeBps) {
     if (usdcRaw <= 0n || price8 <= 0n) return 0n;
-    const base = (usdcRaw * BPS) / (BPS + feeBps);
+    let base = (usdcRaw * BPS) / (BPS + feeBps);
+    // Flooring the fee can leave room for one more unit of base (never two): take it, or the user pays
+    // a micro-USDC less than they entered and gets less $COPRA than it buys. Found by the browser suite (#46).
+    if (base + 1n + ((base + 1n) * feeBps) / BPS <= usdcRaw) base += 1n;
     const scale = 10n ** BigInt(COPRA_DECIMALS - USDC_DECIMALS);
     return (base * scale * PRICE_SCALE) / price8;
   }
