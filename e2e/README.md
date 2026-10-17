@@ -11,6 +11,8 @@ make e2e-scenarios  # run the contract scenario suite against a running stack
 make e2e-feeder     # run the oracle feeder scenarios against a running stack
 make e2e-browser    # run the tier-1 browser suite against a running stack (BROWSER_ARGS="-g mint" to filter)
 make e2e-down       # stop and delete everything
+
+BASE_MAINNET_RPC=<archive RPC> make e2e-fork   # the same scenario suite on a Base-mainnet fork with real USDC (#48)
 ```
 
 ## What you get
@@ -65,6 +67,31 @@ Found by the suite and fixed in the dApp:
 - an account switch kept the old account's signer;
 - a quote that had moved was signed without the user seeing it. Since #57 the vault refuses one that moves after signing too, and the page approves the amount entered instead of `MaxUint256`;
 - a mint could buy one micro-USDC less than the amount entered, so MAX left dust (`copraForCollateral` was not the largest amount, as it claimed).
+
+## Base-mainnet fork (#48)
+`make e2e-fork` runs the contract scenario suite against **anvil forked from Base mainnet**, deployed the way mainnet will be deployed. `e2e/docker-compose.fork.yml` layers onto the stack. It is an override rather than a profile, because a profile cannot change an existing service's command.
+- **`chain`**: anvil forked at a **pinned block** (`E2E_FORK_BLOCK`, default `52700000`) from `BASE_MAINNET_RPC`. Chain id 8453, 2s blocks. The RPC must serve state at that block (an archive node). `https://mainnet.base.org` does; publicnode's free tier does not.
+- **`deployer`** (`deploy-fork.sh`): `DeployCopraMainnet` against Circle's USDC `0x8335…2913`, with four different addresses for the four roles:
+  - the deployer: anvil mnemonic index 10, outside the user accounts;
+  - a multisig stand-in, given code;
+  - the oracle updater;
+  - the fee recipient.
+
+  It then executes the multisig's batch (`acceptOwnership`, `setDeployment`) as the impersonated multisig, as [docs/MAINNET_DEPLOY.md](../docs/MAINNET_DEPLOY.md) has it signed. No key exists for the multisig, the updater or the fee recipient; tests impersonate them.
+- **`check-deployment-fork.sh`** runs the post-deploy checks from the deploy doc:
+  - the multisig owns the registry and the vault, and no ownership is pending;
+  - the vault's collateral is USDC, and the token and vault are wired to each other;
+  - the four roles are four addresses.
+- **Funding.** Users get USDC by `transfer` from a real holder (Aave's aBasUSDC, impersonated), never by minting. `totalSupply` does not move.
+- **The suite** is the same files. They act as the role a contract checks (`VAULT_OWNER`, `REGISTRY_OWNER`, `UPDATER`, `FEE_RECIPIENT`), which on the Sepolia-like stack are one account. Revert names follow the collateral: FiatToken's require strings instead of OpenZeppelin's custom errors. Logs are read from the deploy block, since a range from 0 would go to the remote RPC.
+- **Real USDC only** (`tests/usdc.test.cjs`, skipped on TestnetUSDC). Each scenario acts as USDC's own pauser or blacklister:
+  - USDC paused;
+  - the vault blacklisted;
+  - a holder blacklisted;
+  - the fee recipient blacklisted.
+
+  Each one checks what reverts and what stays recorded, and that the vault recovers once the action is lifted. What each means for holders is in the README's [Trust Assumptions](../README.md#trust-assumptions).
+- **When it runs:** not on every PR. It runs nightly and by hand (`.github/workflows/e2e-fork.yml`, with the `BASE_MAINNET_RPC` secret and an optional fork block), and once before a mainnet release.
 
 ## Notes
 - The repo is mounted **read-only**. Build output, cache and broadcast logs stay inside the container, and only the manifest is written back (as your uid).

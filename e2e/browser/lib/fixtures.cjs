@@ -16,12 +16,12 @@ const { ethers } = h;
 const test = base.test.extend({
   chain: [async ({}, use) => {
     const snap = await h.rpc('evm_snapshot');
-    await h.rpc('anvil_impersonateAccount', [h.OWNER]);
+    for (const a of h.IMPERSONATED) await h.rpc('anvil_impersonateAccount', [a]);
     h.invariants.expected.registry = { ...h.manifest.contracts };
     try {
       await use(h);
     } finally {
-      await h.rpc('anvil_stopImpersonatingAccount', [h.OWNER]);
+      for (const a of h.IMPERSONATED) await h.rpc('anvil_stopImpersonatingAccount', [a]);
       // A test that fails mid-flow can leave the page's transaction pending. Reverting keeps it in the
       // pool with a nonce from the future, and every later transaction from that account queues behind it.
       await h.rpc('anvil_dropAllTransactions');

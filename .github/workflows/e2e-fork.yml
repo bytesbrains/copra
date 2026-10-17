@@ -1,0 +1,52 @@
+name: E2E on a Base-mainnet fork
+
+# The contract scenario suite against anvil forked from Base mainnet at a pinned block, deployed with
+# DeployCopraMainnet against Circle's real USDC and four separate roles (#48). Not on every PR: it needs
+# an archive RPC. Nightly, by hand, and once as a mainnet release gate.
+on:
+  schedule:
+    - cron: '30 3 * * *' # nightly, 03:30 UTC
+  workflow_dispatch:
+    inputs:
+      fork_block:
+        description: 'Base block to fork at (blank: the pinned default in e2e/docker-compose.fork.yml)'
+        required: false
+        default: ''
+
+concurrency:
+  group: e2e-fork-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  e2e-fork:
+    name: E2E (Base-mainnet fork, real USDC)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          submodules: recursive
+
+      # Deploys as mainnet will be deployed, runs the multisig's batch, verifies the deployment as
+      # docs/MAINNET_DEPLOY.md does, runs the scenario suite (including USDC pause and blacklist) and tears down.
+      - name: Fork Base, deploy with DeployCopraMainnet, verify, run the scenario suite
+        env:
+          BASE_MAINNET_RPC: ${{ secrets.BASE_MAINNET_RPC }}
+          E2E_FORK_BLOCK: ${{ inputs.fork_block }}
+        run: |
+          [[ -n "${BASE_MAINNET_RPC}" ]] || { echo "::error::the BASE_MAINNET_RPC secret is not set"; exit 1; }
+          make e2e-fork
+
+      - name: Upload deployment manifest and failure logs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-fork-output
+          path: e2e/.out/
+          include-hidden-files: true
+          if-no-files-found: warn

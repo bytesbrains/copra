@@ -5,7 +5,7 @@ const { describe, it, before, after, beforeEach, afterEach } = require('node:tes
 const assert = require('node:assert/strict');
 const h = require('../lib/harness.cjs');
 
-const { users, OWNER, send, expectRevert, units, ethers, NO_MAX, NO_MIN } = h;
+const { users, VAULT_OWNER, UPDATER, FEE_RECIPIENT, send, expectRevert, units, ethers, NO_MAX, NO_MIN } = h;
 const [alice, bob] = users;
 const PRICE = 142000000n; // $1.42, 8 decimals
 const FEE_BPS = 25n;
@@ -23,10 +23,10 @@ function model(copra, decimals) {
 
 async function deploySet(decimals) {
   const collateral = await h.deploy('MockCollateral', [decimals]);
-  const oracle = await h.deploy('CopraOracle', [OWNER, PRICE]);
-  const vault = await h.deploy('CopraVault', [collateral.target, decimals, oracle.target, OWNER, OWNER]);
+  const oracle = await h.deploy('CopraOracle', [UPDATER, PRICE]);
+  const vault = await h.deploy('CopraVault', [collateral.target, decimals, oracle.target, FEE_RECIPIENT, VAULT_OWNER]);
   const token = await h.deploy('CopraToken', [vault.target]);
-  await send(vault, 'setCopraToken', [token.target], OWNER);
+  await send(vault, 'setCopraToken', [token.target], VAULT_OWNER);
   h.invariants.extraVaults.push({ vault, token, collateral });
   return { collateral, vault, token };
 }

@@ -32,7 +32,15 @@ const errorInterfaces = ['CopraVault', 'CopraOracle', 'CopraToken', 'CopraRegist
   .map((n) => new ethers.Interface(abi(n)));
 
 const rpc = (method, params = []) => provider.send(method, params);
-const OWNER = manifest.roles.registryOwner;
+// The four roles. On the Sepolia-like stack one account holds all of them, as in production there; on the
+// Base-mainnet fork (#48) they are four addresses, so a test must act as the role the contract checks.
+const [REGISTRY_OWNER, VAULT_OWNER, UPDATER, FEE_RECIPIENT] = ['registryOwner', 'vaultOwner', 'oracleUpdater', 'feeRecipient']
+  .map((r) => ethers.getAddress(manifest.roles[r]));
+const ROLE_ACCOUNTS = [...new Set([REGISTRY_OWNER, VAULT_OWNER, UPDATER, FEE_RECIPIENT])];
+// The collateral: TestnetUSDC with its faucet, or Circle's USDC on the fork, funded from a real holder.
+const REAL_USDC = manifest.collateral === 'USDC';
+// Logs are read from the deploy block on: on a fork, a range from 0 would be sent to the remote RPC.
+const FROM_BLOCK = manifest.fromBlock ?? 0;
 const users = manifest.users.map(ethers.getAddress);
 const signer = (address) => provider.getSigner(address); // unlocked on anvil: eth_sendTransaction
 
@@ -48,6 +56,9 @@ async function warpTo(ts) {
   await rpc('evm_mine');
 }
 
+// The accounts tests act as without a key: the roles, and on real USDC the holder that funds users.
+const IMPERSONATED = REAL_USDC ? [...ROLE_ACCOUNTS, manifest.usdcHolder] : ROLE_ACCOUNTS;
+
 /** Runs each test in a snapshot, so state and time are isolated; mines on demand for speed. */
 function isolate({ beforeEach, afterEach, before, after }) {
   let snap;
@@ -56,10 +67,10 @@ function isolate({ beforeEach, afterEach, before, after }) {
     // depend on block cadence, so mine per transaction here and restore the cadence afterwards.
     await rpc('evm_setIntervalMining', [0]);
     await rpc('evm_setAutomine', [true]);
-    await rpc('anvil_impersonateAccount', [OWNER]);
+    for (const a of IMPERSONATED) await rpc('anvil_impersonateAccount', [a]);
   });
   after(async () => {
-    await rpc('anvil_stopImpersonatingAccount', [OWNER]);
+    for (const a of IMPERSONATED) await rpc('anvil_stopImpersonatingAccount', [a]);
     await rpc('evm_setIntervalMining', [2]);
   });
   beforeEach(async () => {
@@ -79,7 +90,7 @@ const invariants = {
 };
 
 async function sumEvents(contract, eventName, field) {
-  const logs = await contract.queryFilter(contract.filters[eventName](), 0, 'latest');
+  const logs = await contract.queryFilter(contract.filters[eventName](), FROM_BLOCK, 'latest');
   return logs.reduce((acc, l) => acc + BigInt(l.args[field]), 0n);
 }
 
@@ -101,7 +112,7 @@ async function checkVault({ vault, token, collateral }) {
     sumEvents(vault, 'Minted', 'copraAmount'),
     sumEvents(vault, 'Redeemed', 'copraAmount'),
   ]);
-  const transfers = await token.queryFilter(token.filters.Transfer(), 0, 'latest');
+  const transfers = await token.queryFilter(token.filters.Transfer(), FROM_BLOCK, 'latest');
   const mintedByTransfer = transfers.filter((t) => t.args.from === ethers.ZeroAddress).reduce((a, t) => a + t.args.value, 0n);
   const burned = transfers.filter((t) => t.args.to === ethers.ZeroAddress).reduce((a, t) => a + t.args.value, 0n);
   assert.equal(mintedByTransfer, minted, 'COPRA minted outside CopraVault.mint');
@@ -139,8 +150,12 @@ async function send(contract, method, args, from, overrides = {}) {
   }
 }
 
+const ERROR_STRING = ethers.id('Error(string)').slice(0, 10);
+
 function decodeRevert(data) {
   if (!data || data === '0x') return { name: '(empty revert)', args: [] };
+  // Real USDC reverts with require strings, not custom errors: name them by the string itself.
+  if (data.startsWith(ERROR_STRING)) return { name: ethers.AbiCoder.defaultAbiCoder().decode(['string'], '0x' + data.slice(10))[0], args: [] };
   for (const iface of errorInterfaces) {
     try {
       const e = iface.parseError(data);
@@ -175,6 +190,8 @@ async function expectRevert(contract, method, args, from, errorName, overrides =
 
 // --- actors ---
 async function fundUsdc(user, amount) {
+  // Real USDC has no faucet and its minters are Circle's: a holder pays, as anyone is funded on mainnet.
+  if (REAL_USDC) return send(contracts.usdc, 'transfer', [user, amount], manifest.usdcHolder);
   // The public faucet caps a claim at 10,000 USDC, so large balances take several claims, like a user would.
   const cap = await contracts.usdc.MAX_FAUCET_AMOUNT();
   for (let left = BigInt(amount); left > 0n; left -= left > cap ? cap : left) {
@@ -192,12 +209,12 @@ async function mintCopra(user, copraAmount, { approve = true } = {}) {
 async function postPrice(price, oracle = contracts.oracle) {
   const due = (await lastUpdatedAt(oracle)) + (await oracle.MIN_UPDATE_INTERVAL());
   if (BigInt(await latestTimestamp()) < due) await warpTo(due);
-  return send(oracle, 'updatePrice', [price], OWNER);
+  return send(oracle, 'updatePrice', [price], UPDATER);
 }
 
 /** The last PriceUpdated event's args: lastUpdatedAt has no getter, and the price getter reverts when stale. */
 async function lastPriceUpdate(oracle = contracts.oracle) {
-  const logs = await oracle.queryFilter(oracle.filters.PriceUpdated(), 0, 'latest');
+  const logs = await oracle.queryFilter(oracle.filters.PriceUpdated(), FROM_BLOCK, 'latest');
   return logs.at(-1).args;
 }
 const lastUpdatedAt = async (oracle = contracts.oracle) => (await lastPriceUpdate(oracle)).timestamp;
@@ -209,7 +226,7 @@ const balances = async (addr) => ({
 });
 
 /** Deploys a contract from its artifact as `from` and returns it connected to the provider. */
-async function deploy(name, args, from = OWNER) {
+async function deploy(name, args, from = VAULT_OWNER) {
   const a = artifact(name);
   const factory = new ethers.ContractFactory(a.abi, a.bytecode.object, await signer(from));
   const c = await factory.deploy(...args);
@@ -222,8 +239,15 @@ const units = (v, d) => ethers.parseUnits(String(v), d);
 const NO_MAX = ethers.MaxUint256;
 const NO_MIN = 0n;
 
+// What the collateral reverts with when a transferFrom is short of allowance or balance: OpenZeppelin's
+// custom errors on TestnetUSDC, FiatToken's require strings on real USDC.
+const COLLATERAL_ERRORS = REAL_USDC
+  ? { allowance: 'ERC20: transfer amount exceeds allowance', balance: 'ERC20: transfer amount exceeds balance' }
+  : { allowance: 'ERC20InsufficientAllowance', balance: 'ERC20InsufficientBalance' };
+
 module.exports = {
-  ethers, provider, rpc, manifest, contracts, artifact, users, OWNER, signer,
+  ethers, provider, rpc, manifest, contracts, artifact, users, signer,
+  REGISTRY_OWNER, VAULT_OWNER, UPDATER, FEE_RECIPIENT, REAL_USDC, FROM_BLOCK, COLLATERAL_ERRORS, IMPERSONATED,
   latestTimestamp, setNextTimestamp, warp, warpTo, isolate,
   invariants, checkInvariants, send, expectRevert, decodeRevert,
   fundUsdc, mintCopra, postPrice, lastUpdatedAt, lastPrice, balances, deploy, units, NO_MAX, NO_MIN,

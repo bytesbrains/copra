@@ -3,7 +3,7 @@ const { describe, it, before, after, beforeEach, afterEach } = require('node:tes
 const assert = require('node:assert/strict');
 const h = require('../lib/harness.cjs');
 
-const { contracts: { usdc, vault, token }, users, OWNER, send, expectRevert, units, rpc, NO_MAX, NO_MIN } = h;
+const { contracts: { usdc, vault, token }, users, VAULT_OWNER, send, expectRevert, units, rpc, NO_MAX, NO_MIN } = h;
 const [alice, bob, carol] = users;
 
 describe('redeem', () => {
@@ -127,6 +127,6 @@ describe('redeem', () => {
     await h.fundUsdc(alice, units(100, 6));
     await h.mintCopra(alice, units(10, 18));
     await expectRevert(token, 'mint', [alice, units(1, 18)], alice, 'OnlyVault');
-    await expectRevert(token, 'burnFromVault', [alice, units(1, 18)], OWNER, 'OnlyVault');
+    await expectRevert(token, 'burnFromVault', [alice, units(1, 18)], VAULT_OWNER, 'OnlyVault');
   });
 });

@@ -18,7 +18,7 @@ async function feed(chain, price) {
     // not leak in, and the registry is this stack's, not the script's default that happens to match it.
     env: {
       PATH: process.env.PATH, HOME: process.env.HOME || '/tmp', CI: '1', BASE_SEPOLIA_RPC: RPC_URL,
-      COPRA_REGISTRY_ADDRESS: chain.manifest.contracts.registry, ORACLE_FEEDER_FROM: chain.OWNER, TARGET_PRICE: price,
+      COPRA_REGISTRY_ADDRESS: chain.manifest.contracts.registry, ORACLE_FEEDER_FROM: chain.UPDATER, TARGET_PRICE: price,
     },
   });
   return stdout;
