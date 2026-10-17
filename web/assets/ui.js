@@ -64,7 +64,8 @@ const watchUsdcBtn = document.getElementById('watchUsdcBtn');
 // Why no quote can be given right now, or null. Neither the price nor the fee is ever assumed: a quote
 // against a built-in default would show the user a number the chain did not give.
 function quoteProblem() {
-  if (currentPriceRaw === null) return priceProblem;
+  // showOracleUnavailable sets both; the fallback keeps "no price" from ever reading as "no problem".
+  if (currentPriceRaw === null) return priceProblem || 'The oracle price cannot be read right now, so minting and redeeming are paused.';
   if (feeBps === null) return 'The protocol fee cannot be read right now, so minting and redeeming are paused.';
   return null;
 }

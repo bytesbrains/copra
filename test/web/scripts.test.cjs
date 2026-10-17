@@ -146,6 +146,11 @@ test('an unreadable fee quotes nothing, says why on submit, and the next read th
   assert.equal(el('feeLabel').textContent, 'Protocol Fee (unavailable)');
   assert.equal(el('metricFeeRate').textContent, 'Fee unavailable');
   assert.equal(vm.runInContext('quoteProblem()', ctx), 'The protocol fee cannot be read right now, so minting and redeeming are paused.');
+  // Typing runs the input handlers, not a telemetry read: still no quote while the fee is unknown.
+  el('amountInput').value = '50';
+  for (const fn of el('amountInput').listeners.input) await fn();
+  assert.equal(el('outputAmount').value, '');
+  assert.equal(el('feeDisplay').textContent, '—');
 
   feeReadable = true;
   await vm.runInContext('readProtocolTelemetry()', ctx);
@@ -153,4 +158,11 @@ test('an unreadable fee quotes nothing, says why on submit, and the next read th
   assert.equal(vm.runInContext('quoteProblem()', ctx), null);
   assert.equal(el('metricFeeRate').textContent, '0.30% (30 bps) Fee');
   assert.notEqual(el('outputAmount').value, '');
+});
+
+test('no price is never "no problem", even if its reason was never set', () => {
+  const { ctx } = loadPage();
+  vm.runInContext('currentPriceRaw = null; priceProblem = null;', ctx);
+  assert.ok(vm.runInContext('quoteProblem()', ctx));
+  assert.equal(vm.runInContext('mintCopraWei()', ctx), 0n);
 });
