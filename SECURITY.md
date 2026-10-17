@@ -13,6 +13,7 @@ Copra Protocol treats smart contract security as the highest priority.
 If you discover a security vulnerability within Copra Protocol smart contracts or infrastructure, please do NOT disclose it publicly on GitHub issues or social media.
 
 Please report vulnerabilities directly via:
+- **GitHub private vulnerability reporting (preferred)**: open the [Security tab](https://github.com/bytesbrains/copra/security) and click **Report a vulnerability**, or go straight to the [advisory form](https://github.com/bytesbrains/copra/security/advisories/new). Only you and the maintainers can see the report, and we can work on the fix with you in a private fork.
 - Email: **security@copra.dev**
 - Encrypted Contact: Contact maintainers via [copra.dev](https://copra.dev)
 
