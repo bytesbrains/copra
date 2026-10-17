@@ -42,3 +42,19 @@ services:
       FOUNDRY_CACHE_PATH: /tmp/forge/cache
       FOUNDRY_BROADCAST: /tmp/forge/broadcast
     profiles: ["deploy"]
+
+  # Contract scenario suite (#44): real transactions against `chain`, reading the deployer's manifest.
+  scenarios:
+    build: ./scenarios
+    depends_on:
+      chain:
+        condition: service_healthy
+    working_dir: /repo/e2e/scenarios
+    volumes:
+      - ..:/repo:ro
+    environment:
+      RPC_URL: http://chain:8545
+      E2E_OUT_DIR: /repo/e2e/.out
+      E2E_SEED: ${E2E_SEED:-}
+    command: ["node", "--test", "--test-concurrency=1", "--test-reporter=spec", "tests/*.test.cjs"]
+    profiles: ["test"]

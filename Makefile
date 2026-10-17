@@ -1,4 +1,4 @@
-.PHONY: all build test test-web test-feeder fmt fmt-check lint clean e2e e2e-up e2e-check e2e-down
+.PHONY: all build test test-web test-feeder fmt fmt-check lint clean e2e e2e-up e2e-check e2e-scenarios e2e-down
 
 all: build test test-web test-feeder
 
@@ -39,11 +39,16 @@ e2e-up:
 e2e-check:
 	$(E2E_COMPOSE) run --rm -T --entrypoint bash -e RPC_URL=http://chain:8545 deployer /repo/e2e/check-deployment.sh /out/deployment.json
 
+# Contract scenarios (#44) against a running stack (make e2e-up first). E2E_SEED replays a random sequence.
+e2e-scenarios:
+	$(E2E_COMPOSE) run --rm -T --build scenarios
+
 e2e-down:
 	$(E2E_COMPOSE) down -v --remove-orphans
 
 # Always tears the stack down, and keeps the first failure's exit code.
 e2e:
 	@$(MAKE) --no-print-directory e2e-down
-	@status=0; $(MAKE) --no-print-directory e2e-up && $(MAKE) --no-print-directory e2e-check || status=$$?; \
+	@status=0; $(MAKE) --no-print-directory e2e-up && $(MAKE) --no-print-directory e2e-check \
+		&& $(MAKE) --no-print-directory e2e-scenarios || status=$$?; \
 		$(MAKE) --no-print-directory e2e-down; exit $$status
