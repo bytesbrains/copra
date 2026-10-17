@@ -12,6 +12,9 @@ typechain-types/
 # Broadcast & deployment logs (prevents leaking local run traces)
 broadcast/
 
+# e2e stack output (deployment manifest of the throwaway local chain)
+e2e/.out/
+
 # Environment, keys, and secret credentials
 .env
 .env.*

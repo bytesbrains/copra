@@ -1,0 +1,44 @@
+# Copra e2e stack: a disposable local chain with the protocol deployed exactly as on Base Sepolia.
+# Run it through the Makefile (`make e2e-up`, `make e2e-down`, `make e2e`), which passes the host
+# uid/gid so the manifest written to e2e/.out is owned by you, not by the container user.
+name: copra-e2e
+
+x-foundry: &foundry
+  # v1.7.1, pinned by multi-arch index digest (amd64 runners and arm64 Macs resolve the same pin).
+  image: ghcr.io/foundry-rs/foundry:v1.7.1@sha256:8347b728d5d393dac1c018691b36f506d23b9dcd78341d40ea0fcb11c3a19cdd
+
+services:
+  chain:
+    <<: *foundry
+    entrypoint: ["anvil"]
+    # Chain id 84532 (Base Sepolia) so the dApp's chain check and wallet network entries behave as in
+    # production; 2s blocks like Base, so pending states are real instead of every tx mining instantly.
+    command: ["--host", "0.0.0.0", "--port", "8545", "--chain-id", "84532", "--block-time", "2"]
+    ports:
+      - "127.0.0.1:${E2E_RPC_PORT:-8545}:8545"
+    healthcheck:
+      test: ["CMD", "cast", "chain-id", "--rpc-url", "http://127.0.0.1:8545"]
+      interval: 1s
+      timeout: 3s
+      retries: 30
+
+  deployer:
+    <<: *foundry
+    depends_on:
+      chain:
+        condition: service_healthy
+    entrypoint: ["bash", "/repo/e2e/deploy.sh"]
+    user: "${E2E_UID:-1000}:${E2E_GID:-1000}"
+    working_dir: /repo
+    volumes:
+      - ..:/repo:ro
+      - ./.out:/out
+    environment:
+      RPC_URL: http://chain:8545
+      E2E_RPC_PORT: ${E2E_RPC_PORT:-8545} # host port, written into the manifest
+      HOME: /tmp/home
+      # The repo is mounted read-only: build output, cache and broadcast logs stay in the container.
+      FOUNDRY_OUT: /tmp/forge/out
+      FOUNDRY_CACHE_PATH: /tmp/forge/cache
+      FOUNDRY_BROADCAST: /tmp/forge/broadcast
+    profiles: ["deploy"]

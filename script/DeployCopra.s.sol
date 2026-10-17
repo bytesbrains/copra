@@ -55,17 +55,32 @@ contract DeployCopra is CopraRegistryScript {
         deploy(vm.envUint("PRIVATE_KEY"));
     }
 
+    /// @notice Local chains only: broadcasts as the `--sender` account, which the node must hold unlocked.
+    ///         The e2e stack runs this on anvil as REGISTRY_OWNER (impersonated), so the registry lands at
+    ///         the canonical REGISTRY address the dApp and feeder already use.
+    ///         forge script DeployCopra.s.sol:DeployCopra --sig "runUnlocked()" --unlocked --sender <addr> --broadcast
+    function runUnlocked() external {
+        _deploy(msg.sender, 0);
+    }
+
     /// @dev Separate from run() so tests can pass a key without mutating the shared process environment.
     function deploy(uint256 deployerPrivateKey) public {
         require(deployerPrivateKey != 0, "DeployCopra: invalid PRIVATE_KEY");
-        address deployerAddress = vm.addr(deployerPrivateKey);
+        _deploy(vm.addr(deployerPrivateKey), deployerPrivateKey);
+    }
 
+    /// @dev Broadcasts with `deployerPrivateKey`, or as `deployerAddress` (unlocked on the node) when it is 0.
+    function _deploy(address deployerAddress, uint256 deployerPrivateKey) internal {
         console.log("--------------------------------------------------");
         console.log("Deploying Copra Protocol to Base Sepolia Testnet");
         console.log("Deployer Address:", deployerAddress);
         console.log("--------------------------------------------------");
 
-        vm.startBroadcast(deployerPrivateKey);
+        if (deployerPrivateKey != 0) {
+            vm.startBroadcast(deployerPrivateKey);
+        } else {
+            vm.startBroadcast(deployerAddress);
+        }
 
         // 0. Permanent registry (deployed once; checked for ownership before anything else is spent)
         CopraRegistry registry = _ensureRegistry(deployerAddress);
