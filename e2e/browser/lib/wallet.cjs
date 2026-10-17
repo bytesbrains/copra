@@ -26,6 +26,7 @@ const SHIM = `(() => {
 
 const rpcError = (code, message, data) => Object.assign(new Error(message), { code, data });
 const hex = (n) => '0x' + n.toString(16);
+const RPC_TIMEOUT_MS = 30_000;
 
 class Wallet {
   constructor(page, { rpcUrl, accounts, chainId, knownChains = [chainId] }) {
@@ -110,11 +111,13 @@ class Wallet {
   }
 
   async rpc(method, params) {
+    // Bounded, so a hung node fails the request by name instead of the test at its timeout.
     const res = await fetch(this.rpcUrl, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ jsonrpc: '2.0', id: this.nextId++, method, params }),
-    });
+      signal: AbortSignal.timeout(RPC_TIMEOUT_MS),
+    }).catch((e) => { throw rpcError(-32603, `${method}: ${this.rpcUrl} did not answer (${e.message})`); });
     const body = await res.json();
     if (body.error) throw rpcError(body.error.code, body.error.message, body.error.data);
     return body.result;

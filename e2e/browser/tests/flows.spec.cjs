@@ -14,7 +14,12 @@ const units = (v, d) => ethers.parseUnits(String(v), d);
 /** Runs the real feeder, which resolves the oracle through the registry and signs as the impersonated updater. */
 async function feed(chain, price) {
   const { stdout } = await promisify(execFile)('bash', [path.join(REPO, 'scripts/oracle-feeder.sh')], {
-    env: { PATH: process.env.PATH, HOME: process.env.HOME || '/tmp', CI: '1', BASE_SEPOLIA_RPC: RPC_URL, ORACLE_FEEDER_FROM: chain.OWNER, TARGET_PRICE: price },
+    // Only what the feeder needs, named: a developer's own ORACLE_FEEDER_KEY or COPRA_ORACLE_ADDRESS must
+    // not leak in, and the registry is this stack's, not the script's default that happens to match it.
+    env: {
+      PATH: process.env.PATH, HOME: process.env.HOME || '/tmp', CI: '1', BASE_SEPOLIA_RPC: RPC_URL,
+      COPRA_REGISTRY_ADDRESS: chain.manifest.contracts.registry, ORACLE_FEEDER_FROM: chain.OWNER, TARGET_PRICE: price,
+    },
   });
   return stdout;
 }
@@ -68,7 +73,7 @@ test('approve (first mint) → button becomes "Mint $COPRA" → mint → balance
   const { events } = await expectSent(wallet, { from: user, contract: chain.contracts.vault, fn: 'mint', args: [expected.copra] });
   const minted = events.find((e) => e.name === 'Minted').args;
   expect([minted.user, minted.copraAmount, minted.feePaid]).toEqual([user, expected.copra, expected.fee]);
-  expect(minted.collateralPaid <= units('14.20', 6)).toBe(true);
+  expect(minted.collateralPaid).toBe(expected.required); // the vault's own quote, which fits in 14.20
   const after = await chain.balances(user);
   expect(before.usdc - after.usdc).toBe(minted.collateralPaid);
   expect(after.copra - before.copra).toBe(expected.copra);
@@ -123,6 +128,8 @@ test('MAX fills the exact balance in both tabs, and that amount mints and redeem
   await page.click('#actionBtn');
   await expectSent(wallet, { from: user, contract: chain.contracts.vault, fn: 'mint', args: [expected.copra] });
   await expect(toast(page)).toContainText('Successfully minted');
+  // Charged exactly the vault's quote for the largest mint that fits: what is left is the change, no more.
+  expect((await chain.balances(user)).usdc).toBe(123_456_789n - expected.required);
 
   await page.click('#tabRedeem');
   const { copra } = await chain.balances(user);

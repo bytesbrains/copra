@@ -140,7 +140,9 @@ function fixed(raw, decimals, digits) {
 
 /**
  * The mint quote for a USDC budget, from the chain alone: the largest $COPRA amount whose
- * vault.quoteMint fits in it (binary search over eth_call), with that quote's fee.
+ * vault.quoteMint fits in it (binary search over eth_call), with that quote's cost and fee.
+ * The search assumes quoteMint grows with the amount; the answer is checked against the vault
+ * directly, so a vault for which that stops holding fails here instead of passing a wrong quote.
  */
 async function chainMintQuote(usdcRaw) {
   const [price] = await h.contracts.oracle.getCopraPriceUSD();
@@ -152,8 +154,9 @@ async function chainMintQuote(usdcRaw) {
     if (required <= usdcRaw) lo = mid;
     else hi = mid - 1n;
   }
-  const [, fee] = await h.contracts.vault.quoteMint(lo);
-  return { copra: lo, fee };
+  const [[required, fee], [next]] = await Promise.all([h.contracts.vault.quoteMint(lo), h.contracts.vault.quoteMint(lo + 1n)]);
+  expect(required <= usdcRaw && next > usdcRaw, `quoteMint(${lo}) is the largest mint that fits ${usdcRaw}`).toBe(true);
+  return { copra: lo, required, fee };
 }
 
 const toast = (page) => page.locator('#txStatus');

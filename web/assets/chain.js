@@ -48,6 +48,17 @@ const REVERT_MESSAGES = {
   ERC20InsufficientAllowance: 'The vault is not approved to spend this much USDC.'
 };
 
+// The protocol's custom errors, parsed once. Built on first use, not at load, so a page whose ethers
+// failed to load still degrades to "Unavailable" instead of dying here.
+let revertInterface = null;
+function protocolErrors() {
+  if (!revertInterface) {
+    const errors = [...ERC20_ABI, ...ORACLE_ABI, ...VAULT_ABI].filter((f) => f.startsWith('error '));
+    revertInterface = new ethers.Interface([...new Set(errors)]);
+  }
+  return revertInterface;
+}
+
 // The custom error a failed call or transaction reverted with, or null. ethers decodes it for calls
 // through a Contract (err.revert); a failed gas estimate only carries the raw revert data.
 function revertName(err) {
@@ -55,8 +66,7 @@ function revertName(err) {
   const data = err?.data ?? err?.info?.error?.data ?? err?.error?.data;
   if (typeof data !== 'string' || data.length < 10) return null;
   try {
-    const errors = [...ERC20_ABI, ...ORACLE_ABI, ...VAULT_ABI].filter((f) => f.startsWith('error '));
-    return new ethers.Interface([...new Set(errors)]).parseError(data)?.name ?? null;
+    return protocolErrors().parseError(data)?.name ?? null;
   } catch {
     return null;
   }
@@ -81,9 +91,21 @@ function showOracleUnavailable(err) {
   document.getElementById('metricOracleUpdated').textContent = 'Minting and redeeming are paused';
 }
 
+// Reads overlap (the 15s poll, a quote re-check, the refresh after a transaction) and can resolve out
+// of order on a slow RPC. Only a read newer than the last one applied may change the page, so an old
+// response never puts back a price the chain has since moved from.
+let telemetryStarted = 0;
+let telemetryApplied = 0;
+function telemetryIsLatest(seq) {
+  if (seq < telemetryApplied) return false;
+  telemetryApplied = seq;
+  return true;
+}
+
 // Read live price, total supply, vault reserves, and protocol fee metrics from the chain
 async function readProtocolTelemetry() {
   await deploymentReady;
+  const seq = ++telemetryStarted;
   try {
     const readProvider = new ethers.JsonRpcProvider(CONTRACTS.rpcUrl);
     const oracleContract = new ethers.Contract(CONTRACTS.oracle, ORACLE_ABI, readProvider);
@@ -99,6 +121,7 @@ async function readProtocolTelemetry() {
       vaultContract.accumulatedFees().catch(() => null),
       vaultContract.protocolFeeBps().catch(() => null)
     ]);
+    if (!telemetryIsLatest(seq)) return;
 
     if (oracleData) {
       const [priceBn, updatedAtBn] = oracleData;
@@ -140,6 +163,7 @@ async function readProtocolTelemetry() {
     calculate();
   } catch (e) {
     console.warn('Could not read protocol telemetry:', e);
+    if (!telemetryIsLatest(seq)) return;
     // Nothing could be read (no deployment known, RPC down): say so rather than "Loading..." forever.
     for (const id of ['metricTotalSupply', 'metricVaultReserves', 'metricAccumulatedFees']) {
       const el = document.getElementById(id);

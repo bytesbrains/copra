@@ -11,7 +11,8 @@ function forward(port, upstream) {
     client.pipe(remote).pipe(client);
     const close = () => { client.destroy(); remote.destroy(); };
     client.on('error', close);
-    remote.on('error', close);
+    // The browser only sees a reset connection: name the service that refused it.
+    remote.on('error', (e) => { console.error(`forward 127.0.0.1:${port} → ${upstream}: ${e.message}`); close(); });
   });
   return new Promise((resolve, reject) => {
     server.once('error', reject);

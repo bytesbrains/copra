@@ -90,8 +90,10 @@ async function submitAction() {
       }
 
       // Get exact quote from vault — the oracle may have moved since the preview
-      const [collateralRequired] = await vaultContract.quoteMint(copraWei);
-      if (collateralRequired !== CopraQuote.quoteMint(copraWei, currentPriceRaw, feeBps).collateralRequired) {
+      // Both the amount and the fee must be the ones shown: a fee change can leave the total unchanged.
+      const [collateralRequired, mintFee] = await vaultContract.quoteMint(copraWei);
+      const shownMint = CopraQuote.quoteMint(copraWei, currentPriceRaw, feeBps);
+      if (collateralRequired !== shownMint.collateralRequired || mintFee !== shownMint.fee) {
         await quoteChanged();
         return;
       }
@@ -130,8 +132,9 @@ async function submitAction() {
         return;
       }
 
-      const [collateralToReturn] = await vaultContract.quoteRedeem(copraWei);
-      if (collateralToReturn !== CopraQuote.quoteRedeem(copraWei, currentPriceRaw, feeBps).collateralToReturn) {
+      const [collateralToReturn, redeemFee] = await vaultContract.quoteRedeem(copraWei);
+      const shownRedeem = CopraQuote.quoteRedeem(copraWei, currentPriceRaw, feeBps);
+      if (collateralToReturn !== shownRedeem.collateralToReturn || redeemFee !== shownRedeem.fee) {
         await quoteChanged();
         return;
       }
