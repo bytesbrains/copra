@@ -76,4 +76,5 @@ jobs:
         with:
           name: e2e-deployment-manifest
           path: e2e/.out/
-          if-no-files-found: ignore
+          include-hidden-files: true # e2e/.out is a dot-directory, skipped by default
+          if-no-files-found: warn
