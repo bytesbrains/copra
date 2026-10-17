@@ -80,7 +80,9 @@ services:
 
   # Tier-1 browser suite (#46): real Chrome against `web`, transactions through a test wallet to `chain`.
   browser:
-    build: ./browser
+    build:
+      context: ./browser
+      target: tier1
     depends_on:
       chain:
         condition: service_healthy
@@ -98,6 +100,35 @@ services:
       E2E_OUT_DIR: /repo/e2e/.out
       BROWSER_OUT_DIR: /out
       # The page runs at 127.0.0.1 and reads anvil's host port, as in a browser on the host: forwarded.
+      WEB_UPSTREAM: web:8787
+      CHAIN_UPSTREAM: chain:8545
+      E2E_RPC_PORT: ${E2E_RPC_PORT:-8545}
+      HOME: /tmp/home
+      CI: "true"
+    profiles: ["test"]
+
+  # Tier 2 (#50): the browser image plus the pinned MetaMask extension, every approval clicked in
+  # MetaMask's own UI. Same forwards, manifest and output directory as the tier-1 browser suite.
+  metamask:
+    build:
+      context: ./browser
+      target: metamask
+    depends_on:
+      chain:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    entrypoint: ["bash", "/repo/e2e/browser/run.sh", "--config", "metamask.config.cjs"]
+    user: "${E2E_UID:-1000}:${E2E_GID:-1000}"
+    volumes:
+      - ..:/repo:ro
+      - ./.out/browser:/out
+    ipc: host
+    environment:
+      REPO_DIR: /repo
+      RPC_URL: http://chain:8545
+      E2E_OUT_DIR: /repo/e2e/.out
+      BROWSER_OUT_DIR: /out
       WEB_UPSTREAM: web:8787
       CHAIN_UPSTREAM: chain:8545
       E2E_RPC_PORT: ${E2E_RPC_PORT:-8545}

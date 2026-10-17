@@ -6,6 +6,7 @@ set -euo pipefail
 
 SUITE=/tmp/suite
 mkdir -p "${SUITE}"
-cp -r /repo/e2e/browser/playwright.config.cjs /repo/e2e/browser/lib /repo/e2e/browser/tests "${SUITE}/"
+cp -r /repo/e2e/browser/playwright.config.cjs /repo/e2e/browser/metamask.config.cjs /repo/e2e/browser/lib \
+    /repo/e2e/browser/tests /repo/e2e/browser/metamask "${SUITE}/"
 cd "${SUITE}"
 exec playwright test "$@"

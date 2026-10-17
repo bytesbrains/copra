@@ -1,0 +1,58 @@
+name: E2E with real MetaMask
+
+# Tier 2 (#50): the pinned MetaMask extension in Playwright's Chromium against the e2e stack, every
+# approval clicked in MetaMask's own UI. For now this is the trial #50 asks for before a suite is
+# written: three runs side by side, each on its own runner, to measure flakiness on ubuntu-latest.
+# It runs on PRs that change the browser harness or the dApp, and by hand.
+on:
+  pull_request:
+    paths:
+      - 'e2e/browser/**'
+      - 'e2e/docker-compose.yml'
+      - 'web/**'
+      - '.github/workflows/e2e-metamask.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-metamask-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  metamask:
+    name: MetaMask trial (run ${{ matrix.run }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false # every run reports: a flaky failure must not cancel the others
+      matrix:
+        run: [1, 2, 3]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          submodules: recursive
+
+      # The stack as tier 1 uses it (anvil, the real deploy, the dApp served by wrangler dev), then the
+      # trial in the browser image plus the pinned MetaMask. Always torn down.
+      - name: Bring up the stack and run the MetaMask trial
+        run: |
+          status=0
+          make e2e-up && make e2e-metamask || status=$?
+          [ "$status" -eq 0 ] || docker compose -f e2e/docker-compose.yml logs --no-color --timestamps chain web > e2e/.out/stack.log 2>&1
+          make e2e-down
+          exit "$status"
+
+      # The report, the trial's timings and MetaMask version, and on failure the video and screenshots.
+      - name: Upload trial output
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-metamask-run-${{ matrix.run }}
+          path: e2e/.out/
+          include-hidden-files: true
+          if-no-files-found: warn

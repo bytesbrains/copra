@@ -10,6 +10,7 @@ make e2e-web        # check the dApp the stack serves: shipped files and headers
 make e2e-scenarios  # run the contract scenario suite against a running stack
 make e2e-feeder     # run the oracle feeder scenarios against a running stack
 make e2e-browser    # run the tier-1 browser suite against a running stack (BROWSER_ARGS="-g mint" to filter)
+make e2e-metamask   # run tier 2 against a running stack: the real MetaMask extension (#50; for now, the trial)
 make e2e-down       # stop and delete everything
 
 BASE_MAINNET_RPC=<archive RPC> make e2e-fork   # the same scenario suite on a Base-mainnet fork with real USDC (#48)
@@ -92,6 +93,28 @@ Found by the suite and fixed in the dApp:
 
   Each one checks what reverts and what stays recorded, and that the vault recovers once the action is lifted. What each means for holders is in the README's [Trust Assumptions](../README.md#trust-assumptions).
 - **When it runs:** not on every PR. It runs nightly and by hand (`.github/workflows/e2e-fork.yml`, with the `BASE_MAINNET_RPC` secret and an optional fork block), and once before a mainnet release.
+
+## Tier 2: real MetaMask (`e2e/browser/metamask/`, #50)
+The pinned **MetaMask 13.49.0** extension is loaded into Playwright's full Chromium, in the browser image's `metamask` stage. The image downloads the release zip from MetaMask's GitHub release and checks it against a SHA-256 (`ADD --checksum`). To upgrade, change the version and the checksum together in their own PR.
+
+So far it runs the **trial** #50 asks for before a suite is written (`trial.spec.cjs`):
+1. onboard from anvil's mnemonic;
+2. click Connect in the dApp;
+3. let the dApp add the local network: MetaMask doesn't know chain 84532, so it answers 4902 and the dApp asks to add it;
+4. reload and connect again;
+5. claim from the faucet, confirming in MetaMask.
+
+Every approval is clicked in MetaMask's own UI. The confirmation must show the local network, the dApp's origin and the TestnetUSDC contract. The chain is checked with the suite's own RPC client, never through the wallet. `.github/workflows/e2e-metamask.yml` runs it three times in parallel on `ubuntu-latest`, on PRs that touch the browser harness or the dApp, and by hand.
+
+What the trial established (details in `lib/metamask.cjs`):
+- **No display needed.** Extensions load in new headless mode (`channel: 'chromium'`), so there is no `xvfb-run`.
+- **Approvals appear in MetaMask's side panel.** Playwright drives it over CDP, where it is an ordinary page. An extension can open its side panel only on a user gesture, so the panel is opened by onboarding's "Open wallet" click and stays open.
+- **A CDP connection does not see a side panel created after it attached.** Lookups reconnect when they miss.
+- **LavaMoat blocks main-world evaluation in extension pages.** Only locators are used there.
+- **MetaMask can come up locked right after onboarding.** The harness types the password, as a user would.
+- **"Basic functionality" is switched off at onboarding**, and metrics are declined. With it on, MetaMask's background is busy with mainnet traffic and wallet calls take up to 30s; off, they take milliseconds.
+- **It cannot run fully offline.** With every external host unresolvable, a connect request is never shown.
+- **Timing:** about 30s per run in the Linux container, of which onboarding is about 12s.
 
 ## Notes
 - The repo is mounted **read-only**. Build output, cache and broadcast logs stay inside the container, and only the manifest is written back (as your uid).
