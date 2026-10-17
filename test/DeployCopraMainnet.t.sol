@@ -95,6 +95,31 @@ contract DeployCopraMainnetTest is Test {
         assertTrue(address(second.vault) != address(first.vault));
     }
 
+    /// @dev A broadcast that stops part-way (after the vault, before setCopraToken) leaves contracts that
+    ///      cannot go live: the registry refuses a vault with no token bound, so a re-run is the only path.
+    function test_DeployCopraMainnet_HalfFinishedRunCannotBeRegistered() public {
+        DeployCopraMainnet.Deployment memory d = script.deploy(_cfg(), DEPLOYER_KEY);
+        CopraVault orphan = new CopraVault(address(usdc), 6, address(d.oracle), feeRecipient, deployer);
+        CopraToken orphanToken = new CopraToken(address(orphan));
+
+        vm.prank(owner);
+        vm.expectRevert(CopraRegistry.InconsistentDeployment.selector);
+        d.registry.setDeployment(address(usdc), address(d.oracle), address(orphan), address(orphanToken));
+    }
+
+    /// @dev The registry's address is derived from OWNER, so a redeploy can only find the multisig's own
+    ///      registry; if the multisig later handed it to someone else, the script refuses rather than adopt it.
+    function test_DeployCopraMainnet_RefusesARegistryNoLongerOwnedByOwner() public {
+        DeployCopraMainnet.Deployment memory d = script.deploy(_cfg(), DEPLOYER_KEY);
+        address successor = address(new Multisig());
+        vm.prank(owner);
+        d.registry.transferOwnership(successor);
+        vm.prank(successor);
+        d.registry.acceptOwnership();
+
+        _expectRefused(_cfg(), "CopraRegistry: not owned by the expected owner");
+    }
+
     function test_DeployCopraMainnet_RefusesZeroAddresses() public {
         string memory reason = "DeployCopraMainnet: zero address";
         DeployCopraMainnet.Config memory cfg = _cfg();

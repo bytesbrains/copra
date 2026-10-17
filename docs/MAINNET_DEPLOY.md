@@ -55,6 +55,8 @@ The script prints the multisig's batch. Execute it as **one** transaction:
 | 1 | `CopraVault` | `acceptOwnership()` |
 | 2 | `CopraRegistry` | `setDeployment(collateral, oracle, vault, token)` |
 
+**If the broadcast stops part-way** (a dropped transaction, gas, a nonce clash), whatever was already sent stays on chain. Nothing goes live: the registry still points at the old set, and `setDeployment` refuses a vault with no token bound (`InconsistentDeployment`). Run the script again. It reuses the registry and deploys a fresh oracle, vault and token, and the half-finished contracts are simply abandoned. Don't try to finish them by hand.
+
 ## 4. Post-deploy verification
 
 Read everything back through the registry, from an RPC that is not the one you deployed with:
