@@ -51,6 +51,7 @@ test('sepolia settings and headers are what production has served since before #
     chainName: 'Base Sepolia',
     rpcUrl: 'https://base-sepolia-rpc.publicnode.com',
     explorer: 'https://sepolia.basescan.org',
+    explorerName: 'Basescan',
     registry: '0x379cB5FED578D6F485ab1834C81E4F1CF4EABb25',
   });
   const csp = fs.readFileSync(path.join(WEB, '_headers'), 'utf8').split('\n').find((l) => l.includes('Content-Security-Policy:'));
@@ -101,6 +102,10 @@ test('settings are validated: exact keys, https outside local, never written int
   assert.doesNotThrow(() => env.validate({ ...rest, name }), 'key order does not matter');
   assert.throws(() => env.validate({ ...ok, rpcUrl: 'http://base-rpc.publicnode.com' }), /https/);
   assert.throws(() => env.validate({ ...ok, explorer: 'http://basescan.org' }), /https or null/);
+  assert.throws(() => env.validate({ ...ok, explorerName: null }), /explorerName/);
+  assert.throws(() => env.validate({ ...ok, explorerName: ' ' }), /explorerName/);
+  assert.throws(() => env.validate({ ...ok, explorer: null }), /explorerName/, 'a name without an explorer');
+  assert.doesNotThrow(() => env.validate({ ...ok, explorer: null, explorerName: null }));
   assert.throws(() => env.validate({ ...ok, registry: '0x1234' }), /registry/);
   assert.throws(() => env.loadNetwork('nowhere'), /no network settings/);
   assert.throws(() => env.build('sepolia', path.join(WEB, 'nested')), /inside web/);
@@ -114,7 +119,7 @@ for (const e of ENVS) {
     const urls = [];
     const failing = () => Promise.reject(new Error('offline'));
     const scripts = localScripts(html).map((file) => ({ file, code: fs.readFileSync(path.join(dir, 'assets', file), 'utf8') }));
-    const { ctx } = runPage({
+    const { ctx, el } = runPage({
       hostname: 'localhost',
       scripts,
       quote: require(path.join(dir, 'assets/quote.js')),
@@ -135,5 +140,26 @@ for (const e of ENVS) {
     assert.ok(urls.length > 0 && urls.every((u) => u === net.rpcUrl), `reads go to ${net.rpcUrl}: ${urls}`);
     // Only Base Sepolia has a fallback set: elsewhere those addresses are not Copra's.
     assert.equal(Boolean(contracts.vault), e === 'sepolia');
+
+    // The copy the scripts write names this network and its explorer, never Base Sepolia's (#63).
+    assert.equal(el('networkBadge').textContent, net.chainName);
+    vm.runInContext("showToast('done', 'info', '0xabc')", ctx);
+    const links = el('txStatus').children.filter((n) => n.tagName === 'A');
+    assert.deepEqual(links.map((l) => [l.textContent, l.href]), net.explorer ? [[`View on ${net.explorerName} ↗`, `${net.explorer}/tx/0xabc`]] : []);
   });
 }
+
+// index.html ships identically on every network (#43), so the Base Sepolia text and addresses in it
+// must all sit in elements the page re-renders from the network settings at load (#63). Strip those,
+// and nothing network-specific may be left.
+test('index.html has no network-specific copy outside the elements rendered from the settings', () => {
+  const html = fs.readFileSync(path.join(WEB, 'index.html'), 'utf8');
+  const rendered = html
+    .replace(/<span data-network="[^"]+">[^<]*<\/span>/g, '')
+    .replace(/<(a|button)\b[^>]*\bdata-contract="[^"]+"[^>]*>[^<]*(?:<span[^>]*>[^<]*<\/span>[^<]*)*<\/\1>/g, '');
+  const sepolia = env.loadNetwork('sepolia');
+  const fallback = vm.runInNewContext(`(${fs.readFileSync(path.join(WEB, 'assets/config.js'), 'utf8').match(/const SEPOLIA_FALLBACK = (\{[^}]+\})/)[1]})`);
+  for (const literal of [sepolia.chainName, 'Sepolia', String(sepolia.chainId), sepolia.explorerName, new URL(sepolia.explorer).host, sepolia.registry, ...Object.values(fallback)]) {
+    assert.ok(!rendered.toLowerCase().includes(literal.toLowerCase()), `index.html hardcodes ${literal} outside a rendered element`);
+  }
+});

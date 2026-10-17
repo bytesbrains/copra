@@ -12,7 +12,7 @@ const path = require('node:path');
 
 const ROOT = path.join(__dirname, '..');
 const WEB = path.join(ROOT, 'web');
-const KEYS = ['name', 'chainId', 'chainName', 'rpcUrl', 'explorer', 'registry'];
+const KEYS = ['name', 'chainId', 'chainName', 'rpcUrl', 'explorer', 'explorerName', 'registry'];
 
 function loadNetwork(env, { rpcUrl } = {}) {
   const file = path.join(ROOT, 'networks', `${path.basename(env)}.json`);
@@ -37,6 +37,10 @@ function validate(net) {
   // Only a local chain may be plain http; a public network's RPC and explorer must be https.
   if (net.name !== 'local' && !net.rpcUrl.startsWith('https://')) throw new Error(`rpcUrl must be https: ${net.rpcUrl}`);
   if (net.explorer !== null && !net.explorer.startsWith('https://')) throw new Error(`explorer must be https or null: ${net.explorer}`);
+  // The name the page gives its explorer links ("View on Basescan"): present exactly when there is one.
+  if (net.explorer === null ? net.explorerName !== null : !(typeof net.explorerName === 'string' && net.explorerName.trim())) {
+    throw new Error(`explorerName must name the explorer, or be null without one: ${net.explorerName}`);
+  }
 }
 
 function networkJs(net) {

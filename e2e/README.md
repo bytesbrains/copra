@@ -59,6 +59,7 @@ Playwright `1.63.0` drives **Chrome** (Playwright's full Chromium build in new h
 Found by the suite and fixed in the dApp:
 - the page showed its built-in $1.42 when the oracle was stale or unreachable, and quoted against it;
 - the same for the fee: an unreadable `protocolFeeBps()` left quotes on the built-in 25 bps (#64);
+- every build named Base Sepolia and Basescan, and with the registry unreachable a non-Sepolia build showed Sepolia's contract addresses (#63);
 - reverts showed as "unknown custom error";
 - the price never refreshed mid-session;
 - an account switch kept the old account's signer;

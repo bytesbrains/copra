@@ -4,5 +4,6 @@
   "chainName": "Copra e2e (anvil)",
   "rpcUrl": "http://127.0.0.1:8545",
   "explorer": null,
+  "explorerName": null,
   "registry": "0x379cB5FED578D6F485ab1834C81E4F1CF4EABb25"
 }

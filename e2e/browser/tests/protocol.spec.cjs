@@ -2,7 +2,7 @@
 // moving between quote and signature, and an unreachable registry.
 const {
   test, expect, h, ethers, open, connect, setAmount, expectPageMatchesChain, expectSent, fixed, chainMintQuote, toast,
-  afterTelemetryPoll,
+  afterTelemetryPoll, short,
 } = require('../lib/fixtures.cjs');
 const { PAGE_RPC_URL } = require('../lib/env.cjs');
 
@@ -251,6 +251,12 @@ test('registry unreachable → the page uses no address it was not given, warns,
   await expect(page.locator('#metricVaultReserves')).toHaveText('Unavailable');
   await expect(page.locator('#metricTotalSupply')).toHaveText('Unavailable');
   await expect(page.locator('#benchmarkHeader')).toHaveText('Price unavailable');
+  // Nor does it show one (#63): index.html ships Base Sepolia's addresses, and none of them is this network's.
+  for (const name of ['vault', 'token', 'oracle', 'usdc']) {
+    await expect(page.locator(`a[data-contract="${name}"][data-short]`)).toHaveText('—');
+    await expect(page.locator(`button[data-contract="${name}"]`)).toBeHidden();
+  }
+  await expect(page.locator('a[data-contract="registry"]')).toHaveText(short(chain.manifest.contracts.registry)); // the one it was given
 
   await connect(page, wallet);
   await page.click('#actionBtn');

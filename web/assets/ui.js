@@ -21,7 +21,7 @@ function applyTheme() {
   document.getElementById('bodyEl').classList.add('testnet-theme');
   document.getElementById('testnetBar').classList.remove('hidden');
   document.getElementById('testnetBadge').classList.remove('hidden');
-  document.getElementById('networkBadge').textContent = 'Base Sepolia';
+  document.getElementById('networkBadge').textContent = CONTRACTS.chainName;
   document.getElementById('networkBadge').className = 'text-xs font-mono bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full';
   document.getElementById('logoSuffix').className = 'text-amber-400 font-medium';
   document.getElementById('heroGlow').className = 'absolute -inset-1 rounded-full bg-gradient-to-r from-amber-500 to-orange-400 opacity-25 blur-lg';
@@ -155,7 +155,7 @@ function showToast(msg, type = 'info', txHash = null) {
     link.target = '_blank';
     link.rel = 'noopener noreferrer';
     link.className = 'underline mt-1 inline-block text-[11px] font-bold';
-    link.textContent = 'View on Basescan ↗';
+    link.textContent = `View on ${CONTRACTS.explorerName} ↗`;
     txStatus.appendChild(link);
   }
 }
