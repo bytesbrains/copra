@@ -82,8 +82,8 @@ async function submitAction() {
   let boundCrossed = null; // set once a mint or redeem is signed with its bound
 
   try {
-    if (currentPriceRaw === null) {
-      showToast(priceProblem, 'warn');
+    if (quoteProblem()) {
+      showToast(quoteProblem(), 'warn');
       return;
     }
     if (mode === 'mint') {

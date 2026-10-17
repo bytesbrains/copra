@@ -7,7 +7,7 @@
 let currentPriceUSD = 1.42;
 let currentPriceRaw = 142000000n; // oracle price, 8 decimals; null when the oracle gives none
 let priceProblem = null; // why there is no price (stale, unreachable), told to a user who tries to submit
-let feeBps = 25n; // 0.25%
+let feeBps = 25n; // 0.25%; null when the vault's fee cannot be read (#64)
 let mode = 'mint';
 let userAddress = null;
 let provider = null;
@@ -61,14 +61,22 @@ const watchUsdcBtn = document.getElementById('watchUsdcBtn');
 // Exact BigInt mirror of CopraVault.quoteMint / quoteRedeem (see /assets/quote.js).
 // Mint: the input is the total USDC paid, fee included, so the $COPRA amount is the largest
 // one whose quoteMint().collateralRequired fits inside it.
+// Why no quote can be given right now, or null. Neither the price nor the fee is ever assumed: a quote
+// against a built-in default would show the user a number the chain did not give.
+function quoteProblem() {
+  if (currentPriceRaw === null) return priceProblem;
+  if (feeBps === null) return 'The protocol fee cannot be read right now, so minting and redeeming are paused.';
+  return null;
+}
+
 function mintCopraWei() {
-  if (currentPriceRaw === null) return 0n;
+  if (quoteProblem()) return 0n;
   const usdcRaw = CopraQuote.parseUnits(amountInput.value, 6) ?? 0n;
   return CopraQuote.copraForCollateral(usdcRaw, currentPriceRaw, feeBps);
 }
 
 function calculate() {
-  if (currentPriceRaw === null) {
+  if (quoteProblem()) {
     outputAmount.value = '';
     feeDisplay.textContent = '—';
     return;
