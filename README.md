@@ -160,3 +160,16 @@ A clean, responsive dApp is included in [web/index.html](web/index.html) and dep
 | **Protocol / Project Name** | `Copra Protocol` or `Copra` | *"Copra Protocol is an autonomous currency..."* |
 | **Token Ticker Symbol** | `$COPRA` (All-caps) | *"1 $COPRA tracks 1 kg of Copra"* |
 
+
+---
+
+## 9. Contact
+
+| For | Address |
+| :--- | :--- |
+| General questions, partnerships, press | [hello@copra.dev](mailto:hello@copra.dev) |
+| Help using the dApp or testnet | [support@copra.dev](mailto:support@copra.dev) |
+| Privacy and data requests | [privacy@copra.dev](mailto:privacy@copra.dev) |
+| **Security vulnerabilities** | **Never in a public issue.** Use [GitHub private vulnerability reporting](https://github.com/bytesbrains/copra/security/advisories/new) (preferred) or [security@copra.dev](mailto:security@copra.dev); see [SECURITY.md](SECURITY.md). |
+
+Bugs and feature requests: [GitHub issues](https://github.com/bytesbrains/copra/issues).

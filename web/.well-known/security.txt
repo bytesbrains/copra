@@ -1,0 +1,8 @@
+# Copra Protocol security contact (RFC 9116). Policy and scope: see Policy below.
+Contact: https://github.com/bytesbrains/copra/security/advisories/new
+Contact: mailto:security@copra.dev
+Expires: 2027-10-01T00:00:00.000Z
+Preferred-Languages: en
+Policy: https://github.com/bytesbrains/copra/blob/main/SECURITY.md
+Canonical: https://copra.dev/.well-known/security.txt
+Canonical: https://testnet.copra.dev/.well-known/security.txt
