@@ -50,4 +50,12 @@ cat > "${OUT_DIR}/deployment.json" <<JSON
   "users": ${USERS}
 }
 JSON
-echo "📄 manifest written to e2e/.out/deployment.json"
+# ABI + bytecode for the test suites, which run without Foundry. forge script only compiled what the
+# deploy imports, so build the test-only MockCollateral fixture explicitly.
+forge build test/mocks/MockCollateral.sol > /dev/null
+mkdir -p "${OUT_DIR}/artifacts"
+for c in CopraRegistry CopraOracle CopraVault CopraToken TestnetUSDC MockCollateral; do
+    cp "$(find "${FOUNDRY_OUT:-out}" -path "*/${c}.sol/${c}.json" | head -n 1)" "${OUT_DIR}/artifacts/${c}.json"
+done
+
+echo "📄 manifest written to e2e/.out/deployment.json, artifacts to e2e/.out/artifacts/"

@@ -55,7 +55,7 @@ jobs:
   e2e-stack:
     name: E2E stack (local chain)
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     permissions:
       contents: read
     steps:
@@ -66,8 +66,9 @@ jobs:
           submodules: recursive
 
       # Brings up anvil (chain id 84532, 2s blocks), deploys as production does with the registry at its
-      # canonical address, verifies the deployment through the registry, and tears everything down.
-      - name: Deploy to a throwaway chain and verify
+      # canonical address, verifies the deployment through the registry, runs the contract scenario suite
+      # (real transactions, invariants after each one), and tears everything down.
+      - name: Deploy to a throwaway chain, verify, run contract scenarios
         run: make e2e
 
       - name: Upload deployment manifest
