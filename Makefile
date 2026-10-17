@@ -1,4 +1,4 @@
-.PHONY: all build test test-web fmt fmt-check lint clean e2e e2e-up e2e-check e2e-scenarios e2e-web e2e-feeder e2e-down
+.PHONY: all build test test-web fmt fmt-check lint clean e2e e2e-up e2e-check e2e-scenarios e2e-web e2e-feeder e2e-browser e2e-down
 
 all: build test test-web
 
@@ -48,12 +48,19 @@ e2e-web:
 e2e-feeder:
 	$(E2E_COMPOSE) run --rm -T --build feeder
 
+# Tier-1 browser suite (#46): real Chrome against the served dApp; failure artifacts in e2e/.out/browser.
+e2e-browser:
+	mkdir -p e2e/.out/browser
+	$(E2E_COMPOSE) run --rm -T --build browser $(BROWSER_ARGS)
+
 e2e-down:
 	$(E2E_COMPOSE) down -v --remove-orphans
 
-# Always tears the stack down, and keeps the first failure's exit code.
+# Always tears the stack down, and keeps the first failure's exit code. On failure the chain and web
+# logs are kept in e2e/.out/stack.log, next to the browser suite's traces (CI uploads both).
 e2e:
 	@$(MAKE) --no-print-directory e2e-down
 	@status=0; $(MAKE) --no-print-directory e2e-up && $(MAKE) --no-print-directory e2e-check && $(MAKE) --no-print-directory e2e-web \
-		&& $(MAKE) --no-print-directory e2e-scenarios && $(MAKE) --no-print-directory e2e-feeder || status=$$?; \
+		&& $(MAKE) --no-print-directory e2e-scenarios && $(MAKE) --no-print-directory e2e-feeder && $(MAKE) --no-print-directory e2e-browser || status=$$?; \
+		[ $$status -eq 0 ] || $(E2E_COMPOSE) logs --no-color --timestamps chain web > e2e/.out/stack.log 2>&1; \
 		$(MAKE) --no-print-directory e2e-down; exit $$status

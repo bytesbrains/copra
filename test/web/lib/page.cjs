@@ -32,6 +32,8 @@ function runPage({ hostname = 'copra.dev', scripts, ethers, quote, console: con 
   const elements = new Map();
   const ctx = {
     console: con || { log() {}, warn() {}, error() {} },
+    // Intervals run unref'd, so a page's polling never keeps a test process alive.
+    setInterval: (fn, ms) => setInterval(fn, ms).unref(), clearInterval,
     setTimeout, clearTimeout, Promise, BigInt, Number, Math, Date, Object, Error, URL,
     window: { location: { hostname, search: '', origin: `https://${hostname}` } },
     navigator: {},

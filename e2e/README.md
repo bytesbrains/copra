@@ -3,12 +3,13 @@
 A disposable local chain with Copra deployed exactly as on Base Sepolia. It is the base for the end-to-end suites tracked in #41. Docker is the only requirement; Foundry runs inside the containers.
 
 ```bash
-make e2e            # up → deploy → verify → dApp check → contract scenarios → feeder scenarios → down (what CI runs)
+make e2e            # up → deploy → verify → dApp check → contract, feeder and browser suites → down (what CI runs)
 make e2e-up         # bring the chain and the dApp up, deploy, print the manifest; leaves it running
 make e2e-check      # verify a running stack
 make e2e-web        # check the dApp the stack serves: shipped files and headers, reading the local chain
 make e2e-scenarios  # run the contract scenario suite against a running stack
 make e2e-feeder     # run the oracle feeder scenarios against a running stack
+make e2e-browser    # run the tier-1 browser suite against a running stack (BROWSER_ARGS="-g mint" to filter)
 make e2e-down       # stop and delete everything
 ```
 
@@ -34,7 +35,7 @@ make e2e-down       # stop and delete everything
 To iterate from the host: `make e2e-up`, then `cd e2e/scenarios && npm ci && node --test --test-concurrency=1 'tests/*.test.cjs'`.
 
 ## dApp check (`e2e/web/check-web.cjs`, #43)
-Checks the served site from outside: every file is byte-for-byte `web/` built for `local`, every `_headers` rule is served as written with the CSP enforced, and the served scripts run against the chain. A holder mints first, inside a snapshot that is rolled back, and the page must show the registry's `deployment v1`, the oracle price, the supply and the reserves read from anvil. It runs the scripts in a fake DOM; the real browser, the CSP in action and the wallet are #46.
+Checks the served site from outside: every file is byte-for-byte `web/` built for `local`, every `_headers` rule is served as written with the CSP enforced, and the served scripts run against the chain. A holder mints first, inside a snapshot that is rolled back, and the page must show the registry's `deployment v1`, the oracle price, the supply and the reserves read from anvil. It runs the scripts in a fake DOM; the real browser, the CSP in action and the wallet are the browser suite below.
 
 ## Oracle feeder scenarios (`e2e/feeder/`, #45)
 `scripts/oracle-feeder.sh`, unchanged, in its own container (the pinned Foundry image plus `python3`, for the benchmark path).
@@ -44,6 +45,24 @@ Checks the served site from outside: every file is byte-for-byte `web/` built fo
 - **Scenarios:** skip inside `MIN_UPDATE_INTERVAL`; update after a day; clamp to 19.5% both ways; skip an unchanged price within 5 days, `FORCE=true`, refresh after 5 days; stale recovery, clamped too; RPC down, oracle or interval read failing, interval getter reverting; stale storage unreadable or implausible (a moved layout fails closed); both signers set; registry repointed; a non-allowlisted feed host falling back to the benchmark.
 - Each scenario runs in an `evm_snapshot`. It replaces `test/feeder/oracle-feeder.test.sh`, which ran the same checks against a bare oracle.
 - The dApp showing the oracle's new age after a recovery is covered by the browser suite (#46).
+
+## Browser suite, tier 1 (`e2e/browser/`, #46)
+Playwright `1.63.0` drives **Chrome** (Playwright's full Chromium build in new headless mode, not the headless shell) in its pinned image, against the `web` service with its CSP enforced. The page runs at `http://127.0.0.1:8787` and reads anvil on `127.0.0.1:8545`, as in a browser on the host: inside the container those two ports are plain TCP forwards to `web` and `chain`, so every byte and header is wrangler's.
+- **The wallet** is a thin EIP-1193 provider injected as `window.ethereum`, whose logic runs in the test process (`lib/wallet.cjs`). It sends transactions to anvil from its unlocked dev accounts, so each one really executes. It signs only for the account it has selected (4100 otherwise), and a test can make it reject (4001), switch account or chain, or not know the chain (4902). Only the wallet's own UI is skipped; tier 2 (#50) is real MetaMask.
+- **Four layers per action.** UI before (quote, fee, button) → the wallet request (contract, function and exact arguments) → the chain (receipt, events, balances read by the suite's own RPC client, and the contract scenarios' invariants) → UI after (balances and every telemetry card against the chain).
+- **No noise passes.** Every test fails on a `pageerror`, a `securitypolicyviolation`, or a `console.error` it did not declare.
+- **Isolation.** Each test runs in an `evm_snapshot`; pending transactions are dropped before the revert, so one failure cannot stall the next test. Blocks stay at 2s, so pending states are real.
+- **Flows:** connect and faucet; approve then mint; redeem; MAX in both tabs, minting and redeeming the exact balance; `wallet_watchAsset` for both tokens; the real oracle feeder moving the price mid-session, and recovering it after a stale spell.
+- **Corner cases:** no wallet; wrong and unknown chain; rejections; account changes; `chainChanged`; a stale oracle, before load and mid-session; a vault short of collateral; the price moving between quote and signature; the registry unreachable; input edge cases; the displayed quote against the vault's own.
+- **On failure** the trace, screenshot and video of each failing test, and the HTML report, are in `e2e/.out/browser/`. `make e2e` also keeps the chain and web logs in `e2e/.out/stack.log`, and CI uploads both.
+
+Found by the suite and fixed in the dApp:
+- the page showed its built-in $1.42 when the oracle was stale or unreachable, and quoted against it;
+- reverts showed as "unknown custom error";
+- the price never refreshed mid-session;
+- an account switch kept the old account's signer;
+- a quote that had moved was signed without the user seeing it (the contract-side bound is #57);
+- a mint could buy one micro-USDC less than the amount entered, so MAX left dust (`copraForCollateral` was not the largest amount, as it claimed).
 
 ## Notes
 - The repo is mounted **read-only**. Build output, cache and broadcast logs stay inside the container, and only the manifest is written back (as your uid).

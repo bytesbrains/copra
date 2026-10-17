@@ -50,15 +50,26 @@ actionBtn.addEventListener('click', submitAction);
 faucetBtn.addEventListener('click', claimFaucet);
 connectBtn.addEventListener('click', initWeb3);
 
-// Initial load: read protocol telemetry and perform initial calculation
+// Initial load: read protocol telemetry and perform initial calculation. Then keep reading it, so the
+// price, quote and metrics follow the oracle feeder and other users mid-session (#46).
 readProtocolTelemetry();
 calculate();
+setInterval(readProtocolTelemetry, 15000);
 
 // Listen to account changes
 if (window.ethereum) {
-  window.ethereum.on('accountsChanged', (accounts) => {
+  window.ethereum.on('accountsChanged', async (accounts) => {
     if (accounts.length > 0) {
       userAddress = accounts[0];
+      // Sign as the account now selected: the old signer would send from an account the wallet left.
+      if (provider) {
+        try {
+          signer = await provider.getSigner(userAddress);
+        } catch (e) {
+          signer = null;
+          console.warn('Could not switch signer:', e);
+        }
+      }
       connectText.textContent = `${userAddress.slice(0, 6)}...${userAddress.slice(-4)}`;
       balanceBar.classList.remove('hidden');
       maxBtn.classList.remove('hidden');
@@ -66,6 +77,7 @@ if (window.ethereum) {
       checkAllowance();
     } else {
       userAddress = null;
+      signer = null;
       connectText.textContent = 'Connect Wallet';
       balanceBar.classList.add('hidden');
       maxBtn.classList.add('hidden');
