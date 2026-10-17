@@ -24,7 +24,7 @@ This document provides autonomous coding assistants and contributors with critic
   - `CopraOracle.sol`: Commodity price oracle. One immutable `feedUpdater`; at most 20% change per update and one update per `MIN_UPDATE_INTERVAL` (1 day), which must stay below `HEARTBEAT`.
   - `interfaces/ICopraOracle.sol`: Interface for benchmark pricing.
 - `test/`: Foundry unit and integration tests (`CopraProtocol.t.sol`).
-- `script/`: Deployment scripts (`DeployCopra.s.sol`).
+- `script/`: Deployment scripts (`DeployCopra.s.sol` for testnet, `DeployCopraMainnet.s.sol` for Base mainnet; see `docs/MAINNET_DEPLOY.md`).
 - `scripts/`: Operational utilities (oracle feeder script, hook setup).
 - `docs/`: Technical specifications (`WHITEPAPER.md`, `ARCHITECTURE.md`).
 - `web/`: Frontend landing page and dApp interface.

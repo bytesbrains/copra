@@ -38,7 +38,7 @@ Further technical documentation:
 
 ### Trust Assumptions
 
-Copra is **not ownerless**. Three privileged roles exist. On Base Sepolia, all three are held by the deployer, `0x91d3019b38185b517Bb98B7BB4953c137F5EEb8E`:
+Copra is **not ownerless**. Three privileged roles exist. On Base Sepolia, all three are held by the deployer, `0x91d3019b38185b517Bb98B7BB4953c137F5EEb8E`. On Base mainnet they are separate: a multisig owns the registry and the vault, and the oracle updater and fee recipient are other addresses ([docs/MAINNET_DEPLOY.md](docs/MAINNET_DEPLOY.md)):
 
 | Role | Can | Limits |
 | :--- | :--- | :--- |
@@ -143,6 +143,8 @@ The live contract set is published on-chain by **CopraRegistry** at a permanent 
    forge script script/DeployCopra.s.sol:DeployCopra --rpc-url $BASE_SEPOLIA_RPC --broadcast
    ```
 
+`DeployCopra` is testnet only and refuses Base mainnet. Mainnet deploys use `DeployCopraMainnet`, which takes real USDC and four separate roles: see [docs/MAINNET_DEPLOY.md](docs/MAINNET_DEPLOY.md).
+
 ---
 
 ## 7. Web Interface for copra.dev
@@ -153,7 +155,7 @@ A clean, responsive dApp is included in [web/index.html](web/index.html) and dep
 ```bash
 node scripts/web-env.cjs local dist/web   # a copy of web/ for that network
 ```
-`mainnet` has no registry yet (`null` until #47 deploys one), so the generator refuses to build it.
+`mainnet` has no registry yet (`null` until the mainnet deploy in [docs/MAINNET_DEPLOY.md](docs/MAINNET_DEPLOY.md) registers one), so the generator refuses to build it.
 Only `assets/network.js` and the CSP's `connect-src` (that network's RPC) differ from `web/`, and `test/web/network.test.cjs` enforces it. After editing `networks/sepolia.json`, regenerate `web/assets/network.js` with `node scripts/web-env.cjs sepolia <tmp>` and copy it back; the test fails until you do.
 
 ---

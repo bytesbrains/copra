@@ -10,7 +10,9 @@ import "../src/testnet/TestnetUSDC.sol";
 
 /**
  * @title DeployCopra
- * @notice Forge deployment script for Copra Protocol on Base Sepolia testnet sandbox.
+ * @notice Forge deployment script for Copra Protocol on Base Sepolia testnet sandbox. Testnet only: it
+ *         deploys TestnetUSDC (a public faucet) and makes one key every role, so it refuses Base mainnet.
+ *         Mainnet deploys use DeployCopraMainnet (script/DeployCopraMainnet.s.sol).
  *
  * Usage:
  * forge script script/DeployCopra.s.sol:DeployCopra --rpc-url $BASE_SEPOLIA_RPC --broadcast
@@ -43,7 +45,7 @@ abstract contract CopraRegistryScript is Script {
         } else {
             registry = CopraRegistry(expected);
         }
-        require(registry.owner() == owner, "CopraRegistry: broadcaster is not the registry owner");
+        require(registry.owner() == owner, "CopraRegistry: not owned by the expected owner");
     }
 }
 
@@ -71,6 +73,7 @@ contract DeployCopra is CopraRegistryScript {
 
     /// @dev Broadcasts with `deployerPrivateKey`, or as `deployerAddress` (unlocked on the node) when it is 0.
     function _deploy(address deployerAddress, uint256 deployerPrivateKey) internal {
+        require(block.chainid != 8453, "DeployCopra: testnet only, use DeployCopraMainnet on Base");
         console.log("--------------------------------------------------");
         console.log("Deploying Copra Protocol to Base Sepolia Testnet");
         console.log("Deployer Address:", deployerAddress);
