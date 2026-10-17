@@ -4,6 +4,7 @@
 // the registry and telemetry reads. The other files only declare.
 
 applyTheme();
+renderNetwork();
 const deploymentReady = loadDeployment();
 
 amountInput.addEventListener('input', calculate);

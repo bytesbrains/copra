@@ -4,5 +4,6 @@
   "chainName": "Base",
   "rpcUrl": "https://base-rpc.publicnode.com",
   "explorer": "https://basescan.org",
+  "explorerName": "Basescan",
   "registry": null
 }

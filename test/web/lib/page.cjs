@@ -11,6 +11,8 @@ function fakeElement(id) {
       set: new Set(),
       add(...c) { c.forEach((x) => this.set.add(x)); },
       remove(...c) { c.forEach((x) => this.set.delete(x)); },
+      toggle(c, on) { if (on ?? !this.set.has(c)) this.set.add(c); else this.set.delete(c); },
+      contains(c) { return this.set.has(c); },
     },
     get childNodes() { return el.children; },
     addEventListener(type, fn) { (el.listeners[type] ||= []).push(fn); },
@@ -19,6 +21,7 @@ function fakeElement(id) {
     getAttribute(name) { return el.attrs[name] ?? null; },
     setAttribute(name, v) { el.attrs[name] = String(v); },
     hasAttribute(name) { return name in el.attrs; },
+    removeAttribute(name) { delete el.attrs[name]; },
   };
   return el;
 }

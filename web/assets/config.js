@@ -21,6 +21,7 @@ const CONTRACTS = {
   chainName: NETWORK.chainName,
   rpcUrl: NETWORK.rpcUrl,
   explorer: NETWORK.explorer, // null on a local chain: no explorer links are rendered
+  explorerName: NETWORK.explorerName, // "Basescan"; null exactly when explorer is
   ...(NETWORK.name === 'sepolia' ? SEPOLIA_FALLBACK : {})
 };
 

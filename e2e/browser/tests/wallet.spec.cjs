@@ -15,10 +15,33 @@ test('no window.ethereum → install-a-wallet toast, and the page still renders 
 
   for (const button of ['#connectBtn', '#actionBtn']) {
     await page.click(button);
-    await expect(toast(page)).toContainText('Please install MetaMask, Coinbase Wallet, or Rabby');
+    await expect(toast(page)).toHaveText(`Please install MetaMask, Coinbase Wallet, or Rabby to interact with Copra Protocol on ${LOCAL.chainName}.`);
   }
   await expect(page.locator('#connectText')).toHaveText('Connect Wallet');
   await expect(page.locator('#balanceBar')).toBeHidden();
+});
+
+// #63: index.html ships with Base Sepolia's copy and addresses on every network; the page must render
+// this build's own. The local build names its own chain and has no explorer, so it links nowhere.
+test('the page names its own network: chain name and id, its own contract addresses, no explorer links, never Base Sepolia', async ({ page, wallet, chain }) => {
+  await open(page);
+  await expect(page.locator('#networkBadge')).toHaveText(LOCAL.chainName);
+  await expect(page.locator('#testnetBar')).toContainText(`${LOCAL.chainName} Testnet Live (Chain ID: ${LOCAL.chainId})`);
+  await expect(page.locator('#testnetBar a[data-needs-explorer]')).toBeHidden(); // "View Contracts on …": no explorer here
+  await expect(page.locator('main')).toContainText(`${LOCAL.chainName} Contract Registry`);
+  for (const [name, address] of Object.entries(chain.manifest.contracts)) {
+    const link = page.locator(`a[data-contract="${name}"][data-short]`);
+    await expect(link).toHaveText(short(address));
+    await expect(link).not.toHaveAttribute('href', /.*/);
+  }
+  await expect(page.locator('body')).not.toContainText('Sepolia');
+  await expect(page.locator('a[href*="basescan"]')).toHaveCount(0);
+
+  // A confirmed transaction's toast offers no explorer link either.
+  await connect(page, wallet);
+  await page.click('#faucetBtn');
+  await expect(toast(page)).toContainText('successfully claimed');
+  await expect(toast(page).locator('a')).toHaveCount(0);
 });
 
 test('wrong chain → wallet_switchEthereumChain; the page reloads on chainChanged and then connects', async ({ page, installWallet }) => {

@@ -4,17 +4,42 @@
 // so nothing here runs before every file has loaded. Load order is fixed in index.html.
 
 // --- Live Contract Resolution (CopraRegistry) ---
+// index.html ships with Base Sepolia's addresses and links in it, identically on every network (#43).
+// Rendered at load, so a network without an address shows none rather than Sepolia's (#63).
 function renderContractAddresses() {
   document.querySelectorAll('[data-contract]').forEach((el) => {
     const addr = CONTRACTS[el.getAttribute('data-contract')];
-    if (!addr) return;
     if (el.tagName === 'A') {
-      if (CONTRACTS.explorer) el.href = `${CONTRACTS.explorer}/address/${addr}`;
-      else el.removeAttribute('href'); // a local chain has no explorer: never link to another network's
-      if (el.hasAttribute('data-short')) el.textContent = `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+      const href = addr && CONTRACTS.explorer ? `${CONTRACTS.explorer}/address/${addr}` : null;
+      if (href) {
+        el.setAttribute('href', href);
+        el.setAttribute('target', '_blank');
+        el.setAttribute('rel', 'noopener noreferrer');
+      } else {
+        // No explorer (a local chain) or no address: never link to another network's, nor half a link.
+        ['href', 'target', 'rel'].forEach((a) => el.removeAttribute(a));
+      }
+      if (el.hasAttribute('data-short')) el.textContent = addr ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : '—';
+      else el.classList.toggle('hidden', !href); // "View Contracts on …" with nowhere to go says nothing
     }
-    if (el.hasAttribute('data-copy')) el.setAttribute('data-copy', addr);
+    if (el.hasAttribute('data-copy')) {
+      el.setAttribute('data-copy', addr || ''); // the copy handler ignores an empty one
+      el.classList.toggle('hidden', !addr);
+    }
   });
+}
+
+// The page's network copy (chain name and id, explorer name) from this build's settings, never the
+// Base Sepolia text index.html ships with (#63).
+function renderNetwork() {
+  document.querySelectorAll('[data-network]').forEach((el) => {
+    const value = CONTRACTS[el.getAttribute('data-network')];
+    if (value !== null && value !== undefined) el.textContent = String(value);
+  });
+  document.querySelectorAll('[data-needs-explorer]').forEach((el) => {
+    if (!CONTRACTS.explorer) el.classList.add('hidden');
+  });
+  renderContractAddresses();
 }
 
 // Resolves to true when the registry was read; on any failure the baked-in fallbacks stay in use.

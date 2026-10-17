@@ -7,7 +7,7 @@
 async function initWeb3() {
   await deploymentReady;
   if (typeof window.ethereum === 'undefined') {
-    showToast('Please install MetaMask, Coinbase Wallet, or Rabby to interact with Copra Protocol on Base Sepolia.', 'warn');
+    showToast(`Please install MetaMask, Coinbase Wallet, or Rabby to interact with Copra Protocol on ${CONTRACTS.chainName}.`, 'warn');
     return;
   }
 
@@ -124,7 +124,7 @@ async function submitAction() {
         return;
       }
 
-      showToast('Minting $COPRA on Base Sepolia...', 'pending');
+      showToast(`Minting $COPRA on ${CONTRACTS.chainName}...`, 'pending');
       // The quote on screen is the bound: the vault refuses to charge more than the user saw (#57).
       boundCrossed = async () => (await vaultContract.quoteMint(copraWei))[0] > collateralRequired;
       const mintTx = await vaultContract.mint(copraWei, collateralRequired);
