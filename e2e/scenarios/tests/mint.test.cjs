@@ -3,7 +3,7 @@ const { describe, it, before, after, beforeEach, afterEach } = require('node:tes
 const assert = require('node:assert/strict');
 const h = require('../lib/harness.cjs');
 
-const { contracts: { usdc, vault, token }, users, OWNER, send, expectRevert, units, NO_MAX, NO_MIN } = h;
+const { contracts: { usdc, vault, token }, users, VAULT_OWNER, send, expectRevert, units, NO_MAX, NO_MIN } = h;
 const [alice, bob] = users;
 
 describe('mint', () => {
@@ -37,11 +37,11 @@ describe('mint', () => {
     assert.equal(before - (await usdc.balanceOf(alice)), 2n);
   });
 
-  it('reverts with ERC20InsufficientAllowance without an approval', async () => {
+  it('reverts with the collateral\'s allowance error without an approval', async () => {
     await h.fundUsdc(alice, units(100, 6));
-    const [, , needed] = await expectRevert(vault, 'mint', [units(10, 18), NO_MAX], alice, 'ERC20InsufficientAllowance');
-    const [required] = await vault.quoteMint(units(10, 18));
-    assert.equal(needed, required);
+    const args = await expectRevert(vault, 'mint', [units(10, 18), NO_MAX], alice, h.COLLATERAL_ERRORS.allowance);
+    // OpenZeppelin's error carries the amount asked for; FiatToken's require string carries nothing.
+    if (!h.REAL_USDC) assert.equal(args[2], (await vault.quoteMint(units(10, 18)))[0]);
   });
 
   it('mints with an exact-allowance approval and leaves the allowance at 0', async () => {
@@ -58,22 +58,22 @@ describe('mint', () => {
     assert.equal(await vault.accumulatedFees(), fee);
   });
 
-  it('reverts with ERC20InsufficientBalance when the balance is below the quote', async () => {
+  it('reverts with the collateral\'s balance error when the balance is below the quote', async () => {
     await h.fundUsdc(alice, units(1, 6));
     await send(usdc, 'approve', [vault.target, h.ethers.MaxUint256], alice);
-    await expectRevert(vault, 'mint', [units(10, 18), NO_MAX], alice, 'ERC20InsufficientBalance');
+    await expectRevert(vault, 'mint', [units(10, 18), NO_MAX], alice, h.COLLATERAL_ERRORS.balance);
   });
 
   it('charges no fee at 0 bps and exactly 1% at MAX_FEE_BPS', async () => {
     await h.fundUsdc(alice, units(1000, 6));
     const amount = units(100, 18);
 
-    await send(vault, 'setProtocolFee', [0n], OWNER);
+    await send(vault, 'setProtocolFee', [0n], VAULT_OWNER);
     const [base, zeroFee] = await vault.quoteMint(amount);
     assert.equal(zeroFee, 0n);
     await h.mintCopra(alice, amount);
 
-    await send(vault, 'setProtocolFee', [await vault.MAX_FEE_BPS()], OWNER);
+    await send(vault, 'setProtocolFee', [await vault.MAX_FEE_BPS()], VAULT_OWNER);
     const [required, fee] = await vault.quoteMint(amount);
     assert.equal(fee, (base * 100n) / 10000n);
     assert.equal(required, base + fee);
@@ -82,7 +82,7 @@ describe('mint', () => {
   });
 
   it('refuses a fee above MAX_FEE_BPS, and fee changes from anyone but the owner', async () => {
-    await expectRevert(vault, 'setProtocolFee', [101n], OWNER, 'FeeExceedsMax');
+    await expectRevert(vault, 'setProtocolFee', [101n], VAULT_OWNER, 'FeeExceedsMax');
     await expectRevert(vault, 'setProtocolFee', [50n], alice, 'OwnableUnauthorizedAccount');
     assert.equal(await vault.protocolFeeBps(), 25n);
   });

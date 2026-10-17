@@ -1,0 +1,29 @@
+# Base-mainnet fork (#48): layered on docker-compose.yml, it turns `chain` into anvil forked from Base at a
+# pinned block, and `deployer` into DeployCopraMainnet against Circle's USDC with four separate roles.
+# Everything else (the scenario suite, its container, the manifest in e2e/.out) is the same stack.
+# An override, not a profile: a profile can add services but cannot change an existing one's command.
+#
+#   BASE_MAINNET_RPC=<archive RPC> make e2e-fork
+#
+# The RPC must serve state at E2E_FORK_BLOCK (an archive node); https://mainnet.base.org does.
+services:
+  chain:
+    command:
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8545"
+      - --fork-url
+      - ${BASE_MAINNET_RPC:?set BASE_MAINNET_RPC to a Base mainnet archive RPC}
+      # Pinned for reproducibility: the same USDC implementation, holder balances and roles every run.
+      - --fork-block-number
+      - ${E2E_FORK_BLOCK:-52700000}
+      - --block-time
+      - "2"
+    healthcheck:
+      retries: 120 # the first request on a fork is fetched from the remote RPC
+
+  deployer:
+    entrypoint: ["bash", "/repo/e2e/deploy-fork.sh"]
+    environment:
+      E2E_FORK_BLOCK: ${E2E_FORK_BLOCK:-52700000}

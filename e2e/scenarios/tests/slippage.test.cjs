@@ -6,7 +6,7 @@ const { describe, it, before, after, beforeEach, afterEach } = require('node:tes
 const assert = require('node:assert/strict');
 const h = require('../lib/harness.cjs');
 
-const { contracts: { usdc, oracle, vault, token }, users, OWNER, send, expectRevert, units, ethers, NO_MAX } = h;
+const { contracts: { usdc, oracle, vault, token }, users, VAULT_OWNER, send, expectRevert, units, ethers, NO_MAX } = h;
 const [alice] = users;
 const AMOUNT = units(1000, 18);
 
@@ -44,14 +44,14 @@ describe('slippage between quote and transaction', () => {
   it('a fee raise to MAX_FEE_BPS landing first: the mint reverts instead of costing 0.75% more', async () => {
     await unlimitedAlice();
     const [quoted] = await vault.quoteMint(AMOUNT);
-    await send(vault, 'setProtocolFee', [100n], OWNER);
+    await send(vault, 'setProtocolFee', [100n], VAULT_OWNER);
     await expectRefusedMint(quoted);
   });
 
   it('price and fee both moved: the mint reverts instead of costing ~20.9% more', async () => {
     await unlimitedAlice();
     const [quoted] = await vault.quoteMint(AMOUNT);
-    await send(vault, 'setProtocolFee', [100n], OWNER);
+    await send(vault, 'setProtocolFee', [100n], VAULT_OWNER);
     await h.postPrice(await maxCollarPrice(true));
     await expectRefusedMint(quoted);
   });

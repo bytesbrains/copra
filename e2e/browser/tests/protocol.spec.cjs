@@ -197,7 +197,7 @@ test('the fee cannot be read → no quote against a built-in fee, a stated reaso
   const user = wallet.selected;
   await chain.fundUsdc(user, units(100, 6));
   await chain.send(chain.contracts.usdc, 'approve', [chain.contracts.vault.target, ethers.MaxUint256], user);
-  await chain.send(chain.contracts.vault, 'setProtocolFee', [40n], chain.OWNER); // not the page's built-in 25
+  await chain.send(chain.contracts.vault, 'setProtocolFee', [40n], chain.VAULT_OWNER); // not the page's built-in 25
   const feeCall = chain.contracts.vault.interface.getFunction('protocolFeeBps').selector.slice(2);
   let failFee = true;
   // ethers batches its reads, so fail only the fee's entry in the batch and let every other answer through.

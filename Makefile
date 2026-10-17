@@ -1,4 +1,4 @@
-.PHONY: all build test test-web fmt fmt-check lint clean e2e e2e-up e2e-check e2e-scenarios e2e-web e2e-feeder e2e-browser e2e-down
+.PHONY: all build test test-web fmt fmt-check lint clean e2e e2e-up e2e-check e2e-scenarios e2e-web e2e-feeder e2e-browser e2e-down e2e-fork e2e-fork-up e2e-fork-check e2e-fork-scenarios
 
 all: build test test-web
 
@@ -63,4 +63,27 @@ e2e:
 	@status=0; $(MAKE) --no-print-directory e2e-up && $(MAKE) --no-print-directory e2e-check && $(MAKE) --no-print-directory e2e-web \
 		&& $(MAKE) --no-print-directory e2e-scenarios && $(MAKE) --no-print-directory e2e-feeder && $(MAKE) --no-print-directory e2e-browser || status=$$?; \
 		[ $$status -eq 0 ] || $(E2E_COMPOSE) logs --no-color --timestamps chain web > e2e/.out/stack.log 2>&1; \
+		$(MAKE) --no-print-directory e2e-down; exit $$status
+
+# --- e2e on a Base-mainnet fork (#48): DeployCopraMainnet against real USDC, four roles, pinned block ---
+# Needs BASE_MAINNET_RPC (an archive RPC). Not on every PR: run it by hand, nightly, and before a mainnet release.
+E2E_FORK_COMPOSE = $(E2E_COMPOSE) -f e2e/docker-compose.fork.yml
+
+e2e-fork-up:
+	mkdir -p e2e/.out
+	$(E2E_FORK_COMPOSE) up -d --wait chain
+	$(E2E_FORK_COMPOSE) run --rm -T deployer
+	@cat e2e/.out/deployment.json
+
+e2e-fork-check:
+	$(E2E_FORK_COMPOSE) run --rm -T --entrypoint bash -e RPC_URL=http://chain:8545 deployer /repo/e2e/check-deployment-fork.sh /out/deployment.json
+
+e2e-fork-scenarios:
+	$(E2E_FORK_COMPOSE) run --rm -T --build scenarios
+
+e2e-fork:
+	@$(MAKE) --no-print-directory e2e-down
+	@status=0; $(MAKE) --no-print-directory e2e-fork-up && $(MAKE) --no-print-directory e2e-fork-check \
+		&& $(MAKE) --no-print-directory e2e-fork-scenarios || status=$$?; \
+		[ $$status -eq 0 ] || $(E2E_FORK_COMPOSE) logs --no-color --timestamps chain > e2e/.out/stack.log 2>&1; \
 		$(MAKE) --no-print-directory e2e-down; exit $$status

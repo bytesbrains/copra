@@ -3,7 +3,7 @@ const { describe, it, before, after, beforeEach, afterEach } = require('node:tes
 const assert = require('node:assert/strict');
 const h = require('../lib/harness.cjs');
 
-const { contracts: { usdc, oracle, vault, token }, users, OWNER, send, expectRevert, units, ethers, NO_MAX, NO_MIN } = h;
+const { contracts: { usdc, oracle, vault, token }, users, VAULT_OWNER, send, expectRevert, units, ethers, NO_MAX, NO_MIN } = h;
 const [alice, bob, carol] = users;
 
 // Deterministic PRNG (mulberry32), so a failing sequence replays exactly. Override with E2E_SEED.
@@ -35,8 +35,8 @@ async function redeemAsPredicted(who, copra) {
 describe('lifecycle', () => {
   h.isolate({ before, after, beforeEach, afterEach });
 
-  it('faucet → approve → mint → transfer → the receiver redeems', async () => {
-    await send(usdc, 'faucet', [alice, units(1000, 6)], alice);
+  it('fund (faucet, or a holder on real USDC) → approve → mint → transfer → the receiver redeems', async () => {
+    await h.fundUsdc(alice, units(1000, 6));
     const amount = units(250, 18);
     const [required] = await vault.quoteMint(amount);
     await send(usdc, 'approve', [vault.target, required], alice);
@@ -56,13 +56,13 @@ describe('lifecycle', () => {
     await send(vault, 'mint', [units(1000, 18), NO_MAX], alice);
     const feeAt25 = await vault.accumulatedFees();
 
-    await send(vault, 'setProtocolFee', [80n], OWNER);
+    await send(vault, 'setProtocolFee', [80n], VAULT_OWNER);
     const [, fee80] = await vault.quoteMint(units(1000, 18));
     await send(vault, 'mint', [units(1000, 18), NO_MAX], alice);
     assert.equal((await vault.accumulatedFees()) - feeAt25, fee80);
     assert.ok(fee80 > feeAt25 * 3n, 'fee quote follows the new rate');
 
-    await send(vault, 'setFeeRecipient', [carol], OWNER);
+    await send(vault, 'setFeeRecipient', [carol], VAULT_OWNER);
     const fees = await vault.accumulatedFees();
     await send(vault, 'claimFees', [], alice);
     assert.equal(await usdc.balanceOf(carol), fees);

@@ -48,7 +48,16 @@ Copra is **not ownerless**. Three privileged roles exist. On Base Sepolia, all t
 
 **The oracle updater is the main trust assumption.** No function lets any role withdraw user collateral, and `claimFees()` can only send `accumulatedFees` to `feeRecipient`. But redemptions pay out at the oracle price. An updater that is compromised or malicious can raise the price, redeem its own $COPRA and drain the vault, leaving other holders unable to redeem. The update interval means this takes days of public price updates rather than one block, but it does not prevent it. If the updater stops posting, the price goes stale after 7 days, and mint and redeem revert until it resumes. Redemptions are always paid from the USDC the vault actually holds: if the price rises after deposits, the vault can be worth less than all $COPRA in circulation, and `redeem` reverts once the vault runs short.
 
-These behaviors are pinned by tests (`test_TrustAssumption_*`, `test_Vault_MintAndRedeemRevertOnStalePrice` and `test_Vault_RedeemCannotLeaveFeesUnbacked` in [test/CopraProtocol.t.sol](test/CopraProtocol.t.sol)), so a change to them also has to change this section.
+**Circle is a fourth party.** On mainnet the vault holds Circle's USDC, which Circle can pause and whose blacklist Circle controls. Copra has no pause and no blacklist of its own, but anything that stops USDC moving also stops the vault from paying out:
+
+| Circle action | What reverts | What it means for holders |
+| :--- | :--- | :--- |
+| **USDC paused** | Every `mint`, `redeem` and `claimFees` | Nobody can enter or exit until Circle unpauses. $COPRA still transfers. Nothing is lost: the reserves and recorded fees stay exactly where they were, and everything works again once USDC is unpaused. |
+| **Vault blacklisted** | Every `mint`, `redeem` and `claimFees` | All collateral is frozen for **every** holder for as long as the vault stays blacklisted. No role can move it elsewhere, because no function withdraws collateral. Unlisting the vault restores everything. |
+| **A holder blacklisted** | That holder's own `mint` and `redeem` | Other holders are unaffected. $COPRA is not USDC, so the blacklist does not reach it: the holder can still transfer their $COPRA to any address that is not blacklisted, and that address can redeem it. |
+| **Fee recipient blacklisted** | `claimFees` | The fees stay recorded in `accumulatedFees` and backed in the vault. Holders are unaffected. The vault owner can call `setFeeRecipient`, and the next claim pays the new recipient. |
+
+These behaviors are pinned by tests (`test_TrustAssumption_*`, `test_Vault_MintAndRedeemRevertOnStalePrice` and `test_Vault_RedeemCannotLeaveFeesUnbacked` in [test/CopraProtocol.t.sol](test/CopraProtocol.t.sol)). The USDC ones are pinned against Circle's real contract on a Base-mainnet fork ([e2e/scenarios/tests/usdc.test.cjs](e2e/scenarios/tests/usdc.test.cjs), `make e2e-fork`). A change to any of them also has to change this section.
 
 ---
 
