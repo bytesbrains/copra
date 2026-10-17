@@ -29,8 +29,8 @@ function renderContractAddresses() {
   });
 }
 
-// The page's network copy (chain name and id, explorer name) from this build's settings, never the
-// Base Sepolia text index.html ships with (#63).
+// The page's network copy (chain name and id, explorer name, collateral) from this build's settings,
+// never the Base Sepolia text index.html ships with (#63, #47).
 function renderNetwork() {
   document.querySelectorAll('[data-network]').forEach((el) => {
     const value = CONTRACTS[el.getAttribute('data-network')];
@@ -38,6 +38,9 @@ function renderNetwork() {
   });
   document.querySelectorAll('[data-needs-explorer]').forEach((el) => {
     if (!CONTRACTS.explorer) el.classList.add('hidden');
+  });
+  document.querySelectorAll('[data-needs-faucet]').forEach((el) => {
+    if (!CONTRACTS.faucet) el.classList.add('hidden'); // real USDC: nothing to claim, on any hostname
   });
   renderContractAddresses();
 }

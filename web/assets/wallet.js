@@ -180,6 +180,7 @@ async function submitAction() {
 
 // --- Testnet Faucet ---
 async function claimFaucet() {
+  if (!CONTRACTS.faucet) return; // the button is hidden then; real USDC has no faucet to call
   if (!userAddress || !signer) {
     await initWeb3();
     if (!userAddress) return;

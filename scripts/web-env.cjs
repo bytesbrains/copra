@@ -12,7 +12,7 @@ const path = require('node:path');
 
 const ROOT = path.join(__dirname, '..');
 const WEB = path.join(ROOT, 'web');
-const KEYS = ['name', 'chainId', 'chainName', 'rpcUrl', 'explorer', 'explorerName', 'registry'];
+const KEYS = ['name', 'chainId', 'chainName', 'rpcUrl', 'explorer', 'explorerName', 'registry', 'collateral'];
 
 function loadNetwork(env, { rpcUrl } = {}) {
   const file = path.join(ROOT, 'networks', `${path.basename(env)}.json`);
@@ -41,6 +41,10 @@ function validate(net) {
   if (net.explorer === null ? net.explorerName !== null : !(typeof net.explorerName === 'string' && net.explorerName.trim())) {
     throw new Error(`explorerName must name the explorer, or be null without one: ${net.explorerName}`);
   }
+  // The collateral the network's contract set uses: TestnetUSDC (with its public faucet) or Circle's USDC.
+  // Base mainnet takes only USDC, as script/DeployCopraMainnet.s.sol does (#47).
+  if (!['TestnetUSDC', 'USDC'].includes(net.collateral)) throw new Error(`collateral must be TestnetUSDC or USDC: ${net.collateral}`);
+  if (net.chainId === 8453 && net.collateral !== 'USDC') throw new Error('collateral must be USDC on Base mainnet (8453)');
 }
 
 function networkJs(net) {

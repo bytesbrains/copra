@@ -8,5 +8,6 @@ const NETWORK = Object.freeze({
   "rpcUrl": "https://base-sepolia-rpc.publicnode.com",
   "explorer": "https://sepolia.basescan.org",
   "explorerName": "Basescan",
-  "registry": "0x379cB5FED578D6F485ab1834C81E4F1CF4EABb25"
+  "registry": "0x379cB5FED578D6F485ab1834C81E4F1CF4EABb25",
+  "collateral": "TestnetUSDC"
 });

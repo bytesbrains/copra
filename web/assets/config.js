@@ -22,11 +22,15 @@ const CONTRACTS = {
   rpcUrl: NETWORK.rpcUrl,
   explorer: NETWORK.explorer, // null on a local chain: no explorer links are rendered
   explorerName: NETWORK.explorerName, // "Basescan"; null exactly when explorer is
+  // TestnetUSDC has a public faucet; real USDC has none, so no faucet is offered on any hostname (#47).
+  faucet: NETWORK.collateral === 'TestnetUSDC',
+  collateralName: NETWORK.collateral === 'TestnetUSDC' ? 'Testnet USDC' : 'USDC',
   ...(NETWORK.name === 'sepolia' ? SEPOLIA_FALLBACK : {})
 };
 
 // --- Environment & Dynamic Theme Engine ---
-// The testnet theme, banner and faucet are chosen by HOSTNAME, never by CONTRACTS.chainId:
+// The testnet theme and banner are chosen by HOSTNAME, never by CONTRACTS.chainId (the faucet also
+// needs a network whose collateral has one, CONTRACTS.faucet):
 // the chainId is 84532 on every deployment while only Base Sepolia exists, so keying on it
 // put the testnet theme on copra.dev too. testnet.copra.dev, Workers preview URLs and local
 // dev get the testnet UI; copra.dev does not.
