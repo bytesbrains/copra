@@ -33,6 +33,7 @@ The protocol codebase is located in [src/](src/):
 Further technical documentation:
 - [Whitepaper](docs/WHITEPAPER.md)
 - [Architecture & Security Model](docs/ARCHITECTURE.md)
+- Draft specs: [GCPI-001](docs/specs/GCPI-001.md), the Global Copra Price Index, and [COPRA-001](docs/specs/COPRA-001.md), the reserve and redemption protocol that would replace the v1 vault
 - [Contributing Guidelines](CONTRIBUTING.md)
 - [Security Policy](SECURITY.md)
 
