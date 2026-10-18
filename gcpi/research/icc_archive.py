@@ -36,6 +36,7 @@ def months(first, last):
 
 
 def fetch(cache, ym):
+    """Returns the cached PDF's path, downloading it first if needed, or None if ICC has no PDF."""
     pdf = os.path.join(cache, f"wpu{ym}.pdf")
     if not os.path.exists(pdf):
         try:
@@ -50,6 +51,10 @@ def fetch(cache, ym):
         with open(pdf, "wb") as f:
             f.write(body)
         time.sleep(0.3)
+    return pdf
+
+
+def text_of(pdf):
     return subprocess.run(["pdftotext", "-layout", pdf, "-"], capture_output=True, text=True, check=True).stdout
 
 
@@ -67,6 +72,9 @@ def parse(ym, text):
         if not m:
             raise ValueError(f"{ym}: unparsed copra row: {line.strip()}")
         series = re.sub(r"\s+", " ", m.group(1)).strip()
+        # No ICC copra label contains a digit; one that does has swallowed a price column.
+        if re.search(r"\d", series):
+            raise ValueError(f"{ym}: unparsed copra row: {line.strip()}")
         for d, v in zip(dates, m.group(2).split()):
             dd, mm, yy = d.split("/")
             out.append({"date": f"{yy}-{mm}-{dd}", "series": series,
@@ -120,17 +128,25 @@ def main(argv):
     os.makedirs(cache, exist_ok=True)
     first = argv[2] if len(argv) > 2 else "2016-01"
     last = argv[3] if len(argv) > 3 else time.strftime("%Y-%m")
-    rows, have = [], 0
+    rows, have, failed = [], 0, []
     for ym in months(first, last):
-        text = fetch(cache, ym)
-        if text is not None:
-            have += 1
-            rows += parse(ym, text)
-    print(f"ICC monthly price PDFs found: {have} ({first} .. {last})\n")
+        pdf = fetch(cache, ym)
+        if pdf is None:
+            continue
+        have += 1
+        # A month that does not parse is reported and the run continues, but the run fails: skipping it
+        # silently would understate coverage. A cached PDF that is truncated fails the same way every time,
+        # so the message names the file to delete.
+        try:
+            rows += parse(ym, text_of(pdf))
+        except (ValueError, subprocess.CalledProcessError) as e:
+            failed.append(ym)
+            print(f"unparsed {ym}: {e} (cached file: {pdf})", file=sys.stderr)
+    print(f"ICC monthly price PDFs found: {have} ({first} .. {last}), unparsed: {', '.join(failed) or 'none'}\n")
     report(rows)
     with open(os.path.join(cache, "icc_copra.json"), "w") as f:
         json.dump(rows, f)
-    return 0
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":

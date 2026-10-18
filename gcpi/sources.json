@@ -29,6 +29,7 @@
       ],
       "role": "headline-candidate",
       "reason": "Only primary, machine-readable, long-history copra series found for an export-linked market, with grade stated. Monthly and lagged, so it caps GCPI cadence at monthly if used as the anchor.",
+      "before_v1": ["Explain the 2024-2026 Corriente-above-Resecada inversion (#88)", "Confirm in writing that PSA permits republication of the series"],
       "evidence": "gcpi/research/psa_copra.py"
     },
     {
@@ -130,6 +131,7 @@
       ],
       "role": "sub-index-candidate",
       "reason": "Primary, grade-specific, long monthly history. India's domestic market does not co-move with the export-linked markets (r = -0.01 with the Philippines on ICC data), so it belongs in a per-country sub-index, not the headline.",
+      "before_v1": ["Confirm in writing that CDB permits republication of the series", "Use weekly or monthly values: the daily view carries values forward"],
       "evidence": "gcpi/research/cdb_copra.py"
     },
     {
@@ -178,6 +180,7 @@
       ],
       "role": "sub-index-candidate",
       "reason": "Primary and daily, with an explicit traded/nominal flag, which is exactly the freshness signal CDB lacks. Short linked history (current year) means Sri Lanka's backtest must lean on ICC until CDA archives are obtained. Sri Lanka does not co-move with the export-linked markets (r = -0.04 with the Philippines).",
+      "before_v1": ["Confirm in writing that CDA permits republication of the series", "Obtain bulletins before 2026 for the backtest"],
       "evidence": "Daily bulletin 2026-10-15 (copra 112,500-125,000 Rs/250 kg, T)"
     },
     {

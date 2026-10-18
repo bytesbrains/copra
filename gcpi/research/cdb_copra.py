@@ -8,6 +8,7 @@ reported and how many of them repeat the previous day's value: CDB fills every c
 Sundays, so a daily value does not show whether a trade or quote happened that day.
 
 Usage: cdb_copra.py [first year] [last year] [daily window DD/MM/YYYY-DD/MM/YYYY]
+The daily window is sampled for Kochi only (DAILY_MARKET), the market the report quotes.
 """
 
 import html
@@ -22,6 +23,7 @@ URL = "https://coconutboard.in/priceweb/Reports.aspx"
 MILLING_COPRA = "2"
 MARKETS = {"1": "Kochi", "2": "Alappuzha", "3": "Kozhikode", "4": "Kangayam"}
 MONTHLY, DAILY = "3", "1"
+DAILY_MARKET = "1"  # Kochi
 
 opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
 opener.addheaders = [("User-Agent", "GCPI-research (https://github.com/bytesbrains/copra)")]
@@ -81,9 +83,9 @@ def main(argv):
         print(f"{name:10s} monthly averages from {have[0] if have else '-'}; years short of 12 months: {gaps}")
     if window:
         start, end = window.split("-")
-        days = daily("1", start, end)
+        days = daily(DAILY_MARKET, start, end)
         repeats = sum(1 for a, b in zip(days, days[1:]) if a[1] == b[1])
-        print(f"Kochi daily {start}..{end}: {len(days)} values, {repeats} equal to the previous day")
+        print(f"{MARKETS[DAILY_MARKET]} daily {start}..{end}: {len(days)} values, {repeats} equal to the previous day")
     return 0
 
 

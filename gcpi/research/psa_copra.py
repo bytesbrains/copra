@@ -48,6 +48,9 @@ def main(argv):
     for g in GRADES:
         have = [r for r in rows if r["Commodity"] == g and r["php_kg"] is not None]
         listed = [r for r in rows if r["Commodity"] == g]
+        if not have:
+            print(f"  {g}: no values in {len(listed)} months returned")
+            continue
         print(f"  {g}: {len(have)} of {len(listed)} months, {have[0]['Year']} {have[0]['Period']} .. "
               f"{have[-1]['Year']} {have[-1]['Period']} (latest {have[-1]['php_kg']} PHP/kg)")
 

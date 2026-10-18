@@ -82,6 +82,17 @@ class Registry(unittest.TestCase):
             if s["licence"]["redistribution"] == "restricted":
                 self.assertNotIn(s["role"], {"headline-candidate", "sub-index-candidate"}, s["id"])
 
+    def test_candidates_without_an_open_licence_list_it_as_a_blocker(self):
+        # SOURCES.md: no recommended input can feed v1 until its publisher confirms republication (§12.2),
+        # so a candidate whose licence is not open must say so in before_v1, not only in prose (#104 review).
+        for s in SOURCES:
+            if s["role"] not in {"headline-candidate", "sub-index-candidate"}:
+                continue
+            self.assertTrue(s.get("before_v1"), f"{s['id']}: candidate with no before_v1 list")
+            if s["licence"]["redistribution"] != "open":
+                self.assertTrue(any("republication" in b for b in s["before_v1"]),
+                                f"{s['id']}: licence is {s['licence']['redistribution']} but no republication blocker")
+
     def test_evidence_scripts_exist(self):
         for s in SOURCES:
             for path in re.findall(r"gcpi/research/[\w.]+\.py", s["evidence"]):

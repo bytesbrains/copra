@@ -167,6 +167,9 @@ python3 gcpi/research/worldbank_cmo.py CMO-Historical-Data-Monthly.xlsx
 - Every entry has the fields the issue asks for.
 - Every rejection gives a reason.
 - No restricted source is marked as an index input.
+- Every headline or sub-index candidate without an open licence lists republication as a `before_v1` blocker.
+
+`test/gcpi/test_research.py` pins the parsers on synthetic inputs shaped like the real files, because the data cannot be committed. It covers ICC row parsing and its failure cases, and the World Bank sheet lookup. The numbers themselves are reproduced by running the scripts, not in CI.
 
 ## Method and limits
 

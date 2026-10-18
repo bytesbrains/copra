@@ -17,6 +17,21 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 NS = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
+REL = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}"
+PKG = "{http://schemas.openxmlformats.org/package/2006/relationships}"
+SHEET = "Monthly Prices"
+
+
+def sheet_path(z, name):
+    """The worksheet part for a sheet name, resolved through the workbook's relationships: the Nth sheet
+    is not necessarily stored as sheetN.xml."""
+    sheets = ET.fromstring(z.read("xl/workbook.xml")).find(NS + "sheets")
+    by_name = {s.get("name"): s.get(REL + "id") for s in sheets}
+    if name not in by_name:
+        raise SystemExit(f"no '{name}' sheet; the file has: {', '.join(by_name)}")
+    rels = {r.get("Id"): r.get("Target") for r in ET.fromstring(z.read("xl/_rels/workbook.xml.rels")).iter(PKG + "Relationship")}
+    target = rels[by_name[name]]
+    return target.lstrip("/") if target.startswith("/") else "xl/" + target
 
 
 def main(argv):
@@ -26,11 +41,9 @@ def main(argv):
     z = zipfile.ZipFile(argv[1])
     strings = ["".join(t.text or "" for t in si.iter(NS + "t"))
                for si in ET.fromstring(z.read("xl/sharedStrings.xml")).findall(NS + "si")]
-    sheets = [s.get("name") for s in ET.fromstring(z.read("xl/workbook.xml")).find(NS + "sheets")]
-    monthly = sheets.index("Monthly Prices") + 1
 
     rows = []
-    for r in ET.fromstring(z.read(f"xl/worksheets/sheet{monthly}.xml")).iter(NS + "row"):
+    for r in ET.fromstring(z.read(sheet_path(z, SHEET))).iter(NS + "row"):
         row = {}
         for c in r.findall(NS + "c"):
             v = c.find(NS + "v")
