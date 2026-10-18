@@ -2,7 +2,7 @@
 // full Chromium in new headless mode, onboarded from anvil's public test mnemonic. Nothing about the
 // wallet is mocked: every approval is clicked in MetaMask's own UI.
 //
-// What the trial found about MetaMask 13.49 under automation, and how this file handles it:
+// What the trial (#71) found about MetaMask 13.49 under automation, and how this file handles it:
 //   - Approvals open in MetaMask's side panel, not a popup window. Playwright does not list the side
 //     panel among a context's pages, so the suite also attaches over CDP, where it is an ordinary page.
 //   - LavaMoat blocks evaluation in an extension page's main world: only locators are used there.
@@ -27,12 +27,13 @@ const PASSWORD = 'copra-e2e-metamask';
 const version = () => JSON.parse(fs.readFileSync(path.join(EXTENSION_DIR, 'manifest.json'), 'utf8')).version;
 
 /** Chromium with MetaMask loaded, in a fresh profile. Returns the context, the extension id and a CDP view. */
-async function launch({ videoDir } = {}) {
+async function launch({ videoDir, baseURL } = {}) {
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'metamask-profile-'));
   const context = await chromium.launchPersistentContext(profile, {
     channel: 'chromium', // the full browser in new headless mode: extensions load without a display
     headless: true,
     viewport: { width: 1280, height: 900 },
+    baseURL,
     locale: 'en-US',
     timezoneId: 'UTC',
     recordVideo: videoDir ? { dir: videoDir } : undefined,

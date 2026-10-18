@@ -11,7 +11,7 @@ module.exports = defineConfig({
   globalSetup: './lib/global-setup.cjs',
   workers: 1,
   fullyParallel: false,
-  retries: 0, // the trial measures flakiness: a retry would hide it
+  retries: 0, // a flaky step is a finding, not something to retry away (as in tier 1)
   timeout: 240_000,
   expect: { timeout: 30_000 },
   outputDir: path.join(OUT, 'metamask-results'),
