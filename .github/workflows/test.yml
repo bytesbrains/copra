@@ -52,6 +52,27 @@ jobs:
           PRIVATE_KEY: '1'
         run: forge script script/DeployCopra.s.sol:DeployCopra
 
+  # The pre-push hook's committed-files check, enforced: hooks are opt-in and --no-verify skips them.
+  # Every commit the PR adds, not just its final tree, since a deleted file stays in history.
+  committed-files:
+    name: Committed files
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: No local state, ignored, unexpected binary or oversized files in the PR's commits
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: scripts/check-committed-files.sh "${BASE_SHA}..HEAD"
+
   e2e-stack:
     name: E2E stack (local chain)
     runs-on: ubuntu-latest

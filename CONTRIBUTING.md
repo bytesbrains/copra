@@ -27,6 +27,13 @@ Copra Protocol is built using [Foundry](https://getfoundry.sh/).
    forge fmt --check
    ```
 
+5. **Enable the git hooks** (`.githooks/`):
+   ```bash
+   scripts/setup_hooks.sh
+   ```
+   - Before a commit: gitleaks and `forge fmt --check`.
+   - Before a push: `scripts/check-committed-files.sh` on every commit not yet on the remote, then `forge test`. The check refuses local tool state (`.wrangler/`, SQLite databases), files `.gitignore` excludes, binaries other than images under `assets/` and `web/`, and files over 2 MiB. CI runs the same check on every PR.
+
 ## Running the E2E suite
 
 The end-to-end suite runs the whole protocol on a disposable local chain: the real contracts deployed by the real script, the dApp served as Cloudflare serves it, real Chrome, and the real oracle feeder. [e2e/README.md](e2e/README.md) describes each part.

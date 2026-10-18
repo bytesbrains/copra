@@ -8,6 +8,19 @@ set -e
 
 echo "🥥 [Copra Hook] Running pre-push test validation..."
 
+# Files that must never reach history (local tool state, ignored files, stray binaries), in every
+# commit not yet on the remote. Git passes "<local ref> <local sha> <remote ref> <remote sha>" lines.
+echo "📦 [Copra Hook] Checking the files in the commits being pushed..."
+remote="$1"
+zero=$(git hash-object --stdin </dev/null | tr '0-9a-f' '0')
+while read -r _ local_sha _ _; do
+    [[ "$local_sha" == "$zero" ]] && continue # deleting a remote branch
+    if ! scripts/check-committed-files.sh "$local_sha" --not --remotes="$remote"; then
+        echo "❌ [Copra Hook] Push aborted."
+        exit 1
+    fi
+done
+
 if command -v forge >/dev/null 2>&1; then
     echo "🧪 [Copra Hook] Running forge test suite..."
     if ! forge test; then
