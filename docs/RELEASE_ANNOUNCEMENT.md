@@ -4,7 +4,8 @@
 
 | Asset | Path | Dimensions / Purpose |
 | :--- | :--- | :--- |
-| **OpenGraph Social Banner** | [`assets/og-image.png`](../assets/og-image.png) / [`web/og-image.png`](../web/og-image.png) | `1200×630` social preview card for X, Farcaster, Telegram, and Discord |
+| **Banner** | [`assets/copra-banner.jpg`](../assets/copra-banner.jpg) | `1774×887` master artwork: the README header and the GitHub repository's social preview |
+| **OpenGraph Social Banner** | [`assets/og-image.jpg`](../assets/og-image.jpg) / [`web/og-image.jpg`](../web/og-image.jpg) | `1200×630` crop of the banner (257 KB, under WhatsApp's ~300 KB preview limit): the social card for X, Farcaster, Telegram, WhatsApp and Discord |
 | **Primary Protocol Logo** | [`assets/copra_logo_512.png`](../assets/copra_logo_512.png) | `512×512` high-resolution token & brand icon |
 | **Token Icon (256px)** | [`assets/copra_logo_256.png`](../assets/copra_logo_256.png) | `256×256` wallet & block explorer icon |
 | **Web App Manifest** | [`web/site.webmanifest`](../web/site.webmanifest) | PWA metadata and icon definitions for `copra.dev` |
