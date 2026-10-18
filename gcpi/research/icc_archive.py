@@ -35,6 +35,11 @@ def months(first, last):
         y, m = (y + 1, 1) if m == 12 else (y, m + 1)
 
 
+def next_month(ym):
+    y, m = map(int, ym.split("-"))
+    return f"{y + m // 12:04d}-{m % 12 + 1:02d}"
+
+
 def fetch(cache, ym):
     """Returns the cached PDF's path, downloading it first if needed, or None if ICC has no PDF."""
     pdf = os.path.join(cache, f"wpu{ym}.pdf")
@@ -58,13 +63,49 @@ def text_of(pdf):
     return subprocess.run(["pdftotext", "-layout", pdf, "-"], capture_output=True, text=True, check=True).stdout
 
 
+def iso_date(ym, d):
+    """A header date as YYYY-MM-DD. ICC writes DD/MM/YYYY, except 2016-10..2017-02, which used
+    MM/DD/YYYY. Each report covers one month, so the reading whose month is the report's wins; a date
+    that fits neither reading is an error, never a guess."""
+    a, b, y = d.split("/")
+    month = ym[5:]
+    readings = {f"{y}-{b}-{a}", f"{y}-{a}-{b}"}  # DD/MM, then MM/DD
+    fits = [r for r in readings if r[5:7] == month and r[:4] == ym[:4]]
+    if len(fits) != 1:
+        raise ValueError(f"{ym}: header date {d} is not in the report's month")
+    return fits[0]
+
+
+MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September",
+               "October", "November", "December"]
+
+
+class Misfiled(Exception):
+    """The file for one month holds another month's report (ICC's wpu2026-01.pdf is August 2026)."""
+
+
+def report_month(ym, lines):
+    """The month a report covers, from its own title line ("October 2026"), which must match the file."""
+    for line in lines[:6]:
+        # Full names, or the three-letter forms some reports use ("Jun 2022"), with an optional "Sept".
+        m = re.search(r"\b(" + "|".join(n[:3] for n in MONTH_NAMES) + r")[a-z]*\.?\s+(\d{4})\b", line)
+        if m:
+            month = [n[:3] for n in MONTH_NAMES].index(m.group(1))
+            title = f"{m.group(2)}-{month + 1:02d}"
+            if title != ym:
+                raise Misfiled(f"{ym}: file holds the {MONTH_NAMES[month]} {m.group(2)} report")
+            return title
+    raise ValueError(f"{ym}: no month title")
+
+
 def parse(ym, text):
     """One record per (series, weekly date). A month whose copra rows do not all parse is an error."""
     lines = text.splitlines()
+    report_month(ym, lines)
     header = next((l for l in lines if len(DATE.findall(l)) >= 2), None)
     if header is None:
         raise ValueError(f"{ym}: no date header")
-    dates = DATE.findall(header)
+    dates = [iso_date(ym, d) for d in DATE.findall(header)]
     raw = [l for l in lines if re.match(r"^\s*copra\b", l, re.I) and "meal" not in l.lower()]
     out = []
     for line in raw:
@@ -76,8 +117,7 @@ def parse(ym, text):
         if re.search(r"\d", series):
             raise ValueError(f"{ym}: unparsed copra row: {line.strip()}")
         for d, v in zip(dates, m.group(2).split()):
-            dd, mm, yy = d.split("/")
-            out.append({"date": f"{yy}-{mm}-{dd}", "series": series,
+            out.append({"date": d, "series": series,
                         "usd_t": None if v in ("n.q.", "-") else float(v.replace(",", ""))})
     return out
 
@@ -103,8 +143,9 @@ def report(rows):
     mean = {k: st.mean(v) for k, v in monthly.items()}
     countries = sorted({c for c, _ in mean})
     yms = sorted({ym for _, ym in mean})
+    # Calendar-adjacent months only: a missing month must not turn a two-month move into a one-month one.
     change = {c: {b: math.log(mean[(c, b)] / mean[(c, a)]) for a, b in zip(yms, yms[1:])
-                  if (c, a) in mean and (c, b) in mean} for c in countries}
+                  if b == next_month(a) and (c, a) in mean and (c, b) in mean} for c in countries}
 
     print("\n## Correlation of monthly log changes (US$ terms, series renames merged per country)")
     for i, a in enumerate(countries):
@@ -128,7 +169,7 @@ def main(argv):
     os.makedirs(cache, exist_ok=True)
     first = argv[2] if len(argv) > 2 else "2016-01"
     last = argv[3] if len(argv) > 3 else time.strftime("%Y-%m")
-    rows, have, failed = [], 0, []
+    rows, have, failed, misfiled = [], 0, [], []
     for ym in months(first, last):
         pdf = fetch(cache, ym)
         if pdf is None:
@@ -139,10 +180,15 @@ def main(argv):
         # so the message names the file to delete.
         try:
             rows += parse(ym, text_of(pdf))
+        except Misfiled as e:
+            # A publisher error, not a parse failure: the month is missing from ICC's archive.
+            misfiled.append(ym)
+            print(f"misfiled {e}; {ym} counted as missing", file=sys.stderr)
         except (ValueError, subprocess.CalledProcessError) as e:
             failed.append(ym)
             print(f"unparsed {ym}: {e} (cached file: {pdf})", file=sys.stderr)
-    print(f"ICC monthly price PDFs found: {have} ({first} .. {last}), unparsed: {', '.join(failed) or 'none'}\n")
+    print(f"ICC monthly price PDFs found: {have} ({first} .. {last}), unparsed: {', '.join(failed) or 'none'}, "
+          f"misfiled: {', '.join(misfiled) or 'none'}\n")
     report(rows)
     with open(os.path.join(cache, "icc_copra.json"), "w") as f:
         json.dump(rows, f)

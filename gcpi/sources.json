@@ -25,11 +25,12 @@
       "licence": { "terms": "not stated on the API; OpenSTAT site returned 403 to automated fetch (unverified)", "redistribution": "unclear" },
       "authentication": ["https"],
       "outages_and_changes": [
-        "Corriente priced above Resecada in 15 months, all in 2024-2026 and none in 2010-2023: a likely sampling or definition change to resolve in Phase 2 (#88)"
+        "Corriente priced above Resecada in 15 months, all in 2024-2026 and none in 2010-2023",
+        "Series breaks from 2024-01: r vs ICC's Philippine price +0.91 in 2010-2023, +0.37 since; 8 of 30 months since would be quarantined under GCPI-001 §7.3 (#88, gcpi/BACKTEST.md)"
       ],
       "role": "headline-candidate",
       "reason": "Only primary, machine-readable, long-history copra series found for an export-linked market, with grade stated. Monthly and lagged, so it caps GCPI cadence at monthly if used as the anchor.",
-      "before_v1": ["Explain the 2024-2026 Corriente-above-Resecada inversion (#88)", "Confirm in writing that PSA permits republication of the series"],
+      "before_v1": ["PSA explains or corrects the series break from 2024-01: correlation with ICC's Philippine price falls from +0.91 (2010-2023) to +0.37 (#88)", "Confirm in writing that PSA permits republication of the series"],
       "evidence": "gcpi/research/psa_copra.py"
     },
     {
@@ -78,7 +79,9 @@
       "outages_and_changes": [
         "Indonesia series renamed twice: Domestic, North Sulawesi (to 2022-02) -> Domestic (2022-03..2025-10) -> Domestic, Industry Use (from 2025-11)",
         "India series switches label: Kochi (2016-2018, 2022-) and Kerala (2018-2022)",
-        "No export-basis (FOB/CIF) copra quote in any month 2016-2026"
+        "No export-basis (FOB/CIF) copra quote in any month 2016-2026",
+        "Reports 2016-10..2017-02 write header dates month-first (MM/DD/YYYY); all others day-first (#88)",
+        "wpu2026-01.pdf holds the August 2026 report, so January 2026 is missing from the archive (#88)"
       ],
       "role": "history-only",
       "reason": "Best multi-country weekly history, and the only Indonesian copra price found. Unusable as a live input: secondary (it republishes PCA/UCAP, CDA and CDB), USD conversion undisclosed, series breaks, and all rights reserved, which breaks GCPI-001 §12.3 reproducibility unless ICC grants redistribution.",
@@ -286,7 +289,7 @@
       "cadence": "monthly",
       "typical_delay": "early the following month (2026-09 published 2026-10-02)",
       "history": { "start": "1960-01", "end": "2026-09", "gaps": "none" },
-      "commodity": "coconut oil (copra is no longer in the file)",
+      "commodity": "coconut oil; copra (Philippines/Indonesia, CIF N.W. Europe) 1960-2014 in archived editions only",
       "grade": "crude/bulk",
       "basis": "CFR Europe from 2025-01; CIF Rotterdam 2021-01..2024-12; CIF NW Europe 1999-2020; c.i.f. Rotterdam before",
       "currency": "USD",
@@ -294,7 +297,7 @@
       "licence": { "terms": "World Bank data terms; licence for this file not confirmed (unverified)", "redistribution": "unclear" },
       "authentication": ["https"],
       "outages_and_changes": [
-        "Copra series dropped: present in the 2016 file, absent from the 2025 and 2026 files",
+        "Copra published 1960-2014; the 2020 edition revises 1999-2014 by -14% to +10% and marks 2015 onward '..'; the 2021 edition drops the column (#88)",
         "Coconut oil delivery basis changed four times"
       ],
       "role": "corroboration",

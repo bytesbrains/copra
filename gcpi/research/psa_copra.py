@@ -25,7 +25,8 @@ def get(url, body=None):
         return json.load(r)
 
 
-def main(argv):
+def series():
+    """National monthly rows: {"Commodity", "Year", "Period", "php_kg"}, annual averages dropped."""
     meta = get(TABLE)
     var = {v["code"]: v for v in meta["variables"]}
     code = lambda c, t: var[c]["values"][var[c]["valueTexts"].index(t)]
@@ -43,8 +44,12 @@ def main(argv):
         rec["php_kg"] = None if v in ("..", "...", "-", "") else float(v)
         if rec["Period"] != "Annual":
             rows.append(rec)
+    return meta["title"], rows
 
-    print(f"Table: {meta['title']}")
+
+def main(argv):
+    title, rows = series()
+    print(f"Table: {title}")
     for g in GRADES:
         have = [r for r in rows if r["Commodity"] == g and r["php_kg"] is not None]
         listed = [r for r in rows if r["Commodity"] == g]

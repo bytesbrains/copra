@@ -3,6 +3,7 @@
 **Issue:** #87 · **Methodology:** [GCPI-001](../docs/specs/GCPI-001.md) §16 Phase 1 · **Checked:** 18 October 2026
 **Registry:** [`sources.json`](sources.json) (16 entries, including every rejected candidate with its reason)
 **Reproduce:** [`research/`](research/) (stdlib Python; see [Reproducing these numbers](#reproducing-these-numbers))
+**Corrected** by the Phase 2 backtest (#88, [BACKTEST.md](BACKTEST.md#corrections-to-phase-1)): the cross-market correlations, the World Bank's copra coverage, and the PSA recommendation. Each correction is marked *(corrected, #88)*.
 
 ---
 
@@ -10,12 +11,12 @@
 
 **A global copra index is not yet defensible. A narrower one is.**
 
-1. **No public export-basis copra price exists.** The World Bank dropped copra from its commodity data. ICC publishes only domestic copra prices. CIF Rotterdam quotations come from Oil World, which is subscription-only. Nothing published is an FOB or CIF copra price that GCPI could read and redistribute.
-2. **The four core markets are two markets.** On ten years of ICC weekly data, the Philippines and Indonesia move together (r = +0.79 for monthly changes). India and Sri Lanka move with neither of them (r between −0.14 and −0.04), and trade 35–85% higher. An average across all four mixes an export-linked price with two protected domestic prices.
-3. **Only the Philippines has a primary, open, machine-readable copra series with long history:** PSA's monthly farmgate Resecada price, 2010 onwards, about two months late. Indonesia has no primary public source at all.
+1. **No public export-basis copra price exists.** The World Bank stopped publishing copra after 2014 and dropped the column in 2021 *(corrected, #88)*. ICC publishes only domestic copra prices. CIF Rotterdam quotations come from Oil World, which is subscription-only. Nothing published is an FOB or CIF copra price that GCPI could read and redistribute.
+2. **The four core markets are two markets.** On ten years of ICC weekly data, the Philippines and Indonesia move together (r = +0.75 for monthly changes). India and Sri Lanka move with them only weakly (r between +0.13 and +0.32) *(corrected, #88)*, and trade 35–85% higher. An average across all four mixes an export-linked price with two protected domestic prices.
+3. **Only the Philippines has a primary, open, machine-readable copra series with long history:** PSA's monthly farmgate Resecada price, 2010 onwards, about two months late. Indonesia has no primary public source at all. *(Corrected, #88: PSA's series stops tracking the market from January 2024, so today no open, reliable Philippine series exists either.)*
 4. **No publisher offers a signed or machine-readable feed.** The options are an API (PSA), a postback form (CDB), daily PDFs (CDA) and a Cloudflare-blocked site (PCA). Authentication (#89) starts from HTTPS and PDFs.
 
-**Recommended for #90 to decide:** a headline index on the export-linked basis, anchored on the Philippines (PSA), with India (CDB) and Sri Lanka (CDA) as published per-country sub-indices that do not enter the headline. Its cadence is **monthly** unless a weekly primary source for the Philippines or Indonesia is obtained. A weekly or "global" headline is not supported by the sources that exist today.
+**Recommended for #90 to decide:** a headline index on the export-linked basis, anchored on the Philippines (PSA, *withdrawn as the anchor until PSA explains its 2024 break; #88*), with India (CDB) and Sri Lanka (CDA) as published per-country sub-indices that do not enter the headline. Its cadence is **monthly** unless a weekly primary source for the Philippines or Indonesia is obtained. A weekly or "global" headline is not supported by the sources that exist today.
 
 ---
 
@@ -23,15 +24,15 @@
 
 | Market | Primary source | Cadence | History | Grade and basis | Licence | Role |
 |---|---|---|---|---|---|---|
-| Philippines | PSA OpenSTAT | Monthly, ~2 months late | 2010-01 → 2026-06, no gaps | Resecada and Corriente, farmgate, PHP/kg | Not stated | **Headline candidate** |
+| Philippines | PSA OpenSTAT | Monthly, ~2 months late | 2010-01 → 2026-06, no gaps; breaks 2024 *(#88)* | Resecada and Corriente, farmgate, PHP/kg | Not stated | **Headline candidate**, blocked by the 2024 break |
 | Philippines | PCA | Daily (press reports) | Unknown | Farmgate and millgate | None found | Rejected: blocked, nothing published |
 | Indonesia | None found | | | | | ICC survey only |
 | India | CDB | Daily, monthly | 2008-01 → 2026-10 | Milling copra, wholesale, Rs/quintal | Not stated | **Sub-index candidate** |
 | India | AGMARKNET (data.gov.in) | Daily | API serves today only | Per-mandi variety, min/max/modal + arrivals | GODL-India (open) | Corroboration |
 | Sri Lanka | CDA daily bulletin | Daily (business days) | 2026 only linked | Unspecified grade, wholesale, Rs/250 kg, traded/nominal flag | Not stated | **Sub-index candidate** |
 | PNG, Solomon Is., Vanuatu | KIK, CEMA/CBSI, VBOS | Quarterly | Varies | Depot prices or export unit values | Not stated | Rejected for v1; expansion |
-| Multi-country | ICC Weekly Price Update | Weekly | 2016-01 → 2026-10, all 130 months | Domestic, converted to US$/MT by ICC | All rights reserved | History only |
-| Global | World Bank CMO monthly | Monthly | 1960 → 2026-09 | **Coconut oil only**, CFR Europe | Unconfirmed | Corroboration |
+| Multi-country | ICC Weekly Price Update | Weekly | 2016-01 → 2026-10; the 2026-01 file holds August's report *(#88)* | Domestic, converted to US$/MT by ICC | All rights reserved | History only |
+| Global | World Bank CMO monthly | Monthly | 1960 → 2026-09; copra 1960–2014 in archived editions *(#88)* | **Coconut oil only** today, CFR Europe | Unconfirmed | Corroboration |
 | Global | FAOSTAT QCL | Annual | 1961 → 2023/2024 | Coconut oil and coconuts, **no copra item** | CC BY 4.0 | Weights (with conversion) |
 | Global | Oil World | Weekly | | Copra and oil, CIF Rotterdam | Subscription | Rejected: not redistributable |
 | Exchanges | None | | | | | No copra futures found |
@@ -42,8 +43,8 @@
 
 ### 1. There is no public export price to anchor to
 
-- **World Bank:** the 2016 monthly file had a copra column. The 2025 and 2026 files have only coconut oil, and its basis changed four times: c.i.f. Rotterdam, then CIF NW Europe (1999–2020), crude CIF Rotterdam (2021–2024), then CFR Europe (from January 2025). ([`worldbank_cmo.py`](research/worldbank_cmo.py))
-- **ICC:** in all 130 monthly reports from 2016-01 to 2026-10 there is no FOB, CIF or Europe copra line. Every copra quote is domestic. ([`icc_archive.py`](research/icc_archive.py))
+- **World Bank:** archived editions have copra (Philippines/Indonesia, CIF N.W. Europe) for 1960–2014. The 2020 edition revises 1999–2014 and marks 2015 onward as not available; the 2021 edition drops the column *(corrected, #88; this report first said the 2016 file had copra and later files did not)*. The 2025 and 2026 files have only coconut oil, and its basis changed four times: c.i.f. Rotterdam, then CIF NW Europe (1999–2020), crude CIF Rotterdam (2021–2024), then CFR Europe (from January 2025). ([`worldbank_cmo.py`](research/worldbank_cmo.py))
+- **ICC:** in all 130 monthly report files from 2016-01 to 2026-10 there is no FOB, CIF or Europe copra line. Every copra quote is domestic. ([`icc_archive.py`](research/icc_archive.py))
 - **Oil World:** the Sri Lanka CDA bulletin credits its CIF Rotterdam coconut oil quote to Oil World, a subscription service. A paid, non-redistributable price cannot be an input to an index that third parties must be able to reproduce (GCPI-001 §12.3).
 - **Exchanges:** no active copra futures contract was found.
 
@@ -55,22 +56,24 @@ Monthly log changes of ICC's weekly copra prices, 2016-01 to 2026-10, in US$:
 
 | | Indonesia | Philippines | Sri Lanka |
 |---|---|---|---|
-| **India** | −0.14 | −0.01 | +0.33 |
-| **Indonesia** | | **+0.79** | −0.00 |
-| **Philippines** | | | −0.04 |
+| **India** | +0.29 | +0.32 | +0.17 |
+| **Indonesia** | | **+0.75** | +0.26 |
+| **Philippines** | | | +0.13 |
 
-Mean level, 2025-09 to 2026-10 (US$/t): Philippines 1,094 · Indonesia 1,031 · Sri Lanka 1,474 · India 1,884.
+*(Corrected, #88. The first version read ICC's 2016-10..2017-02 reports, which write dates month-first, as day-first. That misplaced weeks between months and showed India and Sri Lanka as uncorrelated, at −0.14 to +0.33.)*
+
+Mean level, 2025-09 to 2026-10 (US$/t): Philippines 1,093 · Indonesia 1,031 · Sri Lanka 1,474 · India 1,884.
 
 The Philippines and Indonesia export most of their copra as coconut oil and price off world demand. India and Sri Lanka price off domestic demand, and India sets a minimum support price for milling copra. (The explanation is context, not measured here; the correlation and levels are measured.)
 
 Consequences:
 - A production-weighted average of all four (GCPI-001 §4) would be dominated by the Philippines and Indonesia, and its India and Sri Lanka components would add noise unrelated to the export market.
-- GCPI-001 §7.5's corroboration example assumes the four markets move together. They do not, so cross-market anomaly checks across all four would raise false positives. Corroboration should compare the Philippines with Indonesia, and use coconut oil as the export-market signal.
-- Caveat: these are US$ series converted by ICC at an undisclosed rate, so currency moves are mixed in. Phase 2 (#88) should repeat this in local currency from primary sources.
+- GCPI-001 §7.5's corroboration example assumes the four markets move together. They move together only weakly, so cross-market anomaly checks across all four would raise false positives. Corroboration should compare the Philippines with Indonesia, and use coconut oil as the export-market signal.
+- Caveat: these are US$ series converted by ICC at an undisclosed rate, so currency moves are mixed in. Phase 2 ([BACKTEST.md](BACKTEST.md#1-correlations-and-spreads)) repeats this with CDB for India and confirms the split.
 
 ### 3. Source by source
 
-**Philippines, PSA** (`psa-farmgate-copra`). Monthly national and provincial farmgate prices for Copra Resecada (dried, milling) and Copra Corriente, from a public JSON API with no key. History runs 2010-01 to 2026-06 with no gaps. Data quality flag: Corriente, the wetter and cheaper grade, is priced above Resecada in 15 months, all in 2024–2026 and none in 2010–2023. That points to a sampling or definition change that Phase 2 must explain before the series is used. ([`psa_copra.py`](research/psa_copra.py))
+**Philippines, PSA** (`psa-farmgate-copra`). Monthly national and provincial farmgate prices for Copra Resecada (dried, milling) and Copra Corriente, from a public JSON API with no key. History runs 2010-01 to 2026-06 with no gaps. Data quality flag: Corriente, the wetter and cheaper grade, is priced above Resecada in 15 months, all in 2024–2026 and none in 2010–2023. That points to a sampling or definition change that Phase 2 must explain before the series is used. ([`psa_copra.py`](research/psa_copra.py)) *Phase 2 found that the whole series breaks from January 2024: its correlation with ICC's Philippine price falls from +0.91 to +0.37 ([BACKTEST.md](BACKTEST.md#data-quality-findings)).*
 
 **Philippines, PCA** (`pca-price-monitoring`). Press reports cite PCA daily farmgate and millgate monitoring, but the site serves a Cloudflare challenge to every non-browser client and publishes no price page or file. In July 2026 PCA also sought powers to influence copra prices. A publisher that intervenes in the market it reports is a conflict GCPI should disclose if PCA ever becomes a source.
 
@@ -122,7 +125,7 @@ For #90 to accept, amend or reject:
 
 | Component | Source | Status before v1 can use it |
 |---|---|---|
-| Headline: Philippines, Resecada, farmgate | PSA OpenSTAT | Explain the 2024–2026 grade inversion (#88); confirm republication terms |
+| Headline: Philippines, Resecada, farmgate | PSA OpenSTAT | **Blocked:** the series breaks from 2024 (#88). PSA must explain or correct it; confirm republication terms |
 | Headline: Indonesia | None | Find a primary source, or the headline stays single-country |
 | Sub-index: India, milling copra | CDB (Kochi, Kozhikode, Alappuzha) | Confirm terms; use weekly or monthly values, not daily |
 | Sub-index: Sri Lanka | CDA daily bulletin | Confirm terms; obtain archive before 2026 |
