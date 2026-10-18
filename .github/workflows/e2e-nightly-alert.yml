@@ -3,6 +3,7 @@ name: E2E nightly alert
 # When a nightly tier-2 (#50) or fork (#48) run fails, opens an issue labelled `e2e-nightly` (or comments
 # on the open one), and closes it when the next nightly run of that workflow is green (#49). Runs from
 # main with its own token; it checks out nothing and runs no code from the run it reports on.
+# test/ci/nightly-alert.test.cjs runs this script against a stub gh.
 #
 # A scheduled workflow on a public repo is disabled after 60 days without repository activity, and then
 # simply stops: no run, so no alert from here. GitHub emails the repository admins before it disables
@@ -38,8 +39,9 @@ jobs:
         run: |
           set -euo pipefail
           export TITLE="Nightly failing: ${WORKFLOW}"
+          # One issue per workflow, so at most two are ever open with the label: the default page covers them.
           open=$(gh issue list --label e2e-nightly --state open --json number,title \
-            --jq '.[] | select(.title == env.TITLE) | .number' | head -n1)
+            --jq 'map(select(.title == env.TITLE)) | first | .number // empty')
           if [[ "$CONCLUSION" == "success" ]]; then
             [[ -z "$open" ]] || gh issue close "$open" --comment "Green again: ${RUN_URL} (\`${SHA}\`)."
           elif [[ -n "$open" ]]; then

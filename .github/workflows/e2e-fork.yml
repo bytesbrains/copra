@@ -50,6 +50,8 @@ jobs:
           E2E_FORK_BLOCK: ${{ inputs.fork_block }}
         run: |
           [[ -n "${BASE_MAINNET_RPC}" ]] || { echo "::error::the BASE_MAINNET_RPC secret is not set"; exit 1; }
+          # A block number or nothing: it lands in anvil's arguments and in the deployment manifest's JSON.
+          [[ -z "${E2E_FORK_BLOCK}" || "${E2E_FORK_BLOCK}" =~ ^[0-9]+$ ]] || { echo "::error::fork_block must be a block number"; exit 1; }
           make e2e-fork
 
       - name: Upload deployment manifest and failure logs

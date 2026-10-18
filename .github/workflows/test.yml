@@ -43,6 +43,9 @@ jobs:
       - name: Run web quote tests
         run: node --test test/web/*.test.cjs
 
+      - name: Run CI workflow script tests
+        run: node --test test/ci/*.test.cjs
+
       - name: Simulate deployment script (dry-run)
         env:
           # A local simulation needs no real key, and this job runs code from any pushed branch.
