@@ -34,6 +34,16 @@ def sheet_path(z, name):
     return target.lstrip("/") if target.startswith("/") else "xl/" + target
 
 
+def is_number(v):
+    """The file marks a missing month with "..", "…" or blank; only a number is an observation. The copra
+    column keeps ".." from 2015-01 until it was dropped in 2021, so counting non-blank cells overstates it."""
+    try:
+        float(v)
+        return True
+    except (TypeError, ValueError):
+        return False
+
+
 def main(argv):
     if len(argv) != 2:
         print(__doc__)
@@ -56,7 +66,7 @@ def main(argv):
     wanted = {col: name for col, name in header.items() if re.search(r"copra|coconut", str(name), re.I)}
     data = [r for r in rows if re.fullmatch(r"\d{4}M\d\d", str(r.get("A", "")))]
     for col, name in wanted.items():
-        months = [r["A"] for r in data if r.get(col) not in (None, "", "…")]
+        months = [r["A"] for r in data if is_number(r.get(col))]
         print(f"{name}: {months[0]} .. {months[-1]} ({len(months)} months)")
     if not any("copra" in n.lower() for n in wanted.values()):
         print("No copra column.")

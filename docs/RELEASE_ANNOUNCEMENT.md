@@ -23,7 +23,7 @@ Live on Base Sepolia: https://copra.dev
 Codebase (MIT): https://github.com/bytesbrains/copra
 
 **Post 2 — Why Copra?**
-Unlike fiat currencies that inflate or speculative tokens backed by nothing, coconut palms are a perennial biological engine—yielding harvests every 45–60 days for 60+ years across 90+ tropical nations.
+Coconut palms are a perennial crop, yielding harvests every 45–60 days for 60+ years across 90+ tropical nations. $COPRA tracks the copra price both ways: it is commodity exposure, not an inflation hedge. Copra lost about 1.8% a year after inflation from 1960 to 2014 (gcpi/BACKTEST.md).
 
 Copra is the global benchmark commodity behind coconut oil, lauric acid, and agricultural trade.
 

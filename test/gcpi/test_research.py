@@ -48,7 +48,32 @@ class IccParse(unittest.TestCase):
 
     def test_a_month_without_a_date_header_is_an_error(self):
         with self.assertRaisesRegex(ValueError, "no date header"):
-            icc_archive.parse("2026-10", "Copra    Philippines (Domestic, Quezon)    881\n")
+            icc_archive.parse("2026-10", "Prices of Coconut Products\nOctober 2026\n"
+                                         "Copra    Philippines (Domestic, Quezon)    881\n")
+
+    def test_month_first_headers_are_read_by_the_reports_own_month(self):
+        # ICC wrote MM/DD/YYYY from 2016-10 to 2017-02. Read day-first, "10/07/2016" would be 10 July and
+        # land in the wrong month silently (#88 found this; it had skewed #87's correlations).
+        oct2016 = ICC_MONTH.replace("October 2026", "October 2016").replace(
+            "03/10/2026   10/10/2026   17/10/2026", "10/07/2016   10/14/2016   10/21/2016")
+        dates = sorted({r["date"] for r in icc_archive.parse("2016-10", oct2016)})
+        self.assertEqual(dates, ["2016-10-07", "2016-10-14"])
+
+    def test_a_header_date_outside_the_reports_month_is_an_error(self):
+        bad = ICC_MONTH.replace("03/10/2026", "08/08/2026")
+        with self.assertRaisesRegex(ValueError, "not in the report's month"):
+            icc_archive.parse("2026-10", bad)
+
+    def test_a_file_holding_another_months_report_is_misfiled(self):
+        # ICC's wpu2026-01.pdf holds the August 2026 report.
+        with self.assertRaisesRegex(icc_archive.Misfiled, "2026-01: file holds the October 2026 report"):
+            icc_archive.parse("2026-01", ICC_MONTH)
+
+    def test_abbreviated_month_titles(self):
+        self.assertEqual(len(icc_archive.parse("2026-10", ICC_MONTH.replace("October 2026", "Oct 2026"))), 4)
+
+    def test_next_month(self):
+        self.assertEqual([icc_archive.next_month(m) for m in ("2025-12", "2026-01")], ["2026-01", "2026-02"])
 
     def test_month_range(self):
         self.assertEqual(list(icc_archive.months("2025-11", "2026-02")), ["2025-11", "2025-12", "2026-01", "2026-02"])
@@ -83,6 +108,13 @@ class WorldBankSheet(unittest.TestCase):
         self.assertEqual(z.read(path), b"<monthly/>")
         # Positional lookup would have read sheet2 for the *first* sheet here; check the trap is real.
         self.assertEqual(worldbank_cmo.sheet_path(z, "AFOSHEET"), "xl/worksheets/sheet3.xml")
+
+    def test_only_numbers_are_observations(self):
+        # The 2020 edition keeps a copra column of ".." from 2015 on; counting it overstated coverage (#88).
+        for v in ("..", "…", "", None):
+            self.assertFalse(worldbank_cmo.is_number(v), repr(v))
+        for v in ("758.66", "1e3", 408):
+            self.assertTrue(worldbank_cmo.is_number(v), repr(v))
 
     def test_a_renamed_sheet_fails_loudly_naming_what_exists(self):
         z = xlsx({"Prices": "<p/>"})
