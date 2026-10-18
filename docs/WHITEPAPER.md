@@ -14,7 +14,7 @@
 
 ## Abstract
 
-We introduce **Copra Protocol**, an autonomous Real-World Asset (RWA) currency that maps the macro value and production yield of the global coconut economy to an on-chain digital asset ($COPRA). Unlike speculative meme coins or fiat stablecoins, $COPRA is anchored to the global spot price of copra—the dried coconut meat that serves as the international price benchmark for the $15 billion coconut derivatives market. Minted against its full value in transparent on-chain reserves and run by non-upgradeable smart contracts with a small, explicit set of privileged roles (§6), Copra Protocol removes custodial counterparty risk, offers permissionless redemption at the benchmark price while the vault is fully covered (§2.2), and creates an autonomous cash-flow engine for protocol participants.
+We introduce **Copra Protocol**, an autonomous Real-World Asset (RWA) currency that maps the macro value and production yield of the global coconut economy to an on-chain digital asset ($COPRA). Unlike speculative meme coins or fiat stablecoins, $COPRA is denominated in kilograms of copra—the dried coconut meat pressed for coconut oil—and priced by an on-chain oracle (§2.1, §3). Minted against its full value in transparent on-chain reserves and run by non-upgradeable smart contracts with a small, explicit set of privileged roles (§6), Copra Protocol removes custodial counterparty risk, offers permissionless redemption at the benchmark price while the vault is fully covered (§2.2), and creates an autonomous cash-flow engine for protocol participants.
 
 ---
 
@@ -32,14 +32,16 @@ Existing commodity tokens suffer from two extremes:
 1. **Physical Custody Risks**: Tokens backed by vaulted physical goods (gold, agricultural grain) require trusted third-party warehouse operators, legal SPVs, inspection audits, and off-chain legal overhead.
 2. **Purely Speculative Tokens**: Tokens with agricultural branding that have zero connection to real-world commodity pricing or production data.
 
-Copra Protocol solves this by implementing an **Autonomous Peg Stability Module (PSM)**: $COPRA is minted against its full value in on-chain stable collateral (USDC) while its unit price dynamically tracks the verified international copra commodity benchmark.
+Copra Protocol solves this by implementing an **Autonomous Peg Stability Module (PSM)**: $COPRA is minted against its full value in on-chain stable collateral (USDC) while its unit price follows the copra price posted to the oracle (§2.1).
 
 ---
 
 ## 2. Economic & Mathematical Architecture
 
 ### 2.1 The Unit of Account
-The base benchmark unit is **1 kg of standardized commercial-grade Copra** as reported by the International Coconut Community (ICC) and World Bank Commodity trade bulletins.
+The unit of account is **1 kg of copra**, priced in USD with 8 decimals by `CopraOracle`. The oracle reads no external source: a single updater posts the price (§3, §6). On testnet that updater runs the [oracle feeder](../scripts/oracle-feeder.sh), which posts a price from a declared source or a manual override, and records where each one came from. No source is declared yet, so testnet prices today are manual.
+
+The intended source of truth is **GCPI**, an open, reproducible copra price index specified in [GCPI-001](specs/GCPI-001.md), whose reference unit is a kilogram of standardized milling copra. GCPI does not publish a price yet, and nothing reads it.
 
 ### 2.2 Collateralization & Price Moves
 Every unit of $COPRA is minted against its full value in stable collateral at the price of the moment, locked inside the `CopraVault`. That collateral is a fixed pool of USDC, while the value it backs floats with the oracle price. The vault is fully covered when:

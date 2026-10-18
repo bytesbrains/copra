@@ -10,7 +10,7 @@ Target Network: Base L2
 ```mermaid
 flowchart TD
     User["User / Trader / Arbitrageur"]
-    Oracle["CopraOracle.sol\n(International Commodity Feed)"]
+    Oracle["CopraOracle.sol\n(Copra Price, posted by one updater)"]
     Vault["CopraVault.sol\n(Peg Stability & Collateral Vault)"]
     Token["CopraToken.sol\n($COPRA ERC-20)"]
     Collateral["USDC Reserve"]
