@@ -10,6 +10,7 @@ import zipfile
 ROOT = os.path.join(os.path.dirname(__file__), "..", "..")
 sys.path.insert(0, os.path.join(ROOT, "gcpi", "research"))
 import icc_archive  # noqa: E402
+import psa_copra  # noqa: E402
 import worldbank_cmo  # noqa: E402
 
 # pdftotext -layout output of an ICC monthly report, trimmed to the rows that matter.
@@ -121,6 +122,20 @@ class WorldBankSheet(unittest.TestCase):
         with self.assertRaises(SystemExit) as ctx:
             worldbank_cmo.sheet_path(z, "Monthly Prices")
         self.assertIn("the file has: Prices", str(ctx.exception))
+
+
+class PsaQuery(unittest.TestCase):
+    # PXWeb metadata maps each value's code to its text; the query must use the codes.
+    META = {"variables": [
+        {"code": "Geolocation", "values": ["0", "1"], "valueTexts": ["PHILIPPINES", "NCR"]},
+        {"code": "Commodity", "values": ["7", "8", "9"], "valueTexts": ["Abaca", "Copra Resecada", "Copra Corriente"]},
+    ]}
+
+    def test_national_series_of_both_grades_by_code(self):
+        q = psa_copra.query(self.META)
+        sel = {v["code"]: v["selection"]["values"] for v in q["query"]}
+        self.assertEqual(sel, {"Geolocation": ["0"], "Commodity": ["8", "9"]})
+        self.assertEqual(q["response"], {"format": "json"})
 
 
 if __name__ == "__main__":

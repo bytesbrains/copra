@@ -1,0 +1,62 @@
+{
+ "block": 52779095,
+ "uma_oov3": {
+  "address": "0x2aBf1Bd76655de80eDB3086114315Eec75AF500c",
+  "default_liveness_s": 7200,
+  "burned_bond_share": 0.5,
+  "usdc_final_fee": 250.0,
+  "usdc_minimum_bond": 500.0,
+  "owner": "0xd0ce2f132d606a19b01c03f6c327f324add8fcd3",
+  "owner_is_governor_spoke": true
+ },
+ "reclaim": [
+  {
+   "address": "0xACE04E6DeB9567C1B8F37D113F2Da9E690Fc128d",
+   "owner": "0xc15718eec68dbca02c4b4215b87beef46c3106d5",
+   "owner_is_contract": false,
+   "upgradeable_proxy": true,
+   "implementation": "0x7281630e4346dd4c0b7ae3b4689c1d0102741410",
+   "epoch": {
+    "id": 2,
+    "from": 1702206255,
+    "to": 1702292655,
+    "witnesses": [
+     "0x244897572368eadf65bfbc5aec98d8e5443a9072"
+    ],
+    "minimum_signatures": 1
+   }
+  },
+  {
+   "address": "0x15d267946ae3134429fC7b5895B91FE17935D042",
+   "owner": "0xc15718eec68dbca02c4b4215b87beef46c3106d5",
+   "owner_is_contract": false,
+   "upgradeable_proxy": true,
+   "implementation": "0x48f90603202b393bf1e3f430fe5d75a194454ffb",
+   "epoch": {
+    "id": 2,
+    "from": 1721828109,
+    "to": 1721914509,
+    "witnesses": [
+     "0x244897572368eadf65bfbc5aec98d8e5443a9072"
+    ],
+    "minimum_signatures": 1
+   }
+  }
+ ],
+ "primus": [
+  {
+   "address": "0x151cb5eD5D10A42B607bB172B27BDF6F884b9707",
+   "owner": "0xef4730c9734eb7afe124b1b909578497db61c021",
+   "owner_is_contract": false,
+   "upgradeable_proxy": true,
+   "implementation": "0xfda482dd37609f11fd0e8c415cccfd4f070a1845"
+  },
+  {
+   "address": "0x9C1bb8197720d08dA6B9dab5704a406a24C97642",
+   "owner": "0xef4730c9734eb7afe124b1b909578497db61c021",
+   "owner_is_contract": false,
+   "upgradeable_proxy": true,
+   "implementation": "0xc0e0e3c9df98bc01bae7739a4f7fec01fd855399"
+  }
+ ]
+}

@@ -100,7 +100,7 @@ Every recommended input is in the "unclear" row. GCPI-001 §12.2 requires an ope
 ### 5. Authentication (input to #89)
 
 No source offers a signed feed. What exists:
-- **HTTPS JSON API:** PSA. This is the best case for TLS attestation (zkTLS/TLSNotary): small, structured responses.
+- **HTTPS JSON API:** PSA. This is the best case for TLS attestation (zkTLS/TLSNotary): small, structured responses. *(Corrected, #89: OpenSTAT accepts only TLS 1.3, and TLSNotary supports only TLS 1.2, so PSA cannot be attested with it today ([AUTHENTICATION.md](AUTHENTICATION.md#what-each-source-offers-an-attestation)).)*
 - **HTTPS HTML form:** CDB. Attestable, but each request needs ASP.NET view state.
 - **HTTPS PDF:** CDA, ICC, KIK, VBOS. A price inside a PDF is hard to extract in-proof.
 - **Blocked:** PCA. A Cloudflare JavaScript challenge defeats both plain collectors and TLS attestation.
@@ -147,7 +147,7 @@ Until then, calling the headline "global" would overstate it.
 ## Implications for the other issues
 
 - **#88 (backtest):** test the export-linked headline and the sub-indices separately; repeat the regime analysis in local currency; explain the PSA grade inversion; treat CDB daily values as carried forward.
-- **#89 (authentication):** PSA's JSON API is the realistic first target for TLS attestation. PDF sources need a different approach, and PCA is out of reach.
+- **#89 (authentication):** PSA's JSON API is the realistic first target for TLS attestation. PDF sources need a different approach, and PCA is out of reach. *(Answered in [AUTHENTICATION.md](AUTHENTICATION.md): PSA is TLS 1.3 only, so the first target is the ECB's FX XML; PDFs are attested as transcripts and parsed by a pinned parser.)*
 - **#90 (spec decisions):** Q1 basis and grade as above; cadence monthly unless a weekly primary appears; §7.5 corroboration within the export-linked pair plus coconut oil, not across all four markets.
 - **#96 (COPRA-001 economics):** a monthly GCPI with a two-month publication lag means a redemption settles about three to four months after request: the next month must end, then be published (COPRA-001 §8.2). The ratios in COPRA-001 §13.2 must be sized for that.
 - **#98 (legal):** licence confirmations above, and FAOSTAT's commercial-promotion clause.
