@@ -121,18 +121,21 @@ feed 0 "the oracle accepts one update per ${DAY}s. Skipping broadcast." TARGET_P
 [[ "${OUT}" == *"Oracle Contract : ${ORACLE}"* ]] || fail "did not resolve ${ORACLE} through the registry"
 expect_no_update
 
-scenario "after 1 day: broadcasts, and the oracle and PriceUpdated match"
+scenario "after 1 day: broadcasts, and the oracle and PriceUpdated match, with a provenance record"
 warp "${DAY}"
 feed 0 "successfully updated" TARGET_PRICE=1.45
 expect_update 142000000 145000000
+[[ "${OUT}" == *'Provenance Record: {"tx": "0x'*'"price_e8": 145000000, "raw_value": "1.45",'*'"source": "manual override"'* ]] \
+    || fail "no provenance record naming the manual override"
 
-scenario "a target more than 20% away clamps to 19.5%, both ways, and the updates land"
+scenario "a target more than 20% away is refused, both ways, never clamped (#85)"
 warp "${DAY}"
-feed 0 "Clamping to 19.5%" TARGET_PRICE=2.00
-expect_update 142000000 169690000 # 1.42 * 1.195
-warp "${DAY}"
-feed 0 "Clamping to 19.5%" TARGET_PRICE=1.00
-expect_update 169690000 136600450 # 1.6969 * 0.805
+feed 1 "exceeds the oracle's 20% limit" TARGET_PRICE=2.00
+expect_no_update
+feed 1 "exceeds the oracle's 20% limit" TARGET_PRICE=1.00
+expect_no_update
+feed 0 "successfully updated" TARGET_PRICE=1.704 # exactly +20%, which the oracle accepts
+expect_update 142000000 170400000
 
 scenario "same price within 5 days: skips; FORCE=true broadcasts"
 warp "${DAY}"
@@ -141,10 +144,15 @@ expect_no_update
 feed 0 "successfully updated" TARGET_PRICE=1.42 FORCE=true
 expect_update 142000000 142000000
 
-scenario "same price after 5 days: refreshes without FORCE"
-warp $((5 * DAY))
-feed 0 "successfully updated" TARGET_PRICE=1.42
-expect_update 142000000 142000000
+scenario "same price at any age: never re-posted without FORCE, so the oracle goes stale (#85)"
+warp $((6 * DAY))
+feed 0 "price is unchanged. Skipping broadcast." TARGET_PRICE=1.42
+expect_no_update
+
+scenario "FORCE without a manual TARGET_PRICE: exit 1, no broadcast"
+warp "${DAY}"
+feed 1 "FORCE re-posts a manual TARGET_PRICE only" FORCE=true
+expect_no_update
 
 scenario "stale oracle (past HEARTBEAT): recovery update lands, price readable again with age 0"
 warp $((7 * DAY + 1))
@@ -206,22 +214,24 @@ feed 0 "successfully updated" TARGET_PRICE=1.55 ORACLE_FEEDER_FROM= ORACLE_FEEDE
 expect_update 150000000 155000000
 expect_eq "$(price "${ORACLE}")" 142000000 "old oracle price (must be untouched)"
 
-scenario "benchmark path (python3, no TARGET_PRICE): non-allowlisted feed host falls back to the benchmark"
+scenario "no source and no override: exit 1, no broadcast, no default price (#85)"
 warp "${DAY}"
-feed 0 "successfully updated" COMMODITY_FEED_API_URL=https://evil.example/price DEFAULT_BENCHMARK=1.45
-[[ "${OUT}" == *"Untrusted feed URL scheme or host: https://evil.example"* ]] || fail "feed URL was not rejected"
-expect_update 142000000 145000000
-warp "${DAY}"
-feed 0 "successfully updated" # no TARGET_PRICE, no feed: the built-in 1.42 benchmark
-expect_update 145000000 142000000
+feed 1 "no price source" DEFAULT_BENCHMARK=1.45 # the old fallback knob, now ignored
+expect_no_update
 
-scenario "stale oracle and a benchmark more than 20% away: the recovery update is clamped too, and lands"
-# The oracle checks the 20% limit against its stored price even when stale. An unclamped recovery reverts
-# with PriceChangeExceeded and leaves the oracle stale, so mint and redeem stay down.
+scenario "source path (python3): an undeclared feed host fails closed, no broadcast (#85)"
+warp "${DAY}"
+feed 1 "price source failed, not broadcasting: host 'evil.example' is not a declared source" \
+    COMMODITY_FEED_API_URL=https://evil.example/price
+expect_no_update
+
+scenario "stale oracle and a target more than 20% away: refused before broadcasting, the oracle stays stale"
+# The oracle checks the 20% limit against its stored price even when stale, so the feeder reads that price
+# from storage and refuses here rather than sending an update that reverts with PriceChangeExceeded.
 warp $((7 * DAY + 1))
-feed 0 "Clamping to 19.5%" TARGET_PRICE=2.00
+feed 1 "exceeds the oracle's 20% limit" TARGET_PRICE=2.00
 [[ "${OUT}" == *"Last On-Chain Price    : \$1.4200 USD / kg (142000000), stale"* ]] || fail "stale price not read from storage"
-expect_update 142000000 169690000
+expect_no_update
 
 scenario "stale oracle and its storage unreadable: exit 1, no broadcast"
 warp $((7 * DAY + 1))

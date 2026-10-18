@@ -69,3 +69,6 @@ Thumbs.db
 .logs/
 tmp/
 temp/
+
+# Python bytecode from the feeder source tests
+__pycache__/
