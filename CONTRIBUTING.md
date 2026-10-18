@@ -59,8 +59,8 @@ BASE_MAINNET_RPC=<archive RPC> make e2e-fork     # the scenario suite on a Base-
 ```bash
 gh run download <run-id> -D /tmp/e2e     # or download it from the run's Summary page
 ```
-- `browser/report/`: the Playwright HTML report. Open `index.html`.
-- `browser/test-results/<test>/`: for each failing test, `trace.zip`, a video and screenshots. In tier 2 these include MetaMask's side panel. Open a trace with `npx playwright show-trace trace.zip`, or at [trace.playwright.dev](https://trace.playwright.dev). It holds every action, network request and DOM snapshot.
+- `browser/report/` (tier 1) or `browser/metamask-report/` (tier 2): the Playwright HTML report. Open `index.html`. A failing test's screenshots are attached there; in tier 2 they include MetaMask's side panel as it was when the test failed.
+- `browser/test-results/<test>/` (tier 1) or `browser/metamask-results/<test>/` (tier 2): for each failing test, `trace.zip` and its video. Open a trace with `npx playwright show-trace trace.zip`, or at [trace.playwright.dev](https://trace.playwright.dev). It holds every action, network request and DOM snapshot.
 - `stack.log`: the chain's and the web server's logs, kept when a run fails.
 - `deployment.json`: the addresses and roles of the deployment the run used.
 
