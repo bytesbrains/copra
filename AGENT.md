@@ -28,7 +28,7 @@ This document provides autonomous coding assistants and contributors with critic
 - `scripts/`: Operational utilities (oracle feeder script, hook setup).
 - `docs/`: Technical specifications (`WHITEPAPER.md`, `ARCHITECTURE.md`).
 - `web/`: Frontend landing page and dApp interface.
-- `.githooks/`: Pre-commit (gitleaks + forge fmt) and pre-push (forge test) hooks.
+- `.githooks/`: Pre-commit (gitleaks + forge fmt) and pre-push (`scripts/check-committed-files.sh` on the commits being pushed, then forge test) hooks. Enable with `scripts/setup_hooks.sh`.
 
 ---
 
