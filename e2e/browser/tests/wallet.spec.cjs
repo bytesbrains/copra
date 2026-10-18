@@ -151,6 +151,26 @@ test('a request left unanswered in the wallet → after 5s the page says to open
   await expectPageMatchesChain(page, user);
 });
 
+test('two requests left unanswered at once: the hint stays while either is pending, and goes when both are answered', async ({ page, wallet }) => {
+  await open(page);
+  await connect(page, wallet);
+  // Add COPRA, then Add USDC, neither answered: neither is followed by a toast of its own when answered,
+  // so the page alone must take the hint down.
+  const first = wallet.hold('wallet_watchAsset');
+  const second = wallet.hold('wallet_watchAsset');
+  await page.click('#watchCopraBtn');
+  await page.waitForTimeout(1_000);
+  await page.click('#watchUsdcBtn');
+  await expect(toast(page)).toHaveText(WALLET_HINT, { timeout: 10_000 });
+  await page.waitForTimeout(1_500); // past the second request's 5s too
+  first();
+  await page.waitForTimeout(500);
+  await expect(toast(page), 'the second request is still waiting').toHaveText(WALLET_HINT);
+  second();
+  await expect(toast(page)).not.toContainText(WALLET_HINT);
+  expect(wallet.calls('wallet_watchAsset')).toHaveLength(2);
+});
+
 test('a request answered within 5s never shows the hint', async ({ page, wallet }) => {
   await open(page);
   const release = wallet.hold('eth_requestAccounts');

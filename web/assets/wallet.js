@@ -5,26 +5,35 @@
 
 // --- Requests the user answers in their wallet ---
 // Closing the wallet's window does not reject a request: MetaMask keeps it pending (#76), and the page
-// can only wait. After a few seconds, say where the answer is expected. The hint is withdrawn as soon
-// as the request settles, either way, putting back what it covered unless a newer message replaced it.
+// can only wait. After a few seconds, say where the answer is expected. There is one status toast, so
+// there is one hint, shared by every request still waiting past the delay (Add COPRA and Add USDC can
+// both be pending). It is withdrawn when the last of them settles, putting back what it covered unless
+// a newer message replaced it.
 const WALLET_HINT_MS = 5000;
 const WALLET_HINT = 'Waiting for your answer: open your wallet to confirm or reject this request.';
+let walletHint = null; // { el, covered, waiting }: the hint on screen and how many late requests it stands for
 
 async function awaitWallet(request) {
-  let hint = null;
-  let covered = null;
+  let late = false;
   const timer = setTimeout(() => {
-    covered = { className: txStatus.className, nodes: [...txStatus.childNodes] };
-    showToast(WALLET_HINT, 'pending');
-    hint = txStatus.firstChild;
+    late = true;
+    if (!walletHint || txStatus.firstChild !== walletHint.el) {
+      const covered = { className: txStatus.className, nodes: [...txStatus.childNodes] };
+      showToast(WALLET_HINT, 'pending');
+      walletHint = { el: txStatus.firstChild, covered, waiting: walletHint?.waiting ?? 0 };
+    }
+    walletHint.waiting++;
   }, WALLET_HINT_MS);
   try {
     return await request;
   } finally {
     clearTimeout(timer);
-    if (hint && txStatus.firstChild === hint) {
-      txStatus.className = covered.className;
-      txStatus.replaceChildren(...covered.nodes);
+    if (late && --walletHint.waiting === 0) {
+      if (txStatus.firstChild === walletHint.el) {
+        txStatus.className = walletHint.covered.className;
+        txStatus.replaceChildren(...walletHint.covered.nodes);
+      }
+      walletHint = null;
     }
   }
 }
