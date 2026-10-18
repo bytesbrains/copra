@@ -1,6 +1,7 @@
 # Run with: python3 -m unittest discover -s test/gcpi
 # gcpi/sources.json, the Phase 1 source registry (#87): every candidate GCPI-001 §3.1 and #87 name is
-# present, every entry carries the fields the issue asks for, and every rejection says why.
+# present, every entry carries the fields the issue asks for, and every rejection says why. The
+# authentication tags are #89's.
 import json
 import os
 import re
@@ -13,6 +14,10 @@ SOURCES = REGISTRY["sources"]
 ROLES = {"headline-candidate", "sub-index-candidate", "corroboration", "weights", "history-only", "rejected"}
 ACCESS = {"api", "html", "html-form", "pdf", "xlsx", "none-found"}
 REDISTRIBUTION = {"open", "unclear", "restricted"}
+# Authentication tags: Phase 1's transport and format, plus what #89's probe (gcpi/research/tls_probe.py)
+# found: the TLS versions offered, a CDN terminating TLS, a key requirement, a page that changes per request.
+AUTHENTICATION_TAGS = {"https", "pdf", "html", "xlsx", "blocked", "none", "tls1.2-only", "tls1.3-only", "cdn",
+                       "api-key", "page-varies"}
 REQUIRED = ["id", "publisher", "market", "series", "url", "access", "access_detail", "cadence", "typical_delay",
             "history", "commodity", "grade", "basis", "currency", "unit", "licence", "authentication",
             "outages_and_changes", "role", "reason", "evidence"]
@@ -65,6 +70,7 @@ class Registry(unittest.TestCase):
             self.assertIn(s["access"], ACCESS, s["id"])
             self.assertIn(s["licence"]["redistribution"], REDISTRIBUTION, s["id"])
             self.assertTrue(s["licence"]["terms"], s["id"])
+            self.assertLessEqual(set(s["authentication"]), AUTHENTICATION_TAGS, s["id"])
 
     def test_urls_are_https(self):
         for s in SOURCES:

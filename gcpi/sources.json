@@ -4,7 +4,7 @@
   "phase": "Phase 1 source research (#87)",
   "checked": "2026-10-18",
   "report": "SOURCES.md",
-  "notes": "One entry per candidate publication. 'role' is this research's recommendation, not a decision: GCPI-001 §19 Q1/Q2 are settled in #90. A field marked 'unverified' was not confirmed from the source itself.",
+  "notes": "One entry per candidate publication. 'role' is this research's recommendation, not a decision: GCPI-001 §19 Q1/Q2 are settled in #90. A field marked 'unverified' was not confirmed from the source itself. Authentication tags of probed endpoints come from gcpi/research/tls_probe.py (#89, gcpi/AUTHENTICATION.md).",
   "sources": [
     {
       "id": "psa-farmgate-copra",
@@ -23,7 +23,7 @@
       "currency": "PHP",
       "unit": "kg",
       "licence": { "terms": "not stated on the API; OpenSTAT site returned 403 to automated fetch (unverified)", "redistribution": "unclear" },
-      "authentication": ["https"],
+      "authentication": ["https", "tls1.3-only", "cdn"],
       "outages_and_changes": [
         "Corriente priced above Resecada in 15 months, all in 2024-2026 and none in 2010-2023",
         "Series breaks from 2024-01: r vs ICC's Philippine price +0.91 in 2010-2023, +0.37 since; 8 of 30 months since would be quarantined under GCPI-001 §7.3 (#88, gcpi/BACKTEST.md)"
@@ -75,7 +75,7 @@
       "currency": "USD (converted by ICC from local currency at an undisclosed rate)",
       "unit": "tonne",
       "licence": { "terms": "© All Rights Reserved by International Coconut Community; no data-use terms published", "redistribution": "restricted" },
-      "authentication": ["https", "pdf"],
+      "authentication": ["https", "pdf", "cdn"],
       "outages_and_changes": [
         "Indonesia series renamed twice: Domestic, North Sulawesi (to 2022-02) -> Domestic (2022-03..2025-10) -> Domestic, Industry Use (from 2025-11)",
         "India series switches label: Kochi (2016-2018, 2022-) and Kerala (2018-2022)",
@@ -127,7 +127,7 @@
       "currency": "INR",
       "unit": "quintal (100 kg)",
       "licence": { "terms": "content owned by CDB; no licence or reuse terms stated", "redistribution": "unclear" },
-      "authentication": ["https"],
+      "authentication": ["https", "tls1.2-only", "html"],
       "outages_and_changes": [
         "Daily view fills every calendar day including Sundays; 50 of 61 Kochi values in Aug-Sep 2026 equal the previous day, so a daily value does not show that a trade or quote happened (GCPI-001 §8.2 freshness)",
         "Form years go back to 1980 but no data is returned before 2008"
@@ -154,7 +154,7 @@
       "currency": "INR",
       "unit": "quintal (100 kg)",
       "licence": { "terms": "Government Open Data License - India, as stated on the dataset page", "redistribution": "open" },
-      "authentication": ["https"],
+      "authentication": ["https", "api-key"],
       "outages_and_changes": ["Full-day API paging timed out on 2026-10-18"],
       "role": "corroboration",
       "reason": "Open licence and arrival volumes are valuable, but copra coverage, grade and history are unmeasured. Corroborates the CDB sub-index; Phase 2 should measure its copra history.",
@@ -177,7 +177,7 @@
       "currency": "LKR",
       "unit": "250 kg (candy)",
       "licence": { "terms": "none stated", "redistribution": "unclear" },
-      "authentication": ["https", "pdf"],
+      "authentication": ["https", "pdf", "page-varies"],
       "outages_and_changes": [
         "Bulletin also republishes an Oil World CIF Rotterdam coconut oil quote, a licensed third-party price"
       ],
@@ -295,7 +295,7 @@
       "currency": "USD",
       "unit": "tonne",
       "licence": { "terms": "World Bank data terms; licence for this file not confirmed (unverified)", "redistribution": "unclear" },
-      "authentication": ["https"],
+      "authentication": ["https", "xlsx"],
       "outages_and_changes": [
         "Copra published 1960-2014; the 2020 edition revises 1999-2014 by -14% to +10% and marks 2015 onward '..'; the 2021 edition drops the column (#88)",
         "Coconut oil delivery basis changed four times"

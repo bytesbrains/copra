@@ -25,17 +25,22 @@ def get(url, body=None):
         return json.load(r)
 
 
+def query(meta):
+    """The PXWeb query for the national series of both grades, from the table's metadata."""
+    var = {v["code"]: v for v in meta["variables"]}
+    code = lambda c, t: var[c]["values"][var[c]["valueTexts"].index(t)]
+    return {"query": [
+        {"code": "Geolocation", "selection": {"filter": "item", "values": [code("Geolocation", "PHILIPPINES")]}},
+        {"code": "Commodity", "selection": {"filter": "item", "values": [code("Commodity", g) for g in GRADES]}},
+    ], "response": {"format": "json"}}
+
+
 def series():
     """National monthly rows: {"Commodity", "Year", "Period", "php_kg"}, annual averages dropped."""
     meta = get(TABLE)
     var = {v["code"]: v for v in meta["variables"]}
-    code = lambda c, t: var[c]["values"][var[c]["valueTexts"].index(t)]
     text = lambda c, v: var[c]["valueTexts"][var[c]["values"].index(v)] if c in var else v
-    query = {"query": [
-        {"code": "Geolocation", "selection": {"filter": "item", "values": [code("Geolocation", "PHILIPPINES")]}},
-        {"code": "Commodity", "selection": {"filter": "item", "values": [code("Commodity", g) for g in GRADES]}},
-    ], "response": {"format": "json"}}
-    res = get(TABLE, query)
+    res = get(TABLE, query(meta))
     cols = [c["code"] for c in res["columns"]]
     rows = []
     for d in res["data"]:
