@@ -112,6 +112,76 @@ test('user rejects (4001) → error toast, button re-enabled, no stuck "Confirmi
   await expectPageMatchesChain(page, user);
 });
 
+// #76: closing the wallet's window does not reject a request, so the page can only wait. After 5s it says
+// where the answer is expected, and withdraws the hint the moment the request settles.
+const WALLET_HINT = 'Waiting for your answer: open your wallet to confirm or reject this request.';
+
+test('a request left unanswered in the wallet → after 5s the page says to open your wallet; the hint goes when it is answered', async ({ page, wallet, chain, guard }) => {
+  guard.allow(/^(Wallet|Faucet) error:/);
+  const user = wallet.selected;
+  await open(page);
+
+  // Connecting, answered after the hint: the hint is withdrawn and the page connects.
+  let release = wallet.hold('eth_requestAccounts');
+  const clicked = Date.now();
+  await page.click('#connectBtn');
+  await expect(toast(page)).toHaveText(WALLET_HINT, { timeout: 10_000 });
+  expect(Date.now() - clicked, 'not before 5s').toBeGreaterThanOrEqual(5_000);
+  release();
+  await expect(page.locator('#connectText')).toHaveText(short(user), { ignoreCase: true });
+  await expect(toast(page)).not.toContainText(WALLET_HINT);
+
+  // A faucet claim: "Claiming…" first, the hint once it is still unanswered, then the claim goes through.
+  release = wallet.hold('eth_sendTransaction');
+  await page.click('#faucetBtn');
+  await expect(toast(page)).toContainText('Claiming 1,000 Testnet USDC');
+  await expect(toast(page)).toHaveText(WALLET_HINT, { timeout: 10_000 });
+  await expect(page.locator('#faucetBtn')).toBeDisabled();
+  release();
+  await expect(toast(page)).toContainText('1,000 Testnet USDC successfully claimed');
+  await expect(page.locator('#faucetBtn')).toBeEnabled();
+
+  // Rejected after the hint: the error replaces it.
+  release = wallet.hold('eth_sendTransaction');
+  await page.click('#faucetBtn');
+  await expect(toast(page)).toHaveText(WALLET_HINT, { timeout: 10_000 });
+  release({ reject: true });
+  await expect(toast(page)).toContainText(`Faucet error: ${REJECTED}`);
+  await expect(page.locator('#faucetBtn')).toBeEnabled();
+  await expectPageMatchesChain(page, user);
+});
+
+test('two requests left unanswered at once: the hint stays while either is pending, and goes when both are answered', async ({ page, wallet }) => {
+  await open(page);
+  await connect(page, wallet);
+  // Add COPRA, then Add USDC, neither answered: neither is followed by a toast of its own when answered,
+  // so the page alone must take the hint down.
+  const first = wallet.hold('wallet_watchAsset');
+  const second = wallet.hold('wallet_watchAsset');
+  await page.click('#watchCopraBtn');
+  await page.waitForTimeout(1_000);
+  await page.click('#watchUsdcBtn');
+  await expect(toast(page)).toHaveText(WALLET_HINT, { timeout: 10_000 });
+  await page.waitForTimeout(1_500); // past the second request's 5s too
+  first();
+  await page.waitForTimeout(500);
+  await expect(toast(page), 'the second request is still waiting').toHaveText(WALLET_HINT);
+  second();
+  await expect(toast(page)).not.toContainText(WALLET_HINT);
+  expect(wallet.calls('wallet_watchAsset')).toHaveLength(2);
+});
+
+test('a request answered within 5s never shows the hint', async ({ page, wallet }) => {
+  await open(page);
+  const release = wallet.hold('eth_requestAccounts');
+  await page.click('#connectBtn');
+  await page.waitForTimeout(3_000);
+  release();
+  await expect(page.locator('#connectText')).toHaveText(short(wallet.selected), { ignoreCase: true });
+  await page.waitForTimeout(3_000); // past the 5s mark: a timer left running would show it now
+  await expect(toast(page)).not.toContainText(WALLET_HINT);
+});
+
 test('accountsChanged to another account and to none', async ({ page, wallet, chain }) => {
   const [alice, bob] = chain.users;
   await chain.fundUsdc(bob, units(5, 6));

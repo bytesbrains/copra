@@ -51,12 +51,12 @@ Checks the served site from outside: every file is byte-for-byte `web/` built fo
 
 ## Browser suite, tier 1 (`e2e/browser/`, #46)
 Playwright `1.63.0` drives **Chrome** (Playwright's full Chromium build in new headless mode, not the headless shell) in its pinned image, against the `web` service with its CSP enforced. The page runs at `http://127.0.0.1:8787` and reads anvil on `127.0.0.1:8545`, as in a browser on the host: inside the container those two ports are plain TCP forwards to `web` and `chain`, so every byte and header is wrangler's.
-- **The wallet** is a thin EIP-1193 provider injected as `window.ethereum`, whose logic runs in the test process (`lib/wallet.cjs`). It sends transactions to anvil from its unlocked dev accounts, so each one really executes. It signs only for the account it has selected (4100 otherwise), and a test can make it reject (4001), switch account or chain, or not know the chain (4902). Only the wallet's own UI is skipped; tier 2 (#50) is real MetaMask.
+- **The wallet** is a thin EIP-1193 provider injected as `window.ethereum`, whose logic runs in the test process (`lib/wallet.cjs`). It sends transactions to anvil from its unlocked dev accounts, so each one really executes. It signs only for the account it has selected (4100 otherwise), and a test can make it reject (4001), leave a request unanswered until released (`hold`), switch account or chain, or not know the chain (4902). Only the wallet's own UI is skipped; tier 2 (#50) is real MetaMask.
 - **Four layers per action.** UI before (quote, fee, button) → the wallet request (contract, function and exact arguments) → the chain (receipt, events, balances read by the suite's own RPC client, and the contract scenarios' invariants) → UI after (balances and every telemetry card against the chain).
 - **No noise passes.** Every test fails on a `pageerror`, a `securitypolicyviolation`, or a `console.error` it did not declare.
 - **Isolation.** Each test runs in an `evm_snapshot`; pending transactions are dropped before the revert, so one failure cannot stall the next test. Blocks stay at 2s, so pending states are real.
 - **Flows:** connect and faucet; approve then mint; redeem; MAX in both tabs, minting and redeeming the exact balance; `wallet_watchAsset` for both tokens; the real oracle feeder moving the price mid-session, and recovering it after a stale spell.
-- **Corner cases:** no wallet; wrong and unknown chain; rejections; account changes; `chainChanged`; a stale oracle, before load and mid-session; a vault short of collateral; the price moving between quote and signature, and between signature and mining (the vault's bound, #57); the registry unreachable; the vault's fee unreadable; input edge cases; the displayed quote against the vault's own.
+- **Corner cases:** no wallet; wrong and unknown chain; rejections; a request left unanswered in the wallet (the 5s "open your wallet" hint, #76); account changes; `chainChanged`; a stale oracle, before load and mid-session; a vault short of collateral; the price moving between quote and signature, and between signature and mining (the vault's bound, #57); the registry unreachable; the vault's fee unreadable; input edge cases; the displayed quote against the vault's own.
 - **On failure** the trace, screenshot and video of each failing test, and the HTML report, are in `e2e/.out/browser/`. `make e2e` also keeps the chain and web logs in `e2e/.out/stack.log`, and CI uploads both.
 
 Found by the suite and fixed in the dApp:
@@ -115,7 +115,7 @@ The pinned **MetaMask 13.49.0** extension is loaded into Playwright's full Chrom
 | `wallet`: Add COPRA | MetaMask shows the symbol, the dApp's logo and a 2.5 COPRA balance at the right decimals, and accepts the token |
 | `wallet`: switching account | pick Account 2 in MetaMask and connect it from its bar: `accountsChanged`, and the page signs as Account 2. Disconnecting empties it |
 | `wallet`: switching network | move the site to Ethereum from MetaMask's bar: the page reloads; Connect switches it back without a prompt |
-| `wallet`: closing MetaMask | closing the side panel mid-confirmation does **not** reject. The page keeps waiting until the request is answered in MetaMask again |
+| `wallet`: closing MetaMask | closing the side panel mid-confirmation does **not** reject. After 5s unanswered the page says "open your wallet to confirm or reject" (#76); rejecting in MetaMask, reopened, restores it |
 
 **Two MetaMask behaviours the suite works with:**
 - After the suite changes the chain behind the wallet (funding an account), tests wait until **MetaMask returns the chain's balances** before reloading. MetaMask can answer `latest` from before the change for a while, even after it reports a newer block.

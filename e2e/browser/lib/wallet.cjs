@@ -39,6 +39,7 @@ class Wallet {
     this.connected = false;
     this.requests = []; // every request the page made, in order: { method, params }
     this.reject = new Set(); // methods the "user" rejects (4001)
+    this.held = new Map(); // method -> gates, in order: each next such request waits, as if the user had not opened the wallet
     this.beforeSend = null; // async (tx) => {}: runs after the user signs, before the wallet broadcasts
     this.nextId = 1;
   }
@@ -48,6 +49,19 @@ class Wallet {
     await page.exposeBinding('__copraWallet', (_source, method, params) => wallet.handle(method, params));
     await page.addInitScript(SHIM);
     return wallet;
+  }
+
+  /**
+   * Leaves the next `method` request unanswered, like a user who closed the wallet's window, until the
+   * returned function is called: release() lets it proceed, release({ reject: true }) answers 4001.
+   * Called again before that request arrives, it holds the one after it too.
+   */
+  hold(method) {
+    let release;
+    const gates = this.held.get(method) ?? [];
+    gates.push(new Promise((resolve) => { release = resolve; }));
+    this.held.set(method, gates);
+    return (answer = {}) => release(answer);
   }
 
   /** Requests for `method`, in order. */
@@ -72,6 +86,8 @@ class Wallet {
   }
 
   async dispatch(method, params, entry) {
+    const gate = this.held.get(method)?.shift();
+    if (gate && (await gate).reject) throw rpcError(4001, 'User rejected the request.');
     if (this.reject.has(method)) throw rpcError(4001, 'User rejected the request.');
     switch (method) {
       case 'eth_requestAccounts':
