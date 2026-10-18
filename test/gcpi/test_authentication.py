@@ -4,6 +4,7 @@
 import os
 import sys
 import unittest
+from unittest import mock
 
 ROOT = os.path.join(os.path.dirname(__file__), "..", "..")
 sys.path.insert(0, os.path.join(ROOT, "gcpi", "research"))
@@ -41,6 +42,21 @@ class EpochDecoding(unittest.TestCase):
         self.assertEqual(e["minimum_signatures"], 2)
         self.assertEqual((e["id"], e["from"], e["to"]), (7, 100, 200))
 
+    def test_a_different_layout_fails_loudly_instead_of_decoding(self):
+        good = epoch(["0x" + "11" * 20], 1)[2:]
+        w = [good[i:i + 64] for i in range(0, len(good), 64)]
+        broken = {
+            "struct offset": [word(64)] + w[1:],
+            "array offset": w[:4] + [word(192)] + w[5:],
+            "uint8 minimum": w[:5] + [word(256)] + w[6:],
+            "address word": w[:8] + [word(2 ** 160)] + w[9:],
+            "string offset": w[:9] + [word(96)] + w[10:],
+            "truncated": w[:8],
+        }
+        for what, ws in broken.items():
+            with self.subTest(what), self.assertRaises(ValueError):
+                base_attestors.decode_epoch("0x" + "".join(ws))
+
     def test_address_and_argument_encoding(self):
         self.assertEqual(base_attestors.address(int("ab" * 20, 16)), "0x" + "ab" * 20)
         self.assertEqual(base_attestors.arg("0x10"), word(16))
@@ -66,6 +82,10 @@ class ProbeVerdicts(unittest.TestCase):
 
     def test_changing_bytes_mean_committing_to_the_value_only(self):
         self.assertIn("1 line(s) change", tls_probe.verdict(probed(same_bytes=False, changed_lines=1)))
+        self.assertIn("the bytes change", tls_probe.verdict(probed(same_bytes=False, changed_lines=None, kind="pdf")))
+
+    def test_an_unmeasured_second_fetch_is_not_a_change(self):
+        self.assertIn("not measured", tls_probe.verdict(probed(same_bytes=None, changed_lines=None)))
 
     def test_formats(self):
         self.assertIn("structured", tls_probe.verdict(probed(kind="xml")))
@@ -88,8 +108,41 @@ class ProbeVerdicts(unittest.TestCase):
     def test_changed_lines_counts_replaced_lines_once(self):
         a = b"<html>\ntoken=1\n<p>2,450</p>\n"
         b = b"<html>\ntoken=2\n<p>2,450</p>\n"
-        self.assertEqual(tls_probe.changed_lines(a, b), 1)
-        self.assertEqual(tls_probe.changed_lines(a, a), 0)
+        self.assertEqual(tls_probe.changed_lines(a, b, "html"), 1)
+        self.assertEqual(tls_probe.changed_lines(a, a, "html"), 0)
+
+    def test_changed_lines_is_not_counted_for_binary_formats(self):
+        self.assertIsNone(tls_probe.changed_lines(b"%PDF-1\n\x00", b"%PDF-1\n\x01", "pdf"))
+        self.assertIsNone(tls_probe.changed_lines(b"PK\x03", b"PK\x04", "xlsx"))
+
+
+@mock.patch.object(tls_probe.time, "sleep", lambda s: None)
+@mock.patch.object(tls_probe, "issuer", lambda host: "Test CA")
+@mock.patch.object(tls_probe, "handshake", lambda host, v: ("TLSv1.2", "AES"))
+class ProbeRecords(unittest.TestCase):
+    OK = (200, {"content-type": "application/json"}, b'{"v": 1}')
+
+    def test_a_failed_second_fetch_keeps_the_first_fetchs_facts(self):
+        with mock.patch.object(tls_probe, "fetch", side_effect=[self.OK, TimeoutError("timed out")]):
+            p = tls_probe.probe("s", "w", "GET", "https://example.org/x", None)
+        self.assertEqual((p["status"], p["kind"], p["bytes"]), (200, "json", 8))
+        self.assertIsNone(p["same_bytes"])
+        self.assertIn("TimeoutError", p["second_fetch_error"])
+        self.assertIn("not measured", p["verdict"])
+
+    def test_a_body_that_cannot_be_built_yields_a_record(self):
+        def body():
+            raise ValueError("'Copra Resecada' is not in list")
+        p = tls_probe.probe("s", "w", "POST", "https://example.org/x", body)
+        self.assertIsNone(p["status"])
+        self.assertIn("ValueError", p["error"])
+        self.assertIn("unreachable", p["verdict"])
+
+    def test_two_identical_fetches(self):
+        with mock.patch.object(tls_probe, "fetch", side_effect=[self.OK, self.OK]):
+            p = tls_probe.probe("s", "w", "GET", "https://example.org/x", None)
+        self.assertEqual((p["same_bytes"], p["changed_lines"]), (True, 0))
+        self.assertIn("structured", p["verdict"])
 
 
 if __name__ == "__main__":

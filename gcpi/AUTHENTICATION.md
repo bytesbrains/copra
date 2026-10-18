@@ -27,7 +27,7 @@ For #90 to decide.
 
 Two things are **not recommended**:
 - **UMA's DVM as the arbiter.** A token-holder vote is the "majority stake determines the price" §5.4 forbids. The one disputed price that matters would be settled by an external governance body.
-- **Reclaim or Primus as deployed on Base.** Each verifier is an upgradeable proxy controlled by one key. Reclaim's accepts a single witness's signature. That is a privileged oracle committee of one.
+- **Reclaim or Primus as deployed on Base.** Each verifier is an upgradeable proxy controlled by one key. At block 52,779,095, Reclaim's accepted a single witness's signature, and that key can change the witness list, the quorum and the code at any time. That is a privileged oracle committee of one.
 
 **The latency fits the cadence.** A monthly index published about 59 days after month end ([BACKTEST.md §2](BACKTEST.md#2-publication-delays-and-missing-data)) can absorb a fixed challenge window. Recommend 3 days per period for #90, about 5% added to the finalization delay.
 
@@ -75,7 +75,7 @@ The only option with no third party. A publisher signs each release, and GCPI ve
 
 ### 2. Optimistic oracle (UMA OOv3 on Base)
 
-Anyone asserts with a bond, anyone disputes within a liveness window, and disputes go to UMA's DVM, a token-holder vote. Read from Base mainnet at block 52,779,095 with [`base_attestors.py`](research/base_attestors.py):
+Anyone asserts with a bond, anyone disputes within a liveness window, and disputes go to UMA's DVM, a token-holder vote. Read from Base mainnet at block 52,779,095 with [`base_attestors.py`](research/base_attestors.py). UMA governance, the owner, can change each value:
 
 | Parameter | Value |
 |---|---|
@@ -105,7 +105,7 @@ A notary, proxy or TEE takes part in the TLS session and attests to what the ser
 | **Reclaim** (proxy witness) | The witnesses. The design samples several; the [2026 paper](https://eprint.iacr.org/2026/2187) analyses it with two attestors in TEEs. | **On Base: 1 witness, 1 signature required, verifier upgradeable by a single key** (below). |
 | **Primus** (MPC / TEE attestors) | The attestors (Phala TEE nodes) | Attestors join by whitelist: "you must first contact the primuslabs team" ([docs](https://docs.primuslabs.xyz/primus-network/attestor-node-guides/)). **On Base: upgradeable proxies owned by a single key.** |
 
-Read from Base mainnet with [`base_attestors.py`](research/base_attestors.py):
+Read from Base mainnet at block 52,779,095 with [`base_attestors.py`](research/base_attestors.py). Every value below is current state of an upgradeable contract, not a fixed property:
 
 | Contract | Owner | Upgradeable | Witnesses / signatures required |
 |---|---|---|---|

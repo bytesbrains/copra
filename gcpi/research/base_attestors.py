@@ -67,13 +67,28 @@ def is_contract(url, a):
 
 def decode_epoch(hexdata):
     """fetchEpoch's return, (uint32 id, uint32 from, uint32 to, (address, string)[] witnesses, uint8 min):
-    the witness addresses and the minimum number of witness signatures per claim."""
+    the witness addresses and the minimum number of witness signatures per claim.
+    Raises ValueError if the response does not have exactly that layout: a different ABI must not
+    decode into plausible-looking witnesses."""
     w = words(hexdata)
-    t = w[0] // 32                      # the returned struct is dynamic: word 0 is its offset
-    epoch_id, start, end, arr, minimum = w[t:t + 5]
-    a = t + arr // 32
+
+    def check(ok, what):
+        if not ok:
+            raise ValueError(f"fetchEpoch response is not the expected ABI layout: {what}")
+
+    check(len(w) >= 7 and w[0] == 32, "struct offset")   # the returned struct is dynamic: word 0 is its offset
+    epoch_id, start, end, arr, minimum = w[1:6]
+    check(max(epoch_id, start, end) < 2 ** 32 and minimum < 2 ** 8, "uint32 / uint8 fields")
+    check(arr == 160, "witness array offset")            # right after the struct's five head words
+    a = 1 + arr // 32
     n = w[a]
-    witnesses = [address(w[a + 1 + w[a + 1 + i] // 32]) for i in range(n)]
+    check(a + 1 + 3 * n <= len(w), "witness count")      # each element: offset, address, string offset
+    witnesses = []
+    for i in range(n):
+        check(w[a + 1 + i] % 32 == 0, f"witness {i} offset")
+        e = a + 1 + w[a + 1 + i] // 32
+        check(e + 1 < len(w) and w[e] < 2 ** 160 and w[e + 1] == 64, f"witness {i} (address, string)")
+        witnesses.append(address(w[e]))
     return {"id": epoch_id, "from": start, "to": end, "witnesses": witnesses, "minimum_signatures": minimum}
 
 
@@ -99,7 +114,10 @@ def main(argv):
     out["reclaim"] = []
     for a in RECLAIM:
         c = controller(url, a)
-        c["epoch"] = decode_epoch(call(url, a, "fetchEpoch(uint32)", words(call(url, a, "currentEpoch()"))[0]))
+        current = words(call(url, a, "currentEpoch()"))[0]
+        c["epoch"] = decode_epoch(call(url, a, "fetchEpoch(uint32)", current))
+        if c["epoch"]["id"] != current:
+            raise ValueError(f"{a}: fetchEpoch({current}) returned epoch {c['epoch']['id']}")
         out["reclaim"].append(c)
     out["primus"] = [controller(url, a) for a in PRIMUS]
 

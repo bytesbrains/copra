@@ -51,6 +51,9 @@ ENDPOINTS = [
 ]
 
 STRUCTURED = ("json", "xml", "csv")
+TEXT = STRUCTURED + ("html",)
+# A failed request, or a request body that could not be built from the live source.
+ERRORS = (OSError, http.client.HTTPException, ValueError, KeyError)
 
 
 def handshake(host, version):
@@ -60,7 +63,7 @@ def handshake(host, version):
     try:
         with socket.create_connection((host, 443), timeout=20) as s, ctx.wrap_socket(s, server_hostname=host) as t:
             return t.version(), t.cipher()[0]
-    except (ssl.SSLError, OSError) as e:
+    except (ssl.SSLError, OSError, ValueError) as e:
         return None, f"{type(e).__name__}: {e}"[:120]
 
 
@@ -69,7 +72,7 @@ def issuer(host):
     try:
         with socket.create_connection((host, 443), timeout=20) as s, ctx.wrap_socket(s, server_hostname=host) as t:
             cert = t.getpeercert()
-    except (ssl.SSLError, OSError) as e:
+    except (ssl.SSLError, OSError, ValueError) as e:
         return f"{type(e).__name__}"
     return dict(x[0] for x in cert["issuer"]).get("organizationName")
 
@@ -116,8 +119,11 @@ def needs_key(status, payload):
     return status in (400, 401) and (b"Authorization" in payload or b"api-key" in payload.lower())
 
 
-def changed_lines(a, b):
-    """Lines that differ between two fetches: a session token changes one, a live page many."""
+def changed_lines(a, b, k):
+    """Lines that differ between two fetches: a session token changes one, a live page many.
+    None for a binary format, where lines mean nothing."""
+    if k not in TEXT:
+        return None
     a, b = a.decode("utf-8", "replace").splitlines(), b.decode("utf-8", "replace").splitlines()
     return sum(1 for l in difflib.unified_diff(a, b, n=0, lineterm="") if l[:1] in "+-" and l[:3] not in ("+++", "---")) // 2
 
@@ -134,8 +140,11 @@ def verdict(p):
         return f"HTTP {p['status']}: no attestation possible"
     if not p["tls12"]:
         return "TLS 1.3 only: no MPC-TLS today (TLSNotary is TLS 1.2 only); proxy-mode attestation only"
+    if p["same_bytes"] is None:
+        return "second fetch failed: byte stability not measured"
     if not p["same_bytes"]:
-        return (f"attestable, but {p['changed_lines']} line(s) change between fetches: collectors must commit to "
+        changed = f"{p['changed_lines']} line(s) change" if p["changed_lines"] is not None else "the bytes change"
+        return (f"attestable, but {changed} between fetches: collectors must commit to "
                 "the value's bytes, not the whole response")
     if p["kind"] in STRUCTURED:
         return "attestable: structured response, value selectable in-proof"
@@ -150,25 +159,28 @@ def probe(source, what, method, url, body):
     v13, c13 = handshake(host, ssl.TLSVersion.TLSv1_3)
     p = {"source": source, "what": what, "method": method, "url": url, "host": host,
          "tls12": v12 is not None, "tls12_cipher": c12, "tls13": v13 is not None, "issuer": issuer(host)}
-    payloads = []
     try:
         body = body() if callable(body) else body
-        for i in range(2):
-            status, headers, payload = fetch(method, url, body)
-            payloads.append(payload)
-            if i == 0:
-                time.sleep(1)
-    except (OSError, http.client.HTTPException) as e:
+        status, headers, payload = fetch(method, url, body)
+    except ERRORS as e:
         p.update(status=None, error=f"{type(e).__name__}: {e}"[:160], challenged=False, needs_key=False,
                  same_bytes=None, kind=None, bytes=None)
         p["verdict"] = verdict(p)
         return p
-    p.update(status=status, bytes=len(payload), kind=kind(headers.get("content-type"), payload),
+    k = kind(headers.get("content-type"), payload)
+    p.update(status=status, bytes=len(payload), kind=k,
              content_encoding=headers.get("content-encoding"), transfer_encoding=headers.get("transfer-encoding"),
              server=headers.get("server"), last_modified=headers.get("last-modified"), etag=headers.get("etag"),
              date=headers.get("date"), challenged=challenged(status, headers, payload),
-             needs_key=needs_key(status, payload), same_bytes=payloads[0] == payloads[1],
-             changed_lines=changed_lines(*payloads), sha256=hashlib.sha256(payload).hexdigest())
+             needs_key=needs_key(status, payload), sha256=hashlib.sha256(payload).hexdigest())
+    time.sleep(1)
+    try:
+        again = fetch(method, url, body)[2]
+    except ERRORS as e:   # the first fetch's facts stand; only stability is unknown
+        p.update(same_bytes=None, changed_lines=None, second_fetch_error=f"{type(e).__name__}: {e}"[:160])
+    else:
+        same = payload == again
+        p.update(same_bytes=same, changed_lines=0 if same else changed_lines(payload, again, k))
     p["verdict"] = verdict(p)
     return p
 
