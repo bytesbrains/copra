@@ -50,11 +50,13 @@ async function main() {
   let headers;
   try {
     env.build('local', built, { rpcUrl: NETWORK.rpcUrl });
-    for (const f of files(built).filter((f) => f !== '_headers')) {
+    // _headers and _redirects configure the server and are never served themselves.
+    const served = files(built).filter((f) => f !== '_headers' && f !== '_redirects');
+    for (const f of served) {
       const { body } = await get('/' + f.split(path.sep).join('/'));
       assert.ok(body.equals(fs.readFileSync(path.join(built, f))), `${f} is not what web-env.cjs builds`);
     }
-    console.log(`PASS: ${files(built).length - 1} served files are web/ built for local (RPC ${NETWORK.rpcUrl})`);
+    console.log(`PASS: ${served.length} served files are web/ built for local (RPC ${NETWORK.rpcUrl})`);
     headers = fs.readFileSync(path.join(built, '_headers'), 'utf8');
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
@@ -81,6 +83,14 @@ async function main() {
     ['testnet.copra.dev', null],
   ]) assert.equal(await robotsFor(host), want, `X-Robots-Tag for ${host}`);
   console.log('PASS: workers.dev hosts are served noindex; copra.dev and testnet.copra.dev are not');
+
+  // The social card's old URL (#83): platforms cache og:image URLs, so it redirects instead of 404ing.
+  const old = await fetch(new URL('/og-image.png', WEB_URL), { redirect: 'manual' });
+  assert.equal(old.status, 301, '/og-image.png redirects');
+  assert.equal(old.headers.get('location'), '/og-image.jpg');
+  const card = await get('/og-image.jpg');
+  assert.equal(card.res.headers.get('content-type'), 'image/jpeg');
+  console.log('PASS: /og-image.png redirects (301) to the JPEG social card');
 
   // 3. The served page against the chain. The page's RPC is the host's view of anvil; from inside the
   //    stack it is the chain service, so map that one URL and require every read to use it.

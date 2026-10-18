@@ -1,0 +1,3 @@
+# The social card moved from PNG to JPEG (#83). Platforms cache a page's og:image URL, so a cached card
+# that re-fetches it follows this instead of finding a 404.
+/og-image.png /og-image.jpg 301
