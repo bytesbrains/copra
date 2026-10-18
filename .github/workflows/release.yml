@@ -57,12 +57,32 @@ jobs:
           # The deployer key lives only in the base-sepolia environment. deploy-base-sepolia
           # simulates with it before broadcasting, so this dry-run uses a throwaway key.
           PRIVATE_KEY: '1'
+        # The script runs against Sepolia's state. --skip-simulation skips only forge's on-chain re-run of the
+        # transactions, which the unfunded throwaway key fails ("lack of funds (0) for max fee").
         run: |
-          forge script script/DeployCopra.s.sol:DeployCopra --rpc-url "$BASE_SEPOLIA_RPC"
+          forge script script/DeployCopra.s.sol:DeployCopra --rpc-url "$BASE_SEPOLIA_RPC" --skip-simulation
+
+  # The release gate (#49): tier 2 (real MetaMask, #50) and the Base-mainnet fork (#48), run on the release
+  # commit itself. Nothing is deployed or published unless both are green.
+  e2e-metamask:
+    name: Gate · tier 2 (real MetaMask)
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: read
+    uses: ./.github/workflows/e2e-metamask.yml
+
+  e2e-fork:
+    name: Gate · Base-mainnet fork
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: read
+    uses: ./.github/workflows/e2e-fork.yml
+    secrets:
+      BASE_MAINNET_RPC: ${{ secrets.BASE_MAINNET_RPC }}
 
   deploy-base-sepolia:
     name: Deploy to Base Sepolia Testnet
-    needs: validate-and-simulate
+    needs: [validate-and-simulate, e2e-metamask, e2e-fork]
     if: >-
       startsWith(github.ref, 'refs/tags/v') && (
         (github.event_name == 'workflow_dispatch' && github.event.inputs.target_environment == 'base-sepolia') ||
@@ -120,10 +140,11 @@ jobs:
   publish-github-release:
     name: Publish GitHub Release & Artifacts
     # Runs after a same-run deploy (if any) so the manifest below reflects the new contracts.
-    needs: [validate-and-simulate, deploy-base-sepolia]
+    needs: [validate-and-simulate, e2e-metamask, e2e-fork, deploy-base-sepolia]
     if: >-
       always() && startsWith(github.ref, 'refs/tags/v') &&
       needs.validate-and-simulate.result == 'success' &&
+      needs.e2e-metamask.result == 'success' && needs.e2e-fork.result == 'success' &&
       (needs.deploy-base-sepolia.result == 'success' || needs.deploy-base-sepolia.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 10
