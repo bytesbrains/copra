@@ -17,7 +17,7 @@
 **Post 1 — Announcement**
 Introducing Copra Protocol ($COPRA) — the autonomous coconut commodity currency on @base.
 
-1 $COPRA is anchored to 1 kg of international copra (dried coconut kernel, CIF Rotterdam / World Bank Pink Sheet benchmark) and minted against its full value in on-chain USDC reserves.
+1 $COPRA is denominated in 1 kg of copra (dried coconut kernel), priced by an on-chain oracle, and minted against its full value in on-chain USDC reserves.
 
 Live on Base Sepolia: https://copra.dev
 Codebase (MIT): https://github.com/bytesbrains/copra

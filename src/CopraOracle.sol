@@ -6,8 +6,11 @@ import "./interfaces/ICopraOracle.sol";
 /**
  * @title CopraOracle
  * @author Copra Protocol (https://copra.dev)
- * @notice Oracle contract providing the global benchmark price for Copra commodity in USD.
- *         Designed for automated feeds from ICC (International Coconut Community) and World Bank Pink Sheets.
+ * @notice Oracle contract holding the copra price in USD per kg (8 decimals) used by CopraVault.
+ *         It reads no external source: one immutable address, feedUpdater, posts every price, within
+ *         the 20% and one-per-day limits below. On testnet that is scripts/oracle-feeder.sh, which
+ *         posts a declared source or a manual override. The intended source of truth is GCPI, the
+ *         open copra index specified in docs/specs/GCPI-001.md, which does not publish a price yet.
  */
 contract CopraOracle is ICopraOracle {
     address public immutable feedUpdater;

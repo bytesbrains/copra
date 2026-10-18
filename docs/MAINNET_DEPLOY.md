@@ -15,7 +15,7 @@
 | `COPRA_ORACLE_UPDATER` | **Oracle updater** (immutable) | The feeder's key. It may not be the deployer unless `COPRA_ALLOW_DEPLOYER_UPDATER=true`. |
 | `COPRA_FEE_RECIPIENT` | **Fee recipient** | Receives `claimFees()`. It may not be the deployer. The multisig is a sensible choice. |
 
-`COPRA_COLLATERAL` and `COPRA_COLLATERAL_DECIMALS` are `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` and `6`. On chain 8453 the script accepts no other token. `COPRA_INITIAL_PRICE` is the day's copra benchmark in USD with 8 decimals (`142000000` = $1.42). There is no default.
+`COPRA_COLLATERAL` and `COPRA_COLLATERAL_DECIMALS` are `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` and `6`. On chain 8453 the script accepts no other token. `COPRA_INITIAL_PRICE` is the starting copra price in USD per kg with 8 decimals (`142000000` = $1.42). There is no default, and no source is wired up to supply one: record where the number came from, as the testnet feeder does for each update. The intended source is GCPI ([GCPI-001](specs/GCPI-001.md)), which does not publish a price yet.
 
 ## 2. Pre-flight
 
