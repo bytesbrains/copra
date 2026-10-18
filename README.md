@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="assets/copra_logo_256.png" alt="Copra Protocol Logo" width="128" />
+  <img src="assets/copra-banner.jpg" alt="Copra.dev, the Global Coconut Commodity Currency" width="100%" />
   <h1>Copra Protocol ($COPRA)</h1>
   <p><strong>The Global Coconut Commodity Currency</strong></p>
   <p><a href="https://copra.dev">copra.dev</a> • Target Network: <strong>Base L2</strong></p>
