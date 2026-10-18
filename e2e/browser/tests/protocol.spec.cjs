@@ -72,7 +72,7 @@ test('vault short of collateral → readable InsufficientVaultCollateral message
   const user = wallet.selected;
   await chain.fundUsdc(user, units(100, 6));
   await chain.mintCopra(user, units(10, 18));
-  // +19.5%, the feeder's clamp: 10 $COPRA are now worth more than the vault holds for them.
+  // +19.5%, inside the oracle's 20% limit: 10 $COPRA are now worth more than the vault holds for them.
   await chain.postPrice(169_690_000n);
   expect(await revertOf(chain.contracts.vault.connect(await chain.signer(user)).redeem.staticCall(units(10, 18), 0n))).toBe('InsufficientVaultCollateral');
 

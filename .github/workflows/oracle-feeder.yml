@@ -1,5 +1,10 @@
 name: Automated Oracle Feeder
 
+# The feeder never posts a default price (#85). A scheduled run needs a declared source in
+# COMMODITY_FEED_API_URL (see SOURCES in scripts/oracle_feeder.py; none is declared until #87). Without one,
+# the run fails and broadcasts nothing; after the oracle's 7-day heartbeat the price goes stale and mint and
+# redeem revert until a real price is posted. That is the intended safe state, not an outage to paper over.
+
 on:
   schedule:
     # Runs every Monday at 06:00 UTC (weekly commodity heartbeat)
@@ -7,11 +12,11 @@ on:
   workflow_dispatch:
     inputs:
       target_price:
-        description: 'Optional custom benchmark price in USD (e.g. 1.45)'
+        description: 'Manual price override, USD/kg (e.g. 1.45). Testnet only; posted as given and recorded as a manual override, not a sourced price'
         required: false
         default: ''
       force:
-        description: 'Force update even if price is unchanged and heartbeat is fresh'
+        description: 'Re-post an unchanged manual override (refreshes the heartbeat). Needs target_price'
         type: boolean
         required: false
         default: false
@@ -46,6 +51,7 @@ jobs:
           BASE_SEPOLIA_RPC: ${{ secrets.BASE_SEPOLIA_RPC || 'https://base-sepolia-rpc.publicnode.com' }}
           FORCE: ${{ github.event.inputs.force || 'false' }}
           TARGET_PRICE: ${{ github.event.inputs.target_price }}
+          COMMODITY_FEED_API_URL: ${{ vars.COMMODITY_FEED_API_URL }}
         run: |
           chmod +x ./scripts/oracle-feeder.sh
           ./scripts/oracle-feeder.sh "$TARGET_PRICE"
