@@ -26,10 +26,12 @@ problems=()
 commits=$(git rev-list --no-merges "$@")
 for c in $commits; do
   short=$(git rev-parse --short "$c")
-  # Added, copied, modified or renamed files; --numstat prints "-" for binaries. Gitlinks (submodules) skipped.
-  while IFS=$'\t' read -r added _ path; do
+  # Added, copied, modified or renamed files: a modified file is a new blob in history too. --numstat
+  # prints "-" for binaries. -z keeps paths raw: without it git quotes non-ASCII, tab and quote
+  # characters, and the quoted name is not a path. Gitlinks (submodules) skipped.
+  while IFS=$'\t' read -r -d '' added _ path; do
     [[ -n "$path" ]] || continue
-    [[ "$(git ls-tree "$c" -- "$path" | awk '{print $1}')" == 160000 ]] && continue
+    [[ "$(git --literal-pathspecs ls-tree "$c" -- "$path" | awk '{print $1}')" == 160000 ]] && continue
     if [[ "$path" =~ $STATE_RE ]]; then
       problems+=("$short $path: local tool state (a database or wrangler/miniflare store)")
     elif git check-ignore -q --no-index -- "$path"; then
@@ -39,11 +41,11 @@ for c in $commits; do
     fi
     size=$(git cat-file -s "$c:$path")
     (( size <= MAX_BYTES )) || problems+=("$short $path: $size bytes, over the $MAX_BYTES-byte limit")
-  done < <(git diff-tree -r --root --no-commit-id --no-renames --diff-filter=ACMR --numstat "$c")
+  done < <(git diff-tree -r --root --no-commit-id --no-renames --diff-filter=ACMR -z --numstat "$c")
 done
 
 if (( ${#problems[@]} )); then
-  echo "❌ These commits add files that should not be in the repo's history:"
+  echo "❌ These commits add or change files that should not be in the repo's history:"
   printf '   %s\n' "${problems[@]}"
   echo "   Remove them from the commits (amend or rebase; a later deleting commit leaves them in history),"
   echo "   and add local state to .gitignore."

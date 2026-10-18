@@ -87,24 +87,68 @@ test('a file added and deleted again within the range is still refused: it stays
   assert.match(res.stdout, /\.wrangler\/state\/x\.sqlite: local tool state/);
 });
 
-test('the pre-push hook blocks the push before the tests run, and passes a clean one', () => {
-  for (const [files, want] of [[{ '.wrangler/state/x.sqlite': binary }, 1], [{ 'src/A.sol': 'contract A {}\n' }, 0]]) {
-    const r = repo();
-    // A bare "origin" holding main, so --remotes=origin marks what is already pushed.
-    const origin = fs.mkdtempSync(path.join(os.tmpdir(), 'committed-files-origin-'));
-    execFileSync('git', ['init', '-q', '--bare', origin]);
-    r.git('remote', 'add', 'origin', origin);
-    r.git('push', '-q', 'origin', 'main');
+test('paths are read raw: a non-ASCII image passes, and state with non-ASCII or tab names is refused by name', () => {
+  const ok = repo();
+  ok.commit({ 'web/café.png': binary });
+  const res = ok.check();
+  assert.equal(res.status, 0, res.stdout + res.stderr);
+  const bad = repo();
+  bad.commit({ '.wrangler/état.sqlite': binary, '.wrangler/a\tb.sqlite': binary });
+  const res2 = bad.check();
+  assert.equal(res2.status, 1, res2.stdout + res2.stderr);
+  assert.match(res2.stdout, /\.wrangler\/état\.sqlite: local tool state/);
+  assert.match(res2.stdout, /\.wrangler\/a\tb\.sqlite: local tool state/);
+});
+
+test('changing an already-tracked oversized file is refused too: the new version is a new blob in history', () => {
+  const r = repo();
+  r.git('checkout', '-q', 'main');
+  r.commit({ 'web/huge.png': Buffer.concat([binary, Buffer.alloc(3 * 1024 * 1024)]) }, 'already there');
+  r.git('checkout', '-q', '-b', 'touch');
+  r.commit({ 'web/huge.png': Buffer.concat([binary, Buffer.alloc(3 * 1024 * 1024, 1)]) });
+  const res = r.check();
+  assert.equal(res.status, 1);
+  assert.match(res.stdout, /add or change files/);
+});
+
+// Runs the hook with a bare "origin" holding main (so --remotes=origin marks what is already pushed)
+// and a stub forge first on PATH that records whether the test step ran.
+function pushThroughHook(branches) {
+  const r = repo();
+  const origin = fs.mkdtempSync(path.join(os.tmpdir(), 'committed-files-origin-'));
+  execFileSync('git', ['init', '-q', '--bare', origin]);
+  r.git('remote', 'add', 'origin', origin);
+  r.git('push', '-q', 'origin', 'main');
+  fs.mkdirSync(path.join(r.dir, 'scripts'), { recursive: true });
+  fs.copyFileSync(SCRIPT, path.join(r.dir, 'scripts/check-committed-files.sh'));
+  const lines = branches.map(([name, files]) => {
+    r.git('checkout', '-q', 'main');
+    r.git('checkout', '-q', '-b', name);
     r.commit(files);
-    fs.mkdirSync(path.join(r.dir, 'scripts'), { recursive: true });
-    fs.copyFileSync(SCRIPT, path.join(r.dir, 'scripts/check-committed-files.sh'));
-    const head = r.git('rev-parse', 'HEAD').trim();
-    // forge off PATH, so only the files check decides.
-    const res = spawnSync('bash', [HOOK, 'origin', origin], {
-      cwd: r.dir, encoding: 'utf8', input: `refs/heads/work ${head} refs/heads/work ${'0'.repeat(40)}\n`,
-      env: { ...process.env, PATH: '/usr/bin:/bin' },
-    });
-    assert.equal(res.status, want, res.stdout + res.stderr);
-    if (want) assert.match(res.stdout, /Push aborted/);
-  }
+    return `refs/heads/${name} ${r.git('rev-parse', 'HEAD').trim()} refs/heads/${name} ${'0'.repeat(40)}`;
+  });
+  const bin = fs.mkdtempSync(path.join(os.tmpdir(), 'committed-files-bin-'));
+  const forgeLog = path.join(bin, 'forge.log');
+  fs.writeFileSync(path.join(bin, 'forge'), `#!/usr/bin/env bash\necho "$*" >> "${forgeLog}"\n`, { mode: 0o755 });
+  const res = spawnSync('bash', [HOOK, 'origin', origin], {
+    cwd: r.dir, encoding: 'utf8', input: lines.join('\n') + '\n', env: { ...process.env, PATH: `${bin}:${process.env.PATH}` },
+  });
+  return { res, forgeRan: fs.existsSync(forgeLog) };
+}
+
+test('the pre-push hook blocks a bad push before the tests run, and passes a clean one through to them', () => {
+  const bad = pushThroughHook([['topic', { '.wrangler/state/x.sqlite': binary }]]);
+  assert.equal(bad.res.status, 1, bad.res.stdout + bad.res.stderr);
+  assert.match(bad.res.stdout, /Push aborted/);
+  assert.equal(bad.forgeRan, false, 'forge test never ran');
+  const clean = pushThroughHook([['topic', { 'src/A.sol': 'contract A {}\n' }]]);
+  assert.equal(clean.res.status, 0, clean.res.stdout + clean.res.stderr);
+  assert.equal(clean.forgeRan, true, 'forge test ran after the check');
+});
+
+test('the hook checks every ref pushed: a bad branch after a clean one is still caught', () => {
+  const { res } = pushThroughHook([['good', { 'src/A.sol': 'contract A {}\n' }], ['bad', { '.wrangler/x.sqlite': binary }]]);
+  assert.equal(res.status, 1, res.stdout + res.stderr);
+  assert.match(res.stdout, /1 commit\(s\) checked/);
+  assert.match(res.stdout, /\.wrangler\/x\.sqlite: local tool state/);
 });
