@@ -64,7 +64,8 @@ The owner of a position must keep its collateral worth more than its debt at the
 Every $COPRA in existence is backed by the collateral of the positions whose debt created it, at a ratio above 100%.
 
 ```
-Total supply of $COPRA  =  Σ D_j  (minus tokens escrowed in pending redemptions, §8)
+totalSupply($COPRA)  =  Σ D_j
+circulating supply   =  Σ D_j − escrowed $COPRA (pending redemptions, §8)
 ```
 
 ## 2.1 Participants
@@ -117,6 +118,7 @@ All consensus-critical arithmetic is fixed-point integer arithmetic with full-pr
 The protocol reads finalized GCPI period records. It requires, for every period `t`:
 
 - The period identifier `t`, increasing by one per calculation period.
+- The period's time window, derivable on-chain for any `t` (for example a fixed genesis time and cadence), so that the period containing a given timestamp is known before that period finalizes.
 - The finalized price `P_t`.
 - The period status (GCPI-001 §9.4).
 - The finalization timestamp.
@@ -223,7 +225,7 @@ GCPI lags its sources. A national publisher may announce a price fall days befor
 
 A redemption is settled at the price of a period **whose source observations had not yet been published when the redemption was requested.**
 
-1. `requestRedeem(amount)` transfers `amount` $COPRA from the caller into escrow and records the request in the current open period `k`.
+1. `requestRedeem(amount)` transfers `amount` $COPRA from the caller into escrow and records the request in period `k`, the GCPI period whose time window contains the timestamp of the block that includes the request. `k` is defined by time, not by finalization: the latest finalized period lags `k`, and using it would let a request settle at a period whose sources are already being published.
 2. The request settles at the first period `s ≥ k + 1` that finalizes with status `VALID`.
 3. Once period `s` is finalized, anyone may call `settle` for requests that settle at `s`.
 4. Every request settling at period `s` receives the same price `P_s`, regardless of the order in which settlements are executed.
@@ -352,10 +354,10 @@ In shortfall:
 - Redemptions settle at a pro-rata payout per unit:
 
 ```
-PayoutPerUnit = min( P_s,  P_s × TCR_s ) × (1 − REDEEM_FEE)
+PayoutPerUnit = P_s × min( 1, TCR_s ) × (1 − REDEEM_FEE_BPS / 10000)
 ```
 
-where `TCR_s` is the system ratio at settlement. Every holder redeeming at the same period receives the same rate. No holder can be paid in full at the expense of another.
+where `TCR_s = Σ C_j / Value(Σ D_j, P_s)` is the system ratio at settlement (§5.1). Every holder redeeming at the same period receives the same rate. No holder can be paid in full at the expense of another.
 
 The system leaves shortfall when `TCR ≥ 100%` at a later usable price, through a price fall, deposits, or repayments.
 
@@ -445,7 +447,7 @@ These ratios are the direct cost of a slow oracle. A weekly GCPI needs larger ra
 | Settlement-order manipulation | All requests at the same period settle at the same price; allocation across positions is proportional, not ordered (§8.3) |
 | DEX price manipulation | No protocol function reads a DEX price |
 | USDC pause or blacklist | As in v1: a pause stops every collateral movement until lifted, and blacklisting the position manager freezes all collateral (README, "Trust Assumptions") |
-| Accumulator rounding drift | Rounding rule (§3); invariant tests that `Σ D_j` equals supply plus escrow and that `Σ C_j` equals the manager's USDC balance minus fee balances |
+| Accumulator rounding drift | Rounding rule (§3); invariant tests that `Σ D_j` equals `totalSupply` (escrow included) and that `Σ C_j` equals the manager's USDC balance minus fee balances |
 | Base sequencer downtime | No state changes occur; on resumption, `MAX_PRICE_AGE` applies before any price-sensitive action |
 | Developers or fee recipient acting against holders | No privileged function touches positions, prices, or parameters (§10.4, §14) |
 
@@ -481,7 +483,7 @@ The candidates to recruit first are copra market participants who want a short h
 
 **Invariant 1 — Full backing at creation.** Every $COPRA is minted against a position whose ratio is at least `MCR` at the usable price.
 
-**Invariant 2 — Supply accounting.** Total $COPRA supply plus escrowed redemptions equals the sum of all position debt, at all times.
+**Invariant 2 — Supply accounting.** The ERC-20 `totalSupply` of $COPRA, which includes tokens escrowed in pending redemptions, equals the sum of all position debt `Σ D_j`, at all times.
 
 **Invariant 3 — Collateral accounting.** The position manager's USDC balance equals the sum of position collateral plus unclaimed fee balances, at all times.
 
