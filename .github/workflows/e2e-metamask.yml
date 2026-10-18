@@ -2,7 +2,7 @@ name: E2E with real MetaMask
 
 # Tier 2 (#50): the pinned MetaMask extension in Playwright's Chromium against the e2e stack, every
 # approval clicked in MetaMask's own UI. Nightly, by hand, and on PRs that change the browser harness or
-# the dApp. The release gate that requires it green is #49.
+# the dApp. The release workflow calls it on the release commit and refuses to publish unless it is green.
 on:
   schedule:
     - cron: '0 4 * * *' # nightly, 04:00 UTC
@@ -13,6 +13,7 @@ on:
       - 'web/**'
       - '.github/workflows/e2e-metamask.yml'
   workflow_dispatch:
+  workflow_call:
 
 concurrency:
   group: e2e-metamask-${{ github.ref }}

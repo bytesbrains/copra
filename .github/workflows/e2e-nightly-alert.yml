@@ -1,0 +1,53 @@
+name: E2E nightly alert
+
+# When a nightly tier-2 (#50) or fork (#48) run fails, opens an issue labelled `e2e-nightly` (or comments
+# on the open one), and closes it when the next nightly run of that workflow is green (#49). Runs from
+# main with its own token; it checks out nothing and runs no code from the run it reports on.
+#
+# A scheduled workflow on a public repo is disabled after 60 days without repository activity, and then
+# simply stops: no run, so no alert from here. GitHub emails the repository admins before it disables
+# one; `gh workflow enable` restores it. The release workflow runs both suites itself, so a stopped
+# nightly can never let a release through untested. See CONTRIBUTING.md, "Running the E2E suite".
+on:
+  workflow_run:
+    workflows: ['E2E with real MetaMask', 'E2E on a Base-mainnet fork']
+    types: [completed]
+
+permissions: {}
+
+jobs:
+  alert:
+    name: Open or close the nightly-failure issue
+    # A cancelled or skipped run says nothing about the suite.
+    if: >-
+      github.event.workflow_run.event == 'schedule' &&
+      github.event.workflow_run.conclusion != 'cancelled' && github.event.workflow_run.conclusion != 'skipped'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    steps:
+      - name: Report the run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          WORKFLOW: ${{ github.event.workflow_run.name }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          export TITLE="Nightly failing: ${WORKFLOW}"
+          open=$(gh issue list --label e2e-nightly --state open --json number,title \
+            --jq '.[] | select(.title == env.TITLE) | .number' | head -n1)
+          if [[ "$CONCLUSION" == "success" ]]; then
+            [[ -z "$open" ]] || gh issue close "$open" --comment "Green again: ${RUN_URL} (\`${SHA}\`)."
+          elif [[ -n "$open" ]]; then
+            gh issue comment "$open" --body "Still ${CONCLUSION}: ${RUN_URL} (\`${SHA}\`)."
+          else
+            gh label create e2e-nightly --color B60205 --description "A nightly e2e run is failing" 2>/dev/null || true
+            gh issue create --label e2e-nightly --title "$TITLE" --body "$(printf '%s\n\n%s\n\n%s' \
+              "The nightly **${WORKFLOW}** run ended **${CONCLUSION}**: ${RUN_URL} (commit \`${SHA}\`)." \
+              'Its artifact has the report, and on failure the trace, video, screenshots and stack logs. CONTRIBUTING.md, "Running the E2E suite", says how to read them.' \
+              'This issue closes itself when the next nightly run is green. A release cannot ship meanwhile: the release workflow runs this suite itself.')"
+          fi

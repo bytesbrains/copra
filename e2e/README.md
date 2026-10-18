@@ -92,7 +92,7 @@ Found by the suite and fixed in the dApp:
   - the fee recipient blacklisted.
 
   Each one checks what reverts and what stays recorded, and that the vault recovers once the action is lifted. What each means for holders is in the README's [Trust Assumptions](../README.md#trust-assumptions).
-- **When it runs:** not on every PR. It runs nightly and by hand (`.github/workflows/e2e-fork.yml`, with the `BASE_MAINNET_RPC` secret and an optional fork block), and once before a mainnet release.
+- **When it runs:** not on every PR. It runs nightly and by hand (`.github/workflows/e2e-fork.yml`, with the `BASE_MAINNET_RPC` secret and an optional fork block), and on the release commit as part of the release gate (#49).
 
 ## Tier 2: real MetaMask (`e2e/browser/metamask/`, #50)
 The pinned **MetaMask 13.49.0** extension is loaded into Playwright's full Chromium, in the browser image's `metamask` stage. The image downloads the release zip from MetaMask's GitHub release and checks it against a SHA-256 (`ADD --checksum`). To upgrade, change the version and the checksum together in their own PR.
@@ -121,7 +121,7 @@ The pinned **MetaMask 13.49.0** extension is loaded into Playwright's full Chrom
 - After the suite changes the chain behind the wallet (funding an account), tests wait until **MetaMask returns the chain's balances** before reloading. MetaMask can answer `latest` from before the change for a while, even after it reports a newer block.
 - With Basic functionality off, MetaMask accepts an added token but did not then list it among its tokens. The suite checks what MetaMask shows before the user accepts, which is what the dApp controls.
 
-`.github/workflows/e2e-metamask.yml` runs the suite nightly, by hand, and on PRs that touch the browser harness or the dApp. The release gate that requires it green is #49.
+`.github/workflows/e2e-metamask.yml` runs the suite nightly, by hand, and on PRs that touch the browser harness or the dApp. The release workflow runs it on the release commit and publishes nothing unless it is green (#49).
 
 What the trial (#71) established (details in `lib/metamask.cjs`):
 - **No display needed.** Extensions load in new headless mode (`channel: 'chromium'`), so there is no `xvfb-run`.

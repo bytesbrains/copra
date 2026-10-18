@@ -2,7 +2,7 @@ name: E2E on a Base-mainnet fork
 
 # The contract scenario suite against anvil forked from Base mainnet at a pinned block, deployed with
 # DeployCopraMainnet against Circle's real USDC and four separate roles (#48). Not on every PR: it needs
-# an archive RPC. Nightly, by hand, and once as a mainnet release gate.
+# an archive RPC. Nightly, by hand, and called by the release workflow on the release commit.
 on:
   schedule:
     - cron: '30 3 * * *' # nightly, 03:30 UTC
@@ -12,19 +12,29 @@ on:
         description: 'Base block to fork at (blank: the pinned default in e2e/docker-compose.fork.yml)'
         required: false
         default: ''
+  workflow_call:
+    inputs:
+      fork_block:
+        type: string
+        required: false
+        default: ''
+    secrets:
+      BASE_MAINNET_RPC:
+        required: true
 
 concurrency:
   group: e2e-fork-${{ github.ref }}
   cancel-in-progress: false
 
-permissions:
-  contents: read
+permissions: {}
 
 jobs:
   e2e-fork:
     name: E2E (Base-mainnet fork, real USDC)
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
