@@ -49,6 +49,9 @@ jobs:
       - name: Run oracle feeder source tests
         run: python3 -m unittest discover -s test/feeder -v
 
+      - name: Run GCPI source registry tests
+        run: python3 -m unittest discover -s test/gcpi -v
+
       - name: Simulate deployment script (dry-run)
         env:
           # A local simulation needs no real key, and this job runs code from any pushed branch.
