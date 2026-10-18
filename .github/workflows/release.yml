@@ -57,8 +57,10 @@ jobs:
           # The deployer key lives only in the base-sepolia environment. deploy-base-sepolia
           # simulates with it before broadcasting, so this dry-run uses a throwaway key.
           PRIVATE_KEY: '1'
+        # The script runs against Sepolia's state. --skip-simulation skips only forge's on-chain re-run of the
+        # transactions, which the unfunded throwaway key fails ("lack of funds (0) for max fee").
         run: |
-          forge script script/DeployCopra.s.sol:DeployCopra --rpc-url "$BASE_SEPOLIA_RPC"
+          forge script script/DeployCopra.s.sol:DeployCopra --rpc-url "$BASE_SEPOLIA_RPC" --skip-simulation
 
   # The release gate (#49): tier 2 (real MetaMask, #50) and the Base-mainnet fork (#48), run on the release
   # commit itself. Nothing is deployed or published unless both are green.
