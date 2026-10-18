@@ -1,14 +1,17 @@
 # Run with: python3 -m unittest discover -s test/gcpi
 # gcpi/backtest/backtest.py (#88): the aggregation, risk and data-quality functions the report's
 # numbers come from, on synthetic series whose answers are known.
+import io
 import math
 import os
 import sys
 import unittest
+import zipfile
 
 ROOT = os.path.join(os.path.dirname(__file__), "..", "..")
 sys.path.insert(0, os.path.join(ROOT, "gcpi", "backtest"))
 import backtest as bt  # noqa: E402
+import load  # noqa: E402
 
 MONTHS = bt.ym_range("2020-01", "2020-12")
 
@@ -102,6 +105,13 @@ class Risk(unittest.TestCase):
         self.assertEqual(c["met"], 6)  # without b: two markets and 60% of weight
         self.assertEqual(c["min_markets_seen"], 2)
 
+    def test_a_zero_weight_market_does_not_count_toward_coverage(self):
+        # As in renormalized() and chain_linked(): weight 0 is not in the index, so it is not live.
+        panel = {"a": flat(1.0), "b": flat(1.0), "z": flat(1.0)}
+        c = bt.coverage(panel, {"a": 0.5, "b": 0.5, "z": 0.0}, MONTHS)
+        self.assertEqual(c["met"], 0)
+        self.assertEqual(c["min_markets_seen"], 2)
+
     def test_staleness_counts_carried_values(self):
         daily = [("01-06-2020", 10.0), ("02-06-2020", 10.0), ("03-06-2020", 11.0), ("04-06-2020", 11.0)]
         s = bt.staleness(daily)
@@ -115,6 +125,34 @@ class Risk(unittest.TestCase):
         r = bt.real_return(price, cpi)
         self.assertAlmostEqual(r["nominal_pa"], 0.10, places=6)
         self.assertAlmostEqual(r["real_pa"], 1.10 / 1.02 - 1, places=6)
+
+
+def wb_sheet(cells):
+    """A one-sheet "Monthly Prices" workbook; cells is a list of rows of shared strings."""
+    ns = 'xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"'
+    strings = sorted({v for row in cells for v in row})
+    cell = lambda i, j, v: f'<c r="{chr(65 + j)}{i + 1}" t="s"><v>{strings.index(v)}</v></c>'
+    rows = "".join("<row>" + "".join(cell(i, j, v) for j, v in enumerate(row)) + "</row>" for i, row in enumerate(cells))
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("xl/workbook.xml", f'<workbook {ns} xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/'
+                   'relationships"><sheets><sheet name="Monthly Prices" sheetId="1" r:id="rId1"/></sheets></workbook>')
+        z.writestr("xl/_rels/workbook.xml.rels", '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/'
+                   'relationships"><Relationship Id="rId1" Target="worksheets/sheet1.xml"/></Relationships>')
+        z.writestr("xl/worksheets/sheet1.xml", f"<worksheet {ns}><sheetData>{rows}</sheetData></worksheet>")
+        z.writestr("xl/sharedStrings.xml", f"<sst {ns}>{''.join(f'<si><t>{v}</t></si>' for v in strings)}</sst>")
+    buf.seek(0)
+    return buf
+
+
+class LoadWorldBank(unittest.TestCase):
+    def test_reads_the_coconut_oil_column(self):
+        out = load.load_wb(wb_sheet([["Title"], ["", "Coconut oil"], ["2020M01", "1500"]]))
+        self.assertEqual(out["Coconut oil"], {"2020-01": 1.5})
+
+    def test_a_missing_header_names_the_file_and_column(self):
+        with self.assertRaisesRegex(ValueError, "no 'Coconut oil' header"):
+            load.load_wb(wb_sheet([["Title"], ["", "Palm oil"]]))
 
 
 if __name__ == "__main__":

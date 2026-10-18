@@ -12,7 +12,7 @@ For #90 to decide. Each choice links to its evidence.
 
 | Choice | Recommendation | Evidence |
 |---|---|---|
-| Headline basket | **Philippines + Indonesia** (the export-linked pair). India and Sri Lanka as published sub-indices, outside the headline. | [§1](#1-correlations-and-spreads) |
+| Headline basket | **Philippines + Indonesia** (the export-linked pair). India and Sri Lanka as published sub-indices, outside the headline. Not publishable yet: neither market has an open, reliable input (see Philippine source, and [SOURCES.md](SOURCES.md): Indonesia has none). | [§1](#1-correlations-and-spreads) |
 | Aggregation | **Matched-market chain-linking**, not renormalized levels. | [§4](#4-missing-market-handling) |
 | Weights | **Production** (FAOSTAT coconut oil, 3-year average): Philippines 0.65, Indonesia 0.35. The choice barely matters for this pair. | [§3](#3-weighting-production-vs-exports) |
 | Coverage | **At least 70% of headline weight**, which for this pair means both markets. Otherwise the period is non-valid. Drop "at least three markets", which a two-market headline cannot meet. | [§6](#6-minimum-coverage) |
@@ -39,7 +39,7 @@ For #90 to decide. Each choice links to its evidence.
 | US CPI-U | FRED (CPIAUCSL) | 1947 → 2026-09 | Real return |
 | Coconut oil production; copra and coconut oil export value | FAOSTAT | 2021–2023 | Weights |
 
-**What is published:** [`dataset.csv`](backtest/data/dataset.csv) holds PSA's and CDB's monthly prices in local currency and USD, the ECB rates used, and a flag for PSA's post-break months. [`results.json`](backtest/data/results.json) holds every statistic in this report. ICC series are **not** published (all rights reserved); ICC data appears only through statistics. `fetch.py` rebuilds every input from the publishers.
+**What is published:** [`dataset.csv`](backtest/data/dataset.csv) holds PSA's and CDB's monthly prices in local currency and USD, the ECB rates used, and a flag for PSA's post-break months. ECB quotes INR only from January 2009, so CDB's 2008 rows have no USD value (`results.json` `fx_gaps` lists every such month). [`results.json`](backtest/data/results.json) holds every statistic in this report. ICC series are **not** published (all rights reserved); ICC data appears only through statistics. `fetch.py` rebuilds every input from the publishers.
 
 ---
 
@@ -90,12 +90,12 @@ At a one-month lag, every correlation falls to between +0.18 and +0.41. Domestic
 
 | Source | Delay | Missing |
 |---|---|---|
-| PSA monthly | 59 days after month end (2026-06 data published 2026-08-28) | None in 2010–2026 |
+| PSA monthly | At most 59 days after month end (latest month 2026-06; table last updated 2026-08-28) | None in 2010–2026 |
 | ICC weekly | Report dated each Saturday, online within about a week | Philippines 9, Sri Lanka 9, Indonesia 5, India 6 gaps over 14 days; longest 42–49 days. Plus the January 2026 misfile. |
 | CDB | Same day | Monthly: Kochi and Alappuzha none since 2008, Kozhikode 1 month. Daily: none reported 2020-03-23..05-31 (stated on the page). |
 | World Bank | About 2 days after month end | None, 1960–2014 copra and 1960–2026 coconut oil |
 
-PSA's delay is one observation. OpenSTAT keeps no release history, so its variation cannot be measured. **GCPI should record every source's release time from now on.** The finalization-delay distribution COPRA-001 needs does not exist in any archive.
+PSA's delay is one observation, and an upper bound: OpenSTAT dates the table's last update, not each month's release, and keeps no release history, so neither the exact lag nor its variation can be measured. **GCPI should record every source's release time from now on.** The finalization-delay distribution COPRA-001 needs does not exist in any archive.
 
 ## 3. Weighting: production vs exports
 
@@ -214,7 +214,7 @@ This is COPRA-001's "cost of a slow oracle" in numbers. A weekly index needs abo
 
 ### Finalization delays: `MAX_PRICE_AGE` and `REDEEM_EXPIRY`
 
-- **`MAX_PRICE_AGE`:** finalizations are monthly. The only measured delay is PSA's 59 days, from one snapshot; no archive records its variation. Recommend one period plus a 50% grace (about 45 days between finalizations), revisited once GCPI has recorded its own release times.
+- **`MAX_PRICE_AGE`:** finalizations are monthly. The only measured delay is PSA's, at most 59 days, from one snapshot; no archive records its variation. Recommend one period plus a 50% grace (about 45 days between finalizations), revisited once GCPI has recorded its own release times.
 - **`REDEEM_EXPIRY`:** the longest headline outage was one non-valid month; ICC's longest weekly gap was 49 days. Recommend at least 3 periods.
 - **Redemption delay:** COPRA-001 §8.2 settles at the first valid period after the request. A monthly GCPI published 59 days late means about 3–4 months from request to payout.
 

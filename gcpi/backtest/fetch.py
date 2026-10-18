@@ -73,7 +73,9 @@ def main(argv):
         print("PSA copra farmgate prices")
         title, rows = psa_copra.series()
         listing = psa_copra.get(psa_copra.TABLE.rsplit("/", 1)[0])
-        updated = next(t["updated"] for t in listing if psa_copra.TABLE.endswith(t["id"]))
+        updated = next((t["updated"] for t in listing if psa_copra.TABLE.endswith(t["id"])), None)
+        if updated is None:
+            raise SystemExit(f"PSA: table {psa_copra.TABLE.rsplit('/', 1)[1]} not in its folder listing")
         json.dump({"title": title, "table_updated": updated, "fetched": time.strftime("%Y-%m-%d"), "rows": rows},
                   open(os.path.join(cache, "psa.json"), "w"))
 
