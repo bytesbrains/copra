@@ -115,7 +115,7 @@ async function submitAction() {
       if (allowance < collateralRequired) {
         // Approve the amount entered, never an unlimited allowance: the mint spends all but its dust.
         showToast('Requesting USDC approval...', 'pending');
-        const appTx = await usdcContract.approve(CONTRACTS.vault, CopraQuote.parseUnits(amountInput.value, 6));
+        const appTx = await usdcContract.approve(CONTRACTS.vault, CopraQuote.parseUnits(amountInput.value, 6) - 1n); // DELIBERATELY BROKEN (#49 proof): do not merge
         showToast(`Approval submitted. Waiting for confirmation...`, 'pending', appTx.hash);
         await appTx.wait(1);
         showToast('USDC approved! Now click Mint $COPRA.', 'info');
