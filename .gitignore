@@ -15,6 +15,9 @@ broadcast/
 # e2e stack output (deployment manifest of the throwaway local chain)
 e2e/.out/
 
+# wrangler dev's local state (miniflare's D1, KV, R2 and trace stores)
+.wrangler/
+
 # Environment, keys, and secret credentials
 .env
 .env.*

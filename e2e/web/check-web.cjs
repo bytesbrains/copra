@@ -1,13 +1,15 @@
 // Checks the dApp served by the stack's `web` service (#43), from outside, over HTTP:
 //   1. what is served is the shipped app: every file is byte-for-byte web/, except assets/network.js,
 //      which is the `local` build's;
-//   2. the headers are web/_headers' own, enforced, with only connect-src naming the local RPC;
+//   2. the headers are web/_headers' own, enforced, with only connect-src naming the local RPC, and
+//      only workers.dev hosts (previews, the Worker's own address) are told noindex (#78);
 //   3. the served scripts, run against the e2e chain, show the local registry's deployment and read
 //      the oracle, supply and reserves from anvil. A holder mints first (in a snapshot, rolled back),
 //      so the figures are not just a fresh deployment's zeros.
 // The browser itself (CSP enforcement, wallet) is #46; this runs the same scripts in a fake DOM.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const http = require('node:http');
 const os = require('node:os');
 const path = require('node:path');
 const vm = require('node:vm');
@@ -66,6 +68,19 @@ async function main() {
   assert.equal(res.headers.get('content-security-policy-report-only'), null, 'the CSP is enforced');
   assert.match(res.headers.get('content-security-policy'), new RegExp(`connect-src 'self' ${new URL(NETWORK.rpcUrl).origin};`));
   console.log(`PASS: ${want.length} headers from web/_headers, CSP enforced, connect-src 'self' ${new URL(NETWORK.rpcUrl).origin}`);
+
+  // The host-scoped noindex rule, as the server applies it. fetch cannot set Host, so node:http does.
+  const robotsFor = (host) => new Promise((resolve, reject) => {
+    http.get(new URL('/', WEB_URL), { headers: { host } }, (r) => { r.resume(); resolve(r.headers['x-robots-tag'] ?? null); }).on('error', reject);
+  });
+  for (const [host, want] of [
+    ['fix-branch-copra.bytesbrains-cruise.workers.dev', 'noindex'], // branch preview
+    ['f2e18698-copra.bytesbrains-cruise.workers.dev', 'noindex'], // per-version preview
+    ['copra.bytesbrains-cruise.workers.dev', 'noindex'], // the Worker's own address
+    ['copra.dev', null],
+    ['testnet.copra.dev', null],
+  ]) assert.equal(await robotsFor(host), want, `X-Robots-Tag for ${host}`);
+  console.log('PASS: workers.dev hosts are served noindex; copra.dev and testnet.copra.dev are not');
 
   // 3. The served page against the chain. The page's RPC is the host's view of anvil; from inside the
   //    stack it is the chain service, so map that one URL and require every read to use it.
