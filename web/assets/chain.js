@@ -257,13 +257,13 @@ async function checkAllowance() {
 async function watchToken(address, symbol, decimals, image) {
   if (!window.ethereum) return;
   try {
-    await window.ethereum.request({
+    await awaitWallet(window.ethereum.request({
       method: 'wallet_watchAsset',
       params: {
         type: 'ERC20',
         options: { address, symbol, decimals, image }
       }
-    });
+    }));
   } catch (e) {
     console.warn('wallet_watchAsset error:', e);
   }

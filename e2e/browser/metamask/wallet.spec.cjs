@@ -137,7 +137,7 @@ test('switching the site to another network in MetaMask reloads the page (chainC
   await expectPageMatchesChain(page, wallet.selected);
 });
 
-test('closing MetaMask mid-confirmation does not reject: the page waits, and rejecting when MetaMask is reopened restores it', async ({ connected, chain }) => {
+test('closing MetaMask mid-confirmation does not reject: the page waits, tells the user to open their wallet, and rejecting when MetaMask is reopened restores it', async ({ connected, chain }) => {
   const { page, wallet, metamask } = connected;
   const label = await page.locator('#faucetBtn').innerText();
   await page.click('#faucetBtn');
@@ -145,11 +145,12 @@ test('closing MetaMask mid-confirmation does not reject: the page waits, and rej
   connected.seen.push(route);
 
   // The user closes the side panel instead of answering. MetaMask 13.49 keeps the request pending
-  // (closing is not a rejection), so the page still waits on the wallet, and says what it is waiting for.
+  // (closing is not a rejection), so the page still waits on the wallet. Once the request has gone
+  // unanswered for 5s, the page says where the answer is expected (#76).
   await panel.close();
-  await page.waitForTimeout(3000);
+  await expect(toast(page)).toHaveText('Waiting for your answer: open your wallet to confirm or reject this request.', { timeout: 15_000 });
   await expect(page.locator('#faucetBtn')).toBeDisabled();
-  await expect(toast(page)).toContainText('Claiming');
+  await expect(page.locator('#faucetBtn')).toContainText('Claiming');
   expect(wallet.requests.filter((r) => r.method === 'eth_sendTransaction')).toEqual([]);
 
   // Reopening MetaMask shows the same request; rejecting it there gives the page its 4001.
