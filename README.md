@@ -33,7 +33,7 @@ The protocol codebase is located in [src/](src/):
 Further technical documentation:
 - [Whitepaper](docs/WHITEPAPER.md)
 - [Architecture & Security Model](docs/ARCHITECTURE.md)
-- Draft specs: [GCPI-001](docs/specs/GCPI-001.md), the Global Copra Price Index, and [COPRA-001](docs/specs/COPRA-001.md), the reserve and redemption protocol that would replace the v1 vault
+- Draft specs: [GCPI-001](docs/specs/GCPI-001.md), the Global Copra Price Index, and [COPRA-001](docs/specs/COPRA-001.md), the reserve and redemption protocol that would replace the v1 vault. Comment on them in [Discussions](https://github.com/bytesbrains/copra/discussions)
 - [Contributing Guidelines](CONTRIBUTING.md)
 - [Security Policy](SECURITY.md)
 
@@ -191,4 +191,4 @@ Only `assets/network.js` and the CSP's `connect-src` (that network's RPC) differ
 | Privacy and data requests | [privacy@copra.dev](mailto:privacy@copra.dev) |
 | **Security vulnerabilities** | **Never in a public issue.** Use [GitHub private vulnerability reporting](https://github.com/bytesbrains/copra/security/advisories/new) (preferred) or [security@copra.dev](mailto:security@copra.dev); see [SECURITY.md](SECURITY.md). |
 
-Bugs and feature requests: [GitHub issues](https://github.com/bytesbrains/copra/issues).
+Bugs and feature requests: [GitHub issues](https://github.com/bytesbrains/copra/issues). Comments on the GCPI methodology, proposed price sources and the COPRA-001 reserve design: [GitHub Discussions](https://github.com/bytesbrains/copra/discussions).
