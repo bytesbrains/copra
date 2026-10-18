@@ -103,6 +103,8 @@ def resolve(url, sources=None, get=fetch, now=None):
     except ValueError as e:
         raise SourceError(f"field '{src['date_field']}' is not an ISO date: '{published_text}'") from e
     age_days = (now.date() - published).days
+    # One day ahead is allowed: a source east of UTC (Manila, Jakarta) dates its observation by its own
+    # calendar, which can be a day ahead of UTC's. Two days ahead cannot be a time zone.
     if age_days < -1:
         raise SourceError(f"publication date {published} is in the future")
     if age_days > src["max_age_days"]:

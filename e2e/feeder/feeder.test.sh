@@ -123,10 +123,15 @@ expect_no_update
 
 scenario "after 1 day: broadcasts, and the oracle and PriceUpdated match, with a provenance record"
 warp "${DAY}"
-feed 0 "successfully updated" TARGET_PRICE=1.45
+feed 0 "successfully updated" TARGET_PRICE=1.45 GITHUB_STEP_SUMMARY="${WORK}/summary.md"
 expect_update 142000000 145000000
 [[ "${OUT}" == *'Provenance Record: {"tx": "0x'*'"price_e8": 145000000, "raw_value": "1.45",'*'"source": "manual override"'* ]] \
     || fail "no provenance record naming the manual override"
+# The step summary carries the same record as the log, and it parses as JSON.
+RECORD=$(sed -n 's/^Provenance Record: //p' <<< "${OUT}")
+grep -qxF "${RECORD}" "${WORK}/summary.md" || fail "step summary does not carry the logged provenance record"
+python3 -c 'import json,sys; r=json.loads(sys.argv[1]); assert r["tx"].startswith("0x") and r["observation"]["source"] == "manual override"' \
+    "${RECORD}" || fail "provenance record is not valid JSON of the expected shape"
 
 scenario "a target more than 20% away is refused, both ways, never clamped (#85)"
 warp "${DAY}"
@@ -136,6 +141,9 @@ feed 1 "exceeds the oracle's 20% limit" TARGET_PRICE=1.00
 expect_no_update
 feed 0 "successfully updated" TARGET_PRICE=1.704 # exactly +20%, which the oracle accepts
 expect_update 142000000 170400000
+warp "${DAY}"
+feed 0 "successfully updated" TARGET_PRICE=1.3632 # exactly -20%, likewise
+expect_update 170400000 136320000
 
 scenario "same price within 5 days: skips; FORCE=true broadcasts"
 warp "${DAY}"

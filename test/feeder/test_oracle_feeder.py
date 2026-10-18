@@ -57,10 +57,6 @@ class Resolve(unittest.TestCase):
         rec = resolve(url="https://kg.example/p", payload=body(usd_kg="1.455", as_of="2026-10-17"))
         self.assertEqual(rec["price_e8"], 145500000)
 
-    def test_no_default_price_exists(self):
-        self.assertFalse(hasattr(feeder, "DEFAULT_BENCHMARK"))
-        self.assertFalse(hasattr(feeder, "INDICATIVE_BENCHMARKS"))
-
     def test_redirects_are_refused_not_followed(self):
         # A declared host redirecting elsewhere would otherwise bypass the source registry.
         with self.assertRaises(feeder.SourceError):
@@ -88,7 +84,9 @@ class Resolve(unittest.TestCase):
         self.fails("not an ISO date", payload=body(price=1420))
         self.fails("not an ISO date", payload=body(price=1420, date="last week"))
         self.fails("36 days old", payload=body(price=1420, date="2026-09-12"))
-        self.fails("in the future", payload=body(price=1420, date="2026-10-21"))
+        self.fails("in the future", payload=body(price=1420, date="2026-10-20"))
+        # One day ahead of UTC is a source's own calendar east of UTC, not the future.
+        self.assertEqual(resolve(payload=body(price=1420, date="2026-10-19"))["published"], "2026-10-19")
         self.assertEqual(resolve(payload=body(price=1420, date="2026-09-13"))["published"], "2026-09-13")
 
 

@@ -141,7 +141,11 @@ if [[ -n "${TARGET_PRICE_INPUT}" ]]; then
     NEW_PRICE=$(awk -v p="${TARGET_PRICE_INPUT}" 'BEGIN {printf "%.0f", p * 100000000}')
     ACTOR="${GITHUB_ACTOR:-local}"
     [[ "${ACTOR}" =~ ^[A-Za-z0-9][A-Za-z0-9-]*(\[bot\])?$ ]] || ACTOR="unknown"
-    PROVENANCE=$(printf '{"entered_by": "%s", "price_e8": %s, "raw_value": "%s", "retrieved_at": "%s", "source": "manual override", "unit": "USD/kg"}' \
+    # Serialized, not interpolated: the record stays valid JSON whatever the inputs hold (#101 review).
+    PROVENANCE=$(python3 -c 'import json, sys
+_, actor, price_e8, raw, at = sys.argv
+print(json.dumps({"source": "manual override", "entered_by": actor, "price_e8": int(price_e8),
+                  "raw_value": raw, "unit": "USD/kg", "retrieved_at": at}, sort_keys=True))' \
         "${ACTOR}" "${NEW_PRICE}" "${TARGET_PRICE_INPUT}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)")
     echo "Price Source           : manual override by ${ACTOR}"
 elif [[ -n "${FEED_URL}" ]]; then
@@ -228,8 +232,10 @@ echo "✅ Oracle price successfully updated!"
 echo "Transaction Hash : ${TX_HASH}"
 echo "Basescan Link    : https://sepolia.basescan.org/tx/${TX_HASH}"
 
-# The provenance record of this update, beside its transaction (#85).
-echo "Provenance Record: {\"tx\": \"${TX_HASH}\", \"observation\": ${PROVENANCE}}"
+# The provenance record of this update, beside its transaction (#85): one shape in the log and the summary.
+# TX_HASH is hex from the grep above and PROVENANCE is already serialized JSON, so this stays valid JSON.
+RECORD="{\"tx\": \"${TX_HASH}\", \"observation\": ${PROVENANCE}}"
+echo "Provenance Record: ${RECORD}"
 if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
     {
         echo "### Oracle update"
@@ -237,7 +243,7 @@ if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
         echo "Transaction: [${TX_HASH}](https://sepolia.basescan.org/tx/${TX_HASH})"
         echo
         echo '```json'
-        echo "${PROVENANCE}"
+        echo "${RECORD}"
         echo '```'
     } >> "${GITHUB_STEP_SUMMARY}"
 fi
