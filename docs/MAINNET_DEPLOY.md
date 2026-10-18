@@ -80,6 +80,20 @@ cast call $ORACLE   'getCopraPriceUSD()(uint256,uint256)'
 - [ ] Set `registry` in `networks/mainnet.json`. Then `node scripts/web-env.cjs mainnet <dir>` builds the mainnet site.
 - [ ] Point the feeder at the registry with the updater's key, and watch its first update land a day later (`MIN_UPDATE_INTERVAL`).
 
+### The mainnet site's Worker
+
+A mainnet dApp must exist at exactly one address: its own domain. The testnet Worker also answers at `copra.<subdomain>.workers.dev` and at a public preview for every branch (#78). For mainnet, that would mean live copies of the site on addresses that aren't copra.dev, some running unreviewed code against real USDC. The mainnet Worker's wrangler config therefore sets:
+
+```jsonc
+"workers_dev": false,   // no <name>.<subdomain>.workers.dev copy
+"preview_urls": false,  // no per-branch or per-version previews
+"routes": [{ "pattern": "<mainnet domain>", "custom_domain": true }]
+```
+
+- [ ] The mainnet Worker's config has `workers_dev: false`, `preview_urls: false` and only its custom domain as a route.
+- [ ] `https://<worker>.<subdomain>.workers.dev/` doesn't serve the site (no 200 with the dApp).
+- [ ] Workers Builds for that Worker has non-production branch builds turned off. Check that pull requests from forks are never built for any Worker.
+
 ## 5. Later redeploys
 
 Run the same script with the same `COPRA_OWNER`. It reuses the registry and prints a new batch. The old set stays live until the multisig executes `setDeployment` for the new one.

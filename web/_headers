@@ -8,3 +8,8 @@
 
 /.well-known/security.txt
   Content-Type: text/plain; charset=utf-8
+
+# Branch previews (<branch>-copra.<subdomain>.workers.dev) and the Worker's own workers.dev address
+# are copies of the site, not the site (#78): keep them out of search. copra.dev stays indexable.
+https://:version.:subdomain.workers.dev/*
+  X-Robots-Tag: noindex
