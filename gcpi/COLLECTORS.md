@@ -77,7 +77,7 @@ CDB's page carries ASP.NET view state that changes on every request, so retrieva
 
 | Field | Value |
 |---|---|
-| `market` | `IN` (the India sub-index; a deployment's methodology must list it) |
+| `market` | `IN` (the India sub-index; a deployment's methodology must list it, as the [testnet one](engine/methodology/gcpi-1-draft.1-in-testnet.json) does) |
 | `source`, `basis` | `cdb-market-price`, `kochi` |
 | `currency`, `unit` | `INR`, `quintal` |
 | `fx`, `fx_exp`, `fx_source` | ECB monthly mean, 4 decimals, `ecb-monthly-mean` |
@@ -109,11 +109,10 @@ Python 3 standard library and Foundry's `cast`, nothing else.
 
 ## What remains
 
-1. **A live run against CDB and the ECB,** from a network that reaches `coconutboard.in`, to confirm the adapter against the real form.
-2. **Independent operators** for at least two collectors and *k* notaries, and their adversarial runs (#92). That is item 2 of [what remains of #92](CONTRACTS.md#what-remains-of-92) too: *n*, *k* and who the operators are.
-3. **Adapters for the headline markets.** PSA is withdrawn until it explains its 2024 break, and Indonesia has no accepted source ([SOURCES](SOURCES.md)).
-4. **The §6.2 FX rule,** decided in a methodology version, whether it is `ecb-monthly-mean` or another.
-5. **A TLSNotary backend,** once it supports TLS 1.3 and leaves alpha.
+1. **Independent operators** for at least two collectors and *k* notaries, and their adversarial runs (#92). That is item 2 of [what remains of #92](CONTRACTS.md#what-remains-of-92) too: *n*, *k* and who the operators are.
+2. **Adapters for the headline markets.** PSA is withdrawn until it explains its 2024 break, and Indonesia has no accepted source ([SOURCES](SOURCES.md)).
+3. **The §6.2 FX rule,** decided in a methodology version, whether it is `ecb-monthly-mean` or another.
+4. **A TLSNotary backend,** once it supports TLS 1.3 and leaves alpha.
 
 ## Reproducing
 

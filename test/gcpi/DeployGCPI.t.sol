@@ -42,6 +42,25 @@ contract DeployGCPITest is Test {
         assertEq(e.rewardPerPeriod(), 0.001 ether);
     }
 
+    /// @dev The Base Sepolia methodology (#92): India alone, the one market with an adapter, base 2026-09.
+    function test_DeploysTheTestnetSubIndexUntilItsBaseCloses() public {
+        DeployGCPI.Config memory c = _cfg();
+        c.methodologyPath = "gcpi/engine/methodology/gcpi-1-draft.1-in-testnet.json";
+        c.first = "2026-09";
+        uint256 closes = 1_798_848_000; // 2027-01-02: 2026-10-01 + 90 days + the 3-day challenge window
+        vm.warp(closes - 1);
+        GCPIEngine e = script.deploy(c, KEY);
+        assertEq(e.methodologyId(), "GCPI-1-draft.1-IN-testnet");
+        // engine.py: sha256(canonical(gcpi-1-draft.1-in-testnet.json)). Editing the file makes a new version (§13.5).
+        assertEq(
+            GCPIMath.hex32(e.methodologyHash()), "68b11d46362d4a7054a194de5daf753f9256e46d706b22c433d3da718d4ea37b"
+        );
+        assertEq(e.verifier().series().length, 1);
+        vm.warp(closes);
+        vm.expectRevert("DeployGCPI: the base period has closed, so no period could be VALID");
+        script.deploy(c, KEY);
+    }
+
     function test_RefusesBaseMainnet() public {
         vm.chainId(8453);
         vm.expectRevert("DeployGCPI: no live GCPI before shadow publication (#93)");

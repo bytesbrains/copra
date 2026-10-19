@@ -66,13 +66,8 @@ class EndToEnd(unittest.TestCase):
                 break
             except chainlib.ChainError:
                 time.sleep(0.1)
-        # forge may read only ./gcpi/engine and ./out (foundry.toml); out/ is build output and ignored by git.
-        cls.methodology = os.path.join(ROOT, "out", f"gcpi-e2e-{port}.json")
-        os.makedirs(os.path.dirname(cls.methodology), exist_ok=True)
-        with open(cls.methodology, "w") as f:
-            json.dump({"id": "GCPI-e2e-IN", "markets": {"IN": "100"}, "signals": [], "corroborators": {},
-                       "min_coverage_bp": "7000", "max_publication_lag_days": "90",
-                       "bands_bp": ["1000", "2000", "4000"], "circuit_breaker_bp": "4000", "base_period": PERIOD}, f)
+        # The Base Sepolia methodology (#92): India alone, base period 2026-09.
+        cls.methodology = os.path.join(ROOT, "gcpi", "engine", "methodology", "gcpi-1-draft.1-in-testnet.json")
         cls.notaries = [chainlib.address_of(["--private-key", k]) for k in KEYS[1:4]]
         env = {**os.environ, "PRIVATE_KEY": KEYS[0], "GCPI_METHODOLOGY": cls.methodology, "GCPI_FIRST": PERIOD,
                "GCPI_NOTARIES": ",".join(cls.notaries), "GCPI_THRESHOLD": "2"}
@@ -95,8 +90,6 @@ class EndToEnd(unittest.TestCase):
         if getattr(cls, "anvil", None):
             cls.anvil.terminate()
             cls.anvil.wait(timeout=10)
-        if os.path.exists(getattr(cls, "methodology", "")):
-            os.remove(cls.methodology)
         if getattr(cls, "dir", None):
             cls.dir.cleanup()
 

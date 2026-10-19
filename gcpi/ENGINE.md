@@ -48,6 +48,8 @@ The rules below are normative. Where GCPI-001 left a rule open, this engine had 
 | `max_publication_lag_days` | `90` | §8.2 freshness window after period end |
 | `base_period` | `2016-02` | §8.4 *b*. A placeholder: see the open choices. |
 
+**Testnet methodology** (#92): [`methodology/gcpi-1-draft.1-in-testnet.json`](engine/methodology/gcpi-1-draft.1-in-testnet.json) is what Base Sepolia runs. It is the India sub-index alone, because CDB is the only source with an adapter ([COLLECTORS](COLLECTORS.md)). It has no signals and no corroborators, as §7.5 lists none for a sub-index, so a 10–40% move waits for India's next publication (open choice 1). Its base period is 2026-09, the newest month CDB has published, so a deployment made before 2027-01-02, when that period's window closes, can still finalize a VALID base. The bands, circuit breaker, coverage and freshness window are the v1 draft's. It is a draft (§13.5): no comment period, no review, and nothing that settles value may read it.
+
 **Observation.** Every field is a string. Integers are canonical decimal strings: no sign, no leading zeros.
 
 | Field | Example | Meaning |
