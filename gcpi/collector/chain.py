@@ -6,6 +6,7 @@ attestation digest could otherwise have the notary sign an observation it never 
 
 import json
 import os
+import re
 import subprocess
 
 DOMAIN = {"name": "GCPI ObservationVerifier", "version": "1"}
@@ -97,7 +98,12 @@ class Chain:
     def submitted(self, commitment):
         """Whether the verifier already holds this observation."""
         out = self.call(f"observation(bytes32)(({OBSERVATION},uint32,uint32,address,bool))", "0x" + commitment)
-        return "0x0000000000000000000000000000000000000000" not in out
+        # The submitter, the struct's last address, is set exactly when it is held (submit()'s Duplicate check).
+        # Only that field is read: an identifier such as `basis` may itself spell the zero address.
+        submitter = out.rstrip().removesuffix(")").rsplit(",", 2)[-2].strip()
+        if not re.fullmatch(r"0x[0-9a-fA-F]{40}", submitter):
+            raise ChainError(f"observation(): unexpected answer {out[-120:]!r}")
+        return int(submitter, 16) != 0
 
     def address_of(self, signer):
         return address_of(signer)

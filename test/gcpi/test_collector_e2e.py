@@ -45,6 +45,15 @@ def free_port():
 class EndToEnd(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        # unittest skips tearDownClass when this raises, so a failure here cleans up after itself.
+        try:
+            cls._setUp()
+        except BaseException:
+            cls.tearDownClass()
+            raise
+
+    @classmethod
+    def _setUp(cls):
         cls.dir = tempfile.TemporaryDirectory()
         port = free_port()
         cls.rpc = f"http://127.0.0.1:{port}"
@@ -70,7 +79,6 @@ class EndToEnd(unittest.TestCase):
                               "--broadcast"], cwd=ROOT, env=env, capture_output=True, text=True, timeout=600)
         found = re.search(r"ObservationVerifier: (0x[0-9a-fA-F]{40})", out.stdout)
         if out.returncode != 0 or not found:
-            cls.tearDownClass()
             raise RuntimeError(f"DeployGCPI failed:\n{out.stdout[-2000:]}\n{out.stderr[-2000:]}")
         cls.chain = chainlib.Chain(cls.rpc, found.group(1), 31337)
         for k in KEYS[1:4]:
@@ -83,11 +91,13 @@ class EndToEnd(unittest.TestCase):
         for s in getattr(cls, "servers", []):
             s.shutdown()
             s.server_close()
-        cls.anvil.terminate()
-        cls.anvil.wait(timeout=10)
+        if getattr(cls, "anvil", None):
+            cls.anvil.terminate()
+            cls.anvil.wait(timeout=10)
         if os.path.exists(getattr(cls, "methodology", "")):
             os.remove(cls.methodology)
-        cls.dir.cleanup()
+        if getattr(cls, "dir", None):
+            cls.dir.cleanup()
 
     def serve(self, key, source):
         """A notary over HTTP, retrieving whatever source() returns at the time it is asked."""

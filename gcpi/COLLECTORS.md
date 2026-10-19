@@ -44,9 +44,11 @@ How this relates to §5.3.1, which says notaries attest "through TLS attestation
 | `unusable` | The engine would make the observation INVALID |
 | `would_equivocate` | It already signed a different normalized price or basis for this market, source and period |
 
-**Never equivocating.** Equivocation is the slashable fault a revision would cause (§5.4). A notary therefore logs every signature's market, source, period, normalized price and basis, and refuses a conflicting one. The log is a JSON-lines file, written and `fsync`ed before the signature is returned, and read back at start. Losing it loses that protection, so it belongs on durable storage. Signing the same value again, retrieved later, is not a conflict.
+**Never equivocating.** Equivocation is the slashable fault a revision would cause (§5.4). A notary therefore logs every signature's market, source, period, normalized price and basis, and refuses a conflicting one. The log is a JSON-lines file, written and `fsync`ed (with its directory, when the write creates it) before the signature is made, and read back at start. Losing it loses that protection, so it belongs on durable storage. Signing the same value again, retrieved later, is not a conflict.
 
 **What is signed is built locally.** The EIP-712 typed data comes from the chain id and verifier address the notary was started with, not from an RPC call to `attestationDigest`. A node that lied about the digest could otherwise make a notary sign a commitment it never checked. At start, the notary checks that the RPC serves the configured chain.
+
+**Exposure.** `/attest` takes no credentials, by design: anyone may run a collector, so anyone may ask. Each request costs the notary a retrieval from the publisher and the ECB, so a notary reachable from the internet belongs behind a proxy that rate-limits it. It listens on `127.0.0.1:8645` unless `--listen HOST:PORT` (an IPv6 host in brackets) says otherwise.
 
 ## How a collector submits
 

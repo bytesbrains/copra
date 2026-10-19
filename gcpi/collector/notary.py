@@ -13,7 +13,7 @@ A notary's bond is slashed for two provable faults (§5.4), and this refuses bot
     for a market, source and period it already signed. The log is written before the signature leaves.
     Losing the log loses that protection, so it belongs on durable storage.
 
-Usage: notary.py --rpc-url URL --verifier 0x.. --chain-id N --log notary.jsonl [--listen 127.0.0.1:8545]
+Usage: notary.py --rpc-url URL --verifier 0x.. --chain-id N --log notary.jsonl [--listen 127.0.0.1:8645]
                  [--serve cdb-market-price:IN ...]      signer from NOTARY_KEY or NOTARY_KEYSTORE
 """
 
@@ -21,9 +21,11 @@ import argparse
 import http.server
 import json
 import os
+import socket
 import sys
 import threading
 import time
+import urllib.parse
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -57,6 +59,21 @@ class Notary:
                 for line in f:
                     e = json.loads(line)
                     self._signed.setdefault(tuple(e["key"]), set()).add((e["price"], e["basis"]))
+
+    def _log(self, entry):
+        """Durably, before any signature for it leaves: the line, and the file's own directory entry when
+        this creates the log, or a crash could take the whole log with it."""
+        created = not os.path.exists(self.log_path)
+        with open(self.log_path, "a") as f:
+            f.write(json.dumps(entry) + "\n")
+            f.flush()
+            os.fsync(f.fileno())
+        if created:
+            d = os.open(os.path.dirname(os.path.abspath(self.log_path)), os.O_RDONLY)
+            try:
+                os.fsync(d)
+            finally:
+                os.close(d)
 
     def attest(self, obs):
         """{signer, signature, commitment} for an observation this notary reproduced, or Refused."""
@@ -93,13 +110,10 @@ class Notary:
             if self._signed.get(key, set()) - {(str(price), obs["basis"])}:
                 raise Refused("would_equivocate", "already signed another value for this market, source and period")
             if (str(price), obs["basis"]) not in self._signed.get(key, set()):
-                with open(self.log_path, "a") as f:
-                    f.write(json.dumps({"key": list(key), "price": str(price), "basis": obs["basis"],
-                                        "commitment": c, "at": now}) + "\n")
-                    f.flush()
-                    os.fsync(f.fileno())
+                self._log({"key": list(key), "price": str(price), "basis": obs["basis"], "commitment": c, "at": now})
                 self._signed.setdefault(key, set()).add((str(price), obs["basis"]))
-            signature = self.chain.sign(c, self.signer)
+        # Outside the lock: the log already holds this value, so a slow signer holds up no other request.
+        signature = self.chain.sign(c, self.signer)
         return {"signer": self.address, "signature": signature, "commitment": c}
 
 
@@ -127,7 +141,7 @@ def handler(notary, quiet=False):
                 return self._reply(413, {"refused": "body_size"})
             try:
                 obs = json.loads(self.rfile.read(n))
-            except ValueError:
+            except (ValueError, RecursionError):  # RecursionError: nesting deeper than the parser's stack
                 return self._reply(400, {"refused": "not_json"})
             try:
                 self._reply(200, notary.attest(obs))
@@ -143,13 +157,32 @@ def handler(notary, quiet=False):
     return Handler
 
 
+def listen_address(text):
+    """(host, port) from --listen's HOST:PORT, with an IPv6 host in brackets: [::1]:8645."""
+    u = urllib.parse.urlsplit("//" + text)
+    try:
+        port = u.port
+    except ValueError:
+        port = None
+    if not u.hostname or port is None or u.netloc != text:
+        raise argparse.ArgumentTypeError(f"{text!r} is not HOST:PORT")
+    return u.hostname, port
+
+
+class Server(http.server.ThreadingHTTPServer):
+    def __init__(self, address, handler_class):
+        if ":" in address[0]:
+            self.address_family = socket.AF_INET6
+        super().__init__(address, handler_class)
+
+
 def main(argv):
     p = argparse.ArgumentParser(description="GCPI notary (#92)")
     p.add_argument("--rpc-url", required=True)
     p.add_argument("--verifier", required=True)
     p.add_argument("--chain-id", required=True, type=int)
     p.add_argument("--log", required=True)
-    p.add_argument("--listen", default="127.0.0.1:8645")
+    p.add_argument("--listen", default="127.0.0.1:8645", type=listen_address)
     p.add_argument("--serve", nargs="+", default=["cdb-market-price:IN"])
     a = p.parse_args(argv)
     try:
@@ -159,9 +192,8 @@ def main(argv):
     except (chainlib.ChainError, ValueError) as e:
         print(f"notary: {e}", file=sys.stderr)
         return 1
-    host, _, port = a.listen.rpartition(":")
-    server = http.server.ThreadingHTTPServer((host, int(port)), handler(notary))
-    print(f"notary {notary.address} on {a.listen} for {a.verifier} (chain {a.chain_id})", file=sys.stderr)
+    server = Server(a.listen, handler(notary))
+    print(f"notary {notary.address} on {server.server_address[:2]} for {a.verifier} (chain {a.chain_id})", file=sys.stderr)
     server.serve_forever()
 
 

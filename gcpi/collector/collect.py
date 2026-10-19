@@ -84,8 +84,11 @@ def gather(obs, notaries, chain, k, asker=ask, log=lambda m: None):
         except CollectError as e:
             log(f"refused: {e}")
             continue
-        signer = r.get("signer", "")
-        if r.get("commitment") != c or not chain.verify(c, signer, r.get("signature", "")):
+        if not isinstance(r, dict) or not all(isinstance(r.get(f), str) for f in ("signer", "signature")):
+            log(f"{url}: not an attestation")
+            continue
+        signer = r["signer"]
+        if r.get("commitment") != c or not chain.verify(c, signer, r["signature"]):
             log(f"{url}: signature does not recover {signer} for {c}")
         elif not chain.counts(signer):
             log(f"{url}: {signer} does not count (unlisted, unbonded, unbonding or slashed)")

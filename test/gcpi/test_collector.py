@@ -2,16 +2,21 @@
 # gcpi/collector (#92): the CDB and ECB parsers on the publishers' bytes, the notary's refusals (the two
 # slashable faults first), and the collector's handling of notaries, against a chain held in memory.
 # test_collector_e2e.py runs the same code against the contracts on anvil.
+import argparse
 import decimal
 import fractions
 import json
 import os
 import sys
 import tempfile
+import threading
 import unittest
+import urllib.error
+import urllib.request
 
 sys.path.insert(0, os.path.dirname(__file__))
 from collector_fixtures import FakeSources, ecb_days, ecb_zip  # noqa: E402
+import chain as chainlib  # noqa: E402
 import collect  # noqa: E402
 import notary as notarylib  # noqa: E402
 import sources  # noqa: E402
@@ -89,6 +94,14 @@ class Parsing(unittest.TestCase):
         self.assertEqual(len(used), 20, "an N/A day is left out, not read as zero")
         with self.assertRaises(SourceError):
             sources.ecb_monthly_mean(fake(), "LKR", PERIOD)
+
+    def test_OnlyTheMonthsOwnDatesCountAndEachOnce(self):
+        days = ecb_days(PERIOD, INR)
+        for extra in ((f"{PERIOD}-extra",) + days[0][1:], (f"{PERIOD}-1",) + days[0][1:]):
+            _, _, used = sources.ecb_monthly_mean(FakeSources({}, ecb_zip(days + [extra])), "INR", PERIOD)
+            self.assertEqual(len(used), len(days), extra[0])
+        with self.assertRaisesRegex(SourceError, "twice"):
+            sources.ecb_monthly_mean(FakeSources({}, ecb_zip(days + [days[0]])), "INR", PERIOD)
 
     def test_CdbGivesAValidEngineObservationAndAStableRecord(self):
         src = fake()
@@ -177,7 +190,8 @@ class Notary(unittest.TestCase):
         self.refused(self.notary(revised), obs, "would_equivocate")
         # The same value again, retrieved later, is not a conflict.
         self.now += 7200
-        self.notary().attest(self.proposed(at=END + 3600))
+        self.chain.now = self.now
+        self.notary().attest(self.proposed(at=self.now - 60))
 
     def test_NothingPrematureIsSigned(self):
         obs = self.proposed()
@@ -192,6 +206,38 @@ class Notary(unittest.TestCase):
         obs = self.proposed()
         self.now = int(obs["published"]) + notarylib.ATTEST_WINDOW + 1
         self.refused(self.notary(), obs, "published_too_old")
+
+    def test_ItSignsOutsideTheLockAndOnlyOnceTheValueIsLogged(self):
+        n = self.notary()
+        def sign(c, signer):
+            self.assertFalse(n._lock.locked(), "a slow signer must not hold up other requests")
+            with open(self.log) as f:
+                self.assertIn(c, f.read())
+            return f"sig:{signer}:{c}"
+        self.chain.sign = sign
+        n.attest(self.proposed())
+
+    def test_ItAnswersOverHttpAndRefusesWhatIsNotAnObservation(self):
+        server = notarylib.Server(("127.0.0.1", 0), notarylib.handler(self.notary(), quiet=True))
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        self.addCleanup(server.server_close)
+        self.addCleanup(server.shutdown)
+        url = f"http://127.0.0.1:{server.server_address[1]}"
+        for body, code in (("[" * 60000, "not_json"), ("[1]", "malformed"), ('{"market": 7}', "malformed")):
+            req = urllib.request.Request(url + "/attest", body.encode(), {"Content-Type": "application/json"})
+            with self.assertRaises(urllib.error.HTTPError, msg=body[:10]) as e:
+                urllib.request.urlopen(req, timeout=10)
+            with e.exception:
+                self.assertEqual(json.loads(e.exception.read())["refused"], code)
+        obs = self.proposed()
+        self.assertEqual(collect.ask(url, obs)["commitment"], engine.commitment(obs))
+
+    def test_ListenTakesHostAndPortOnly(self):
+        self.assertEqual(notarylib.listen_address("127.0.0.1:8645"), ("127.0.0.1", 8645))
+        self.assertEqual(notarylib.listen_address("[::1]:8645"), ("::1", 8645))
+        for bad in ("8645", "127.0.0.1", "127.0.0.1:", "host:port", "127.0.0.1:99999", "a:1/x"):
+            with self.assertRaises(argparse.ArgumentTypeError, msg=bad):
+                notarylib.listen_address(bad)
 
     def test_UnservedAndMalformedObservationsAreRefused(self):
         obs = self.proposed()
@@ -247,11 +293,36 @@ class Collector(unittest.TestCase):
                            now=self.now, asker=self.asker({self.who[0]: forged}))
         self.assertEqual(self.chain.sent, [], "nothing is sent without k usable attestations")
 
+    def test_AnAnswerThatIsNotAnAttestationIsSkipped(self):
+        odd = {self.who[0]: lambda obs: [1], self.who[1]: lambda obs: {"signer": 1, "signature": None}}
+        obs, _ = collect.propose(sources.Cdb(), fake(), PERIOD, self.now)
+        c = engine.commitment(obs)
+        self.assertEqual(collect.gather(obs, self.who, self.chain, 1, self.asker(odd)), [f"sig:{self.who[2]}:{c}"])
+        with self.assertRaisesRegex(collect.CollectError, "1 usable attestations, 2 needed"):
+            collect.gather(obs, self.who, self.chain, 2, self.asker(odd))
+
     def test_ARefusingNotaryIsSkipped(self):
         refuse = lambda obs: (_ for _ in ()).throw(collect.CollectError("refused"))
         r = collect.submit(sources.Cdb(), PERIOD, self.who, self.chain, "collector", transport=fake(),
                            now=self.now, asker=self.asker({self.who[0]: refuse}))
         self.assertEqual(self.chain.sent[-1][1], [f"sig:{w}:{r['commitment']}" for w in sorted(self.who[1:])])
+
+
+class ChainAnswers(unittest.TestCase):
+    def submitted(self, submitter, basis="kochi"):
+        c = chainlib.Chain("http://127.0.0.1:1", "0x" + "aa" * 20, 1)
+        c.call = lambda *a: (f'(("IN", "2026-09", "cdb-market-price", 1345678 [1.345e6], 2, "INR", "quintal", true, '
+                             f'885123 [8.851e5], 4, "ecb-monthly-mean", 1790000000 [1.79e9], 0x{"ab" * 32}, '
+                             f'"{basis}"), 0, 680, {submitter}, false)')
+        return c.submitted("ab" * 32)
+
+    def test_SubmittedReadsTheSubmitterAndNothingElse(self):
+        zero, someone = "0x" + "0" * 40, "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+        self.assertTrue(self.submitted(someone))
+        self.assertFalse(self.submitted(zero))
+        self.assertTrue(self.submitted(someone, basis=zero), "an identifier may spell the zero address")
+        with self.assertRaises(chainlib.ChainError):
+            self.submitted("garbage")
 
 
 if __name__ == "__main__":

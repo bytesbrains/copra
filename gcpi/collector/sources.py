@@ -73,15 +73,18 @@ def ecb_monthly_mean(transport, currency, period):
     if "Date" not in head or "USD" not in head or currency not in head:
         raise SourceError(f"ECB history has no Date, USD or {currency} column")
     at = {h: i for i, h in enumerate(head)}
+    day = re.compile(re.escape(period) + r"-(0[1-9]|[12][0-9]|3[01])\Z")
     days = []
     for r in rows[1:]:
         r = [v.strip() for v in r]
-        if len(r) < len(head) or not r[at["Date"]].startswith(period + "-"):
+        if len(r) < len(head) or not day.match(r[at["Date"]]):
             continue
         usd, cur = r[at["USD"]], r[at[currency]]
         if DECIMAL.match(usd) and DECIMAL.match(cur):  # "N/A" on days a rate was not set
             days.append([r[at["Date"]], cur, usd])
     days.sort()
+    if len({d for d, _, _ in days}) != len(days):
+        raise SourceError(f"ECB history lists a day of {period} twice")
     if len(days) < MIN_FX_DAYS:
         raise SourceError(f"ECB has {len(days)} reference days for {currency} in {period}, fewer than {MIN_FX_DAYS}")
     with decimal.localcontext(decimal.Context(prec=60)):
