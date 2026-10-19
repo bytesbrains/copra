@@ -11,6 +11,7 @@ import sys
 import tempfile
 import threading
 import unittest
+import unittest.mock
 import urllib.error
 import urllib.request
 
@@ -355,6 +356,15 @@ class ChainAnswers(unittest.TestCase):
                              f'885123 [8.851e5], 4, "ecb-monthly-mean", 1790000000 [1.79e9], 0x{"ab" * 32}, '
                              f'"{basis}"), 0, 680, {submitter}, false)')
         return c.submitted("ab" * 32)
+
+    def test_AKeystoreSignerNeedsItsPasswordFile(self):
+        env = {"NOTARY_KEYSTORE": "/keys/notary"}
+        with unittest.mock.patch.dict(os.environ, env, clear=True):
+            with self.assertRaisesRegex(chainlib.ChainError, "NOTARY_PASSWORD_FILE"):
+                chainlib.signer_from_env("NOTARY")
+        with unittest.mock.patch.dict(os.environ, {**env, "NOTARY_PASSWORD_FILE": "/keys/password"}, clear=True):
+            self.assertEqual(chainlib.signer_from_env("NOTARY"),
+                             ["--keystore", "/keys/notary", "--password-file", "/keys/password"])
 
     def test_SubmittedReadsTheSubmitterAndNothingElse(self):
         zero, someone = "0x" + "0" * 40, "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"

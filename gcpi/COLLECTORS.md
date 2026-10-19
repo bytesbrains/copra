@@ -92,7 +92,7 @@ This is the backtest's FX ([`load.py`](backtest/load.py) `load_fx`) made exact. 
 
 ## Running one
 
-Both read their signer from the environment: `NOTARY_KEY` or `NOTARY_KEYSTORE` for a notary, `COLLECTOR_KEY` or `COLLECTOR_KEYSTORE` for a collector, never both. A keystore's password is read from `ETH_PASSWORD`.
+Both read their signer from the environment: `NOTARY_KEY` or `NOTARY_KEYSTORE` for a notary, `COLLECTOR_KEY` or `COLLECTOR_KEYSTORE` for a collector, never both. A keystore needs `NOTARY_PASSWORD_FILE` or `COLLECTOR_PASSWORD_FILE` too, the file holding its password. Not `ETH_PASSWORD`: cast reads that as a password file for every command, and then refuses even a `cast call`.
 
 ```
 # a notary: bond once, then serve

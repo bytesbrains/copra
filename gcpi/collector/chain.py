@@ -20,14 +20,19 @@ class ChainError(Exception):
 
 
 def signer_from_env(prefix):
-    """cast's signer arguments from <prefix>_KEY or <prefix>_KEYSTORE (password in ETH_PASSWORD), never both."""
+    """cast's signer arguments from <prefix>_KEY, or <prefix>_KEYSTORE with <prefix>_PASSWORD_FILE, never both.
+    The password file goes only to the commands that sign: cast reads ETH_PASSWORD as a password file for
+    every command, and then refuses a `cast call` that has no keystore."""
     key, keystore = os.environ.get(f"{prefix}_KEY"), os.environ.get(f"{prefix}_KEYSTORE")
     if key and keystore:
         raise ChainError(f"{prefix}_KEY and {prefix}_KEYSTORE are both set; set only one signer")
     if key:
         return ["--private-key", key]
     if keystore:
-        return ["--keystore", keystore]
+        password = os.environ.get(f"{prefix}_PASSWORD_FILE")
+        if not password:
+            raise ChainError(f"{prefix}_KEYSTORE needs {prefix}_PASSWORD_FILE, the file holding its password")
+        return ["--keystore", keystore, "--password-file", password]
     raise ChainError(f"{prefix}_KEY or {prefix}_KEYSTORE must be set")
 
 
