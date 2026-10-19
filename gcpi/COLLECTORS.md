@@ -38,10 +38,10 @@ How this relates to §5.3.1, which says notaries attest "through TLS attestation
 | `malformed` | The engine's structural check fails (gcpi/ENGINE.md §1) |
 | `not_served` | It runs no adapter for that source and market |
 | `published_in_future` | `published` is later than its own clock |
-| `published_too_old` | `published` is more than 24 hours before its own retrieval. `published` is the collector's first retrieval (§5.2), so the notary's must follow it closely. |
+| `published_too_old` | `published` is more than 24 hours before the request. `published` is the collector's first retrieval (§5.2), so the notary's must follow it closely. The retrieval it compares against is never later than the request, and at most 10 minutes earlier (see Exposure), so it is never more than 24 hours after `published` either. |
 | `period_not_ended` | The month is not over, so a monthly average is still partial |
 | `out_of_range` | The period is before the verifier's first |
-| `window_closed` | The verifier no longer accepts the period: it closed 3 days after the freshness window |
+| `window_closed` | The verifier no longer accepts the period: it closed `CHALLENGE_WINDOW` (3 days) after the freshness window |
 | `chain_clock_behind` | The chain's clock has not passed both the period's start and `published`. Signing now could be slashed as premature ([CONTRACTS](CONTRACTS.md)). |
 | `source` | Its own retrieval failed or the adapter did not recognise the response |
 | `mismatch` | Its retrieval gave a different observation; the fields are listed |

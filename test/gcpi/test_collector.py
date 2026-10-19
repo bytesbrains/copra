@@ -59,7 +59,7 @@ class FakeChain:
         return self.k
 
     def window(self):
-        return engine.ym_index(PERIOD) - 12, 90
+        return engine.ym_index(PERIOD) - 12, 90, 2 * 86400  # not the deployed 3 days: it is read, not assumed
 
     def submit_bond(self):
         return 10 ** 14
@@ -239,7 +239,7 @@ class Notary(unittest.TestCase):
         old = collect.propose(sources.Cdb(), fake(period="2025-08"), "2025-08", self.now)[0]
         self.refused(self.notary(fake(period="2025-08")), old, "out_of_range")
         obs = self.proposed()
-        closes = engine.period_start(engine.ym_index(PERIOD) + 1) + (90 + 3) * 86400
+        closes = engine.period_start(engine.ym_index(PERIOD) + 1) + (90 + 2) * 86400
         self.chain.now = closes
         self.refused(self.notary(), obs, "window_closed")
         self.chain.now = closes - 1

@@ -58,7 +58,7 @@ class Notary:
         self.transport = transport or (lambda adapter: Transport(adapter.hosts))
         self.clock, self.retrieval_ttl = clock, retrieval_ttl
         self.address = chain.address_of(signer)
-        self.first_period, self.lag_days = chain.window()
+        self.first_period, self.lag_days, self.challenge_window = chain.window()
         self._lock = threading.Lock()
         self._signed = {}
         self._retrievals, self._retrieving = {}, {}
@@ -116,13 +116,13 @@ class Notary:
         if published > now:
             raise Refused("published_in_future")
         if now - published > ATTEST_WINDOW:
-            raise Refused("published_too_old", f"{now - published} s before this retrieval")
+            raise Refused("published_too_old", f"{now - published} s before this request")
         if not sources.ended(obs["period"], now):
             raise Refused("period_not_ended")
         if t < self.first_period:
             raise Refused("out_of_range", "the verifier accepts no period before its first")
         chain_now = self.chain.timestamp()
-        if chain_now >= engine.period_start(t + 1) + self.lag_days * 86400 + chainlib.CHALLENGE_WINDOW:
+        if chain_now >= engine.period_start(t + 1) + self.lag_days * 86400 + self.challenge_window:
             raise Refused("window_closed", "the verifier no longer accepts this period")
         if chain_now < max(start, published):
             raise Refused("chain_clock_behind", "signing now could be slashed as premature")

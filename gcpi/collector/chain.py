@@ -13,7 +13,6 @@ DOMAIN = {"name": "GCPI ObservationVerifier", "version": "1"}
 OBSERVATION = ("(string,string,string,uint256,uint256,string,string,bool,uint256,uint256,string,uint256,"
                "bytes32,string)")
 SUBMIT = f"submit({OBSERVATION},bytes[])"
-CHALLENGE_WINDOW = 3 * 86400  # ObservationVerifier.CHALLENGE_WINDOW
 
 
 class ChainError(Exception):
@@ -95,11 +94,11 @@ class Chain:
         return int(self.call("threshold()(uint256)").split()[0])
 
     def window(self):
-        """(firstPeriod, maxPublicationLagDays): the periods the verifier accepts. Both are immutable, so
-        they are read once."""
+        """(firstPeriod, maxPublicationLagDays, CHALLENGE_WINDOW): the periods the verifier accepts. All are
+        immutable, so they are read once."""
         if self._window is None:
-            self._window = (int(self.call("firstPeriod()(uint256)").split()[0]),
-                            int(self.call("maxPublicationLagDays()(uint256)").split()[0]))
+            self._window = tuple(int(self.call(f"{f}()(uint256)").split()[0])
+                                 for f in ("firstPeriod", "maxPublicationLagDays", "CHALLENGE_WINDOW"))
         return self._window
 
     def submit_bond(self):
