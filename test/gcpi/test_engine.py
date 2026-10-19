@@ -187,6 +187,18 @@ class Determinism(unittest.TestCase):
         noisy["observations"].append(extra)
         self.assertEqual(engine.canonical(engine.run(noisy)), engine.canonical(engine.run(copy.deepcopy(inp))))
 
+    def test_a_trailing_newline_is_not_canonical(self):
+        # Python's `$` also matches before a final newline; JavaScript's does not. The anchors must agree.
+        for code, mutate in [("observation_id", lambda i: i["observations"][0].update(market="PH\n")),
+                             ("observation_period", lambda i: i["observations"][0].update(period="2020-01\n")),
+                             ("observation_integer", lambda i: i["observations"][0].update(price="100\n")),
+                             ("methodology_id", lambda i: i["methodology"].update(id="GCPI-test\n"))]:
+            inp = copy.deepcopy(vector("normal")["input"])
+            mutate(inp)
+            with self.assertRaises(engine.EngineError) as e:
+                engine.run(inp)
+            self.assertEqual(e.exception.code, code)
+
     def test_every_commitment_field_matters(self):
         o = vector("normal")["input"]["observations"][0]
         base = engine.commitment(o)
