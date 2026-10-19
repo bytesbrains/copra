@@ -53,9 +53,9 @@ contract GCPIEngineTest is GCPIHarness {
     function test_AKeeperOutagePublishesNothingThenTheSameRecords() public {
         Vector memory x = loadVector("circuit_breaker");
         GCPIEngine e = deploy(x.m, x.first);
-        Observation[] memory obs = byPublished(x.obs);
+        Observation[] memory obs = bySubmission(x.obs);
         for (uint256 i = 0; i < obs.length; i++) {
-            if (obs[i].published > block.timestamp) vm.warp(obs[i].published);
+            if (submittableAt(obs[i]) > block.timestamp) vm.warp(submittableAt(obs[i]));
             submit(e.verifier(), obs[i]);
         }
         vm.warp(block.timestamp + 3 * 365 days);
@@ -87,12 +87,12 @@ contract GCPIEngineTest is GCPIHarness {
         Vector memory x = loadVector("long_pending");
         GCPIEngine e = deploy(x.m, x.first);
         ObservationVerifier v = e.verifier();
-        Observation[] memory obs = byPublished(x.obs);
+        Observation[] memory obs = bySubmission(x.obs);
         uint256 next;
         uint256 most;
         for (uint256 t = e.firstPeriod(); t <= x.last; t++) {
-            for (; next < obs.length && obs[next].published <= v.closesAt(t); next++) {
-                if (obs[next].published > block.timestamp) vm.warp(obs[next].published);
+            for (; next < obs.length && submittableAt(obs[next]) <= v.closesAt(t); next++) {
+                if (submittableAt(obs[next]) > block.timestamp) vm.warp(submittableAt(obs[next]));
                 submit(v, obs[next]);
             }
             vm.warp(v.closesAt(t));

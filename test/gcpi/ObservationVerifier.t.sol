@@ -137,6 +137,17 @@ contract ObservationVerifierTest is GCPIHarness {
         this.submitExternal(v, o);
     }
 
+    function test_APeriodThatHasNotBegunIsRefusedUntilItBegins() public {
+        // Published now, so only the period is premature: what slashPremature punishes is never stored.
+        Observation memory o = obsOf("PH", "2020-05", 101);
+        o.published = block.timestamp;
+        vm.expectRevert(ObservationVerifier.PeriodNotBegun.selector);
+        this.submitExternal(v, o);
+        assertEq(v.commitments(0, periodOf("2020-05")).length, 0);
+        vm.warp(uint256(GCPIMath.periodStart(periodOf("2020-05"))));
+        submit(v, o);
+    }
+
     function test_StructuralFaultsCarryTheEnginesCodes() public {
         Observation memory o = obsOf("PH", "2020-03", 101);
         o.period = "2020-13";
@@ -293,6 +304,35 @@ contract ObservationVerifierTest is GCPIHarness {
         vm.prank(n2);
         v.withdrawBond();
         assertEq(n2.balance, NOTARY_BOND);
+    }
+
+    function test_EveryBondIsPaidOutOfItsOwnDeposit() public {
+        // Submit bonds and notary bonds share one balance; each payout spends only the deposit it returns.
+        bytes32[3] memory cs;
+        for (uint256 i = 0; i < 3; i++) {
+            Observation memory o = obsOf("PH", "2020-03", 101);
+            o.record = bytes32(i);
+            cs[i] = submit(v, o);
+        }
+        Observation memory early = obsOf("PH", "2021-01", 101);
+        early.published = block.timestamp;
+        v.slashPremature(early, sign(v, notaryKeys[2], early));
+        vm.warp(v.closesAt(periodOf("2020-03")));
+        for (uint256 i = 0; i < 3; i++) {
+            vm.prank(submitter);
+            v.refundBond(cs[i]);
+        }
+        for (uint256 i = 0; i < 2; i++) {
+            vm.prank(vm.addr(notaryKeys[i]));
+            v.beginUnbonding();
+        }
+        vm.warp(block.timestamp + UNBONDING);
+        for (uint256 i = 0; i < 2; i++) {
+            vm.prank(vm.addr(notaryKeys[i]));
+            v.withdrawBond();
+        }
+        // All that is left is the slashed notary's unpaid half, which stays for good.
+        assertEq(address(v).balance, NOTARY_BOND - NOTARY_BOND / 2);
     }
 
     function test_OnlyListedNotariesCanBond() public {

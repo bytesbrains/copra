@@ -52,7 +52,7 @@ contract GCPIVectorsTest is GCPIHarness {
             ObservationVerifier v = e.verifier();
             bool reverted;
             for (uint256 i = 0; i < x.obs.length && !reverted; i++) {
-                if (x.obs[i].published > block.timestamp) vm.warp(x.obs[i].published);
+                if (submittableAt(x.obs[i]) > block.timestamp) vm.warp(submittableAt(x.obs[i]));
                 try this.submitExternal(v, x.obs[i]) {}
                 catch (bytes memory reason) {
                     assertEq(reason, want, x.name);

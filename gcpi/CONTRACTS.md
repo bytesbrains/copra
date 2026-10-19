@@ -50,6 +50,7 @@ So the contracts after finalizing period *L* hold what `engine.py` returns for `
 - **What the signature means is off-chain.** A notary signs after taking part in the TLS session that retrieved the value (§5.3.1, TLSNotary's model). The contract checks the signatures, not the session.
 - **Disputes need no vote (§5.3.2).** Two attested observations of one market and period that disagree are both kept, and the engine makes the market DISPUTED for the period.
 - **A submission must not claim a publication time in the future.** No notary can have retrieved a publication that has not happened yet.
+- **A submission must not be for a period that has not begun.** Attesting one is a slashable fault, so it is refused rather than stored, where it would hold one of the period's 16 slots until the period closed.
 
 **Bonds (§5.4).**
 - **Submitters** post `submitBond`, returned by `refundBond` once the period closes. It is an anti-spam lockup only, and nothing slashes it.
@@ -74,6 +75,7 @@ Only the last row can change a result, and only from one non-price status to ano
 | At most 16 observations per series and period | Unbounded | Bounds the gas of one `finalize()`. Each extra observation already needs *k* notaries. |
 | Band and closeness tests compare 512-bit products | Unbounded integers | Python's products can pass 2²⁵⁶ at large index levels. Both give the exact answer. |
 | `published` must not be later than the submission | No clock | The contract has a clock, and a future publication is a notary fault |
+| An observation can be submitted only once its period has begun | No clock | Attesting a period that has not begun is a notary fault. The observation can still be submitted from the period's start, and its result depends on `published`, not on when it was submitted, so nothing changes. The replay submits `published_early` at its period's start. |
 | An observation can be submitted only until its period closes, 3 days after the freshness window | A late observation makes its market STALE | A window must close for the period to be computed at all. So a market whose only observation arrives after the close is ABSENT on-chain, where engine.py says STALE. The period is non-valid either way, but its status can differ (STALE against INSUFFICIENT_COVERAGE or UNAVAILABLE). No vector has such an observation. |
 
 ## Threat model (§14)

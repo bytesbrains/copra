@@ -124,32 +124,34 @@ abstract contract GCPIHarness is Test, GCPIMethodologyReader {
     }
 
     // ---------------------------------------------------------------------------------------------------
-    // Replay: observations at their publication time, each period finalized when its window closes.
+    // Replay: observations as soon as they can be submitted, each period finalized when its window closes.
 
     function replay(GCPIEngine e, Observation[] memory obs, uint256 last) internal {
         replayWith(e, obs, last, address(this), 0);
     }
 
     /**
-     * @dev Each window's observations are submitted in an order drawn from `seed` (0: by publication time), once
-     *      the newest of them is published. `finalizer` calls finalize() as soon as each period closes.
+     * @dev Each window's observations are submitted in an order drawn from `seed` (0: by submittableAt), once
+     *      the last of them can be. `finalizer` calls finalize() as soon as each period closes.
      */
     function replayWith(GCPIEngine e, Observation[] memory obs, uint256 last, address finalizer, uint256 seed)
         internal
     {
         ObservationVerifier v = e.verifier();
-        Observation[] memory sorted = byPublished(obs);
+        Observation[] memory sorted = bySubmission(obs);
         uint256 next;
         for (uint256 t = e.firstPeriod(); t <= last; t++) {
             uint256 closes = v.closesAt(t);
             uint256 from = next;
-            while (next < sorted.length && sorted[next].published <= closes) next++;
+            while (next < sorted.length && submittableAt(sorted[next]) <= closes) next++;
             if (seed != 0) {
-                if (next > from && sorted[next - 1].published > block.timestamp) vm.warp(sorted[next - 1].published);
+                if (next > from && submittableAt(sorted[next - 1]) > block.timestamp) {
+                    vm.warp(submittableAt(sorted[next - 1]));
+                }
                 _shuffle(sorted, from, next, uint256(keccak256(abi.encode(seed, t))));
             }
             for (uint256 i = from; i < next; i++) {
-                if (sorted[i].published > block.timestamp) vm.warp(sorted[i].published);
+                if (submittableAt(sorted[i]) > block.timestamp) vm.warp(submittableAt(sorted[i]));
                 _submitOnce(v, sorted[i]);
             }
             if (closes > block.timestamp) vm.warp(closes);
@@ -186,11 +188,18 @@ abstract contract GCPIHarness is Test, GCPIMethodologyReader {
         submit(v, o);
     }
 
-    function byPublished(Observation[] memory obs) internal pure returns (Observation[] memory s) {
+    /// @dev The earliest the verifier takes an observation: once it is published and its period has begun.
+    function submittableAt(Observation memory o) internal pure returns (uint256) {
+        (bool ok, uint256 t) = GCPIMath.parsePeriod(o.period);
+        uint256 start = ok && GCPIMath.periodStart(t) > 0 ? uint256(GCPIMath.periodStart(t)) : 0;
+        return o.published > start ? o.published : start;
+    }
+
+    function bySubmission(Observation[] memory obs) internal pure returns (Observation[] memory s) {
         s = new Observation[](obs.length);
         for (uint256 i = 0; i < obs.length; i++) {
             s[i] = obs[i];
-            for (uint256 j = i; j > 0 && s[j - 1].published > s[j].published; j--) {
+            for (uint256 j = i; j > 0 && submittableAt(s[j - 1]) > submittableAt(s[j]); j--) {
                 (s[j - 1], s[j]) = (s[j], s[j - 1]);
             }
         }

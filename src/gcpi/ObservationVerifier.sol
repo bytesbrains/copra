@@ -76,6 +76,7 @@ contract ObservationVerifier is EIP712, ReentrancyGuard {
     error WindowClosed();
     error WindowOpen();
     error PublishedInFuture();
+    error PeriodNotBegun();
     error Duplicate();
     error TooManyObservations();
     error WrongBond();
@@ -114,7 +115,7 @@ contract ObservationVerifier is EIP712, ReentrancyGuard {
         if (!ok || first < 1970 * 12) revert Malformed("first");
         if (maxPublicationLagDays_ > 36500) revert Malformed("max_publication_lag_days");
         if (threshold_ == 0 || threshold_ > notaries_.length) revert Malformed("threshold");
-        // Bounded so that now + delay always fits unbondingAt's 64 bits.
+        // Bounded so that now + delay fits unbondingAt's 64 bits for any timestamp before the year 584 billion.
         if (unbondingDelay_ > 3650 days) revert Malformed("unbonding_delay");
         for (uint256 i = 0; i < series_.length; i++) {
             bytes32 h = keccak256(bytes(series_[i]));
@@ -183,6 +184,9 @@ contract ObservationVerifier is EIP712, ReentrancyGuard {
         if (block.timestamp >= closesAt(t)) revert WindowClosed();
         // No notary can have retrieved a publication that has not happened yet (§5.4).
         if (o.published > block.timestamp) revert PublishedInFuture();
+        // Nor of a period that has not begun: attesting one is the fault slashPremature punishes, so it is not
+        // stored, where it would take one of the period's MAX_OBSERVATIONS slots until the period closed.
+        if (GCPIMath.periodStart(t) > int256(block.timestamp)) revert PeriodNotBegun();
         c = GCPIMath.commitment(o);
         if (_observations[c].submitter != address(0)) revert Duplicate();
         if (_commitments[s][t].length >= MAX_OBSERVATIONS) revert TooManyObservations();
