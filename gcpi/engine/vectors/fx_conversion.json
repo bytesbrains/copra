@@ -1,0 +1,270 @@
+{
+ "description": "Local-currency quotations: Philippine pesos per kg and Indian rupees per quintal, each with its own FX rate (local per USD), and USD per tonne.",
+ "expected": {
+  "engine": "GCPI-ENGINE-v1",
+  "methodology": "GCPI-test",
+  "methodology_hash": "212d039aa2fdc241628565fca116133b5eeae33e09b85aa29db95c50e3b1dfb1",
+  "periods": [
+   {
+    "accepted": [
+     "IN",
+     "PH",
+     "WB"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "10000",
+    "decided_at": "2020-02",
+    "input_commitment": "46e0786c8259834e2e446893fb76b7cd8961f39dcf0faba0254193f6d3a39848",
+    "level": "884607136453290300",
+    "linked_from": null,
+    "markets": {
+     "IN": {
+      "band": "normal",
+      "decided_at": "2020-02",
+      "decision": "ACCEPTED",
+      "observations": [
+       "9b7431db6d8eb69370ac7254495bedc3955eb33944a6fea23a4fef8702c48ded"
+      ],
+      "price": "1272727272727272727"
+     },
+     "PH": {
+      "band": "normal",
+      "decided_at": "2020-02",
+      "decision": "ACCEPTED",
+      "observations": [
+       "f6fdbd182f0d42879aca6ec3323f7b059ba10fe8cb788c11238d90f2902d1881"
+      ],
+      "price": "601577909270216963"
+     },
+     "WB": {
+      "band": "normal",
+      "decided_at": "2020-02",
+      "decision": "ACCEPTED",
+      "observations": [
+       "e90fe9b2989d74534522a89d2fa1bdaabc246f4e80271d261fe8454a98985fe0"
+      ],
+      "price": "1010000000000000000"
+     }
+    },
+    "matched": [],
+    "period": "2020-02",
+    "reason": "base",
+    "status": "VALID"
+   },
+   {
+    "accepted": [
+     "IN",
+     "PH",
+     "WB"
+    ],
+    "candidate": null,
+    "comparable": true,
+    "coverage_bp": "10000",
+    "decided_at": "2020-03",
+    "input_commitment": "7d4e15ded94bd5d57fcacad8e643148e6e4276920e985a3e0e6702966457a865",
+    "level": "878313589206283417",
+    "linked_from": "2020-02",
+    "markets": {
+     "IN": {
+      "band": "normal",
+      "decided_at": "2020-03",
+      "decision": "ACCEPTED",
+      "observations": [
+       "467cfa5a2121a0e65aa12971ce2cc35f0da89b9a53f359feb068637f5d82d9f9"
+      ],
+      "price": "1247415575465196416"
+     },
+     "PH": {
+      "band": "normal",
+      "decided_at": "2020-03",
+      "decision": "ACCEPTED",
+      "observations": [
+       "38c41e05a517b4ce66fe9bb861d9b8f721cd7c33a85e6d2dbf65839143e0c0ff"
+      ],
+      "price": "605061042851984503"
+     },
+     "WB": {
+      "band": "normal",
+      "decided_at": "2020-03",
+      "decision": "ACCEPTED",
+      "observations": [
+       "63ae6fc261f7b9dfe9c282afd3f65430bb8096d39e6cef689b11194c1bc760cd"
+      ],
+      "price": "990000000000000000"
+     }
+    },
+    "matched": [
+     "IN",
+     "PH",
+     "WB"
+    ],
+    "period": "2020-03",
+    "reason": "linked",
+    "status": "VALID"
+   }
+  ]
+ },
+ "expected_sha256": "5c1ebe02d88f48debf0b035bd85c1267182db973b594ecb66b2374ea3ca1eaca",
+ "input": {
+  "first": "2020-01",
+  "last": "2020-03",
+  "methodology": {
+   "bands_bp": [
+    "1000",
+    "2000",
+    "4000"
+   ],
+   "base_period": "2020-02",
+   "circuit_breaker_bp": "4000",
+   "corroborators": {},
+   "id": "GCPI-test",
+   "markets": {
+    "IN": "30",
+    "PH": "50",
+    "WB": "20"
+   },
+   "max_publication_lag_days": "90",
+   "min_coverage_bp": "7000",
+   "signals": []
+  },
+  "observations": [
+   {
+    "basis": "",
+    "currency": "PHP",
+    "fx": "506123",
+    "fx_exp": "4",
+    "fx_source": "test-fx",
+    "market": "PH",
+    "period": "2020-01",
+    "price": "3000",
+    "price_exp": "2",
+    "published": "1580601600",
+    "record": "410b1ccae84b59cdb2940e4f6712037d7ad258be59be064b02e083bf801bf60e",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "PHP",
+    "fx": "507000",
+    "fx_exp": "4",
+    "fx_source": "test-fx",
+    "market": "PH",
+    "period": "2020-02",
+    "price": "3050",
+    "price_exp": "2",
+    "published": "1583107200",
+    "record": "f35634258bd773c0343f7bce2e522e06117ba68d19f912e7bf4616757e73b3e2",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "PHP",
+    "fx": "512345",
+    "fx_exp": "4",
+    "fx_source": "test-fx",
+    "market": "PH",
+    "period": "2020-03",
+    "price": "3100",
+    "price_exp": "2",
+    "published": "1585785600",
+    "record": "e0fee1b9e916ca9346397d07c5f7fb9dfbff9de178ff67c6d1f7758b1c694241",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "INR",
+    "fx": "7120",
+    "fx_exp": "2",
+    "fx_source": "test-fx",
+    "market": "IN",
+    "period": "2020-01",
+    "price": "9000",
+    "price_exp": "0",
+    "published": "1580601600",
+    "record": "a3cb65afb7a9421511df48ac910ea0375796346d2cc96d235a1693a372961988",
+    "source": "test-source",
+    "unit": "quintal"
+   },
+   {
+    "basis": "",
+    "currency": "INR",
+    "fx": "7150",
+    "fx_exp": "2",
+    "fx_source": "test-fx",
+    "market": "IN",
+    "period": "2020-02",
+    "price": "9100",
+    "price_exp": "0",
+    "published": "1583107200",
+    "record": "e781a277113e8edf9d85c4fb8371d4b31f3c2713a56155469afbcfbf0cea4443",
+    "source": "test-source",
+    "unit": "quintal"
+   },
+   {
+    "basis": "",
+    "currency": "INR",
+    "fx": "7255",
+    "fx_exp": "2",
+    "fx_source": "test-fx",
+    "market": "IN",
+    "period": "2020-03",
+    "price": "9050",
+    "price_exp": "0",
+    "published": "1585785600",
+    "record": "ae28c6a13b77ef4c274b2fc55c0c759fe770e650cc19fbdc10a99afe8fb6c786",
+    "source": "test-source",
+    "unit": "quintal"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "WB",
+    "period": "2020-01",
+    "price": "1000",
+    "price_exp": "0",
+    "published": "1580601600",
+    "record": "9cb83ba398a2865ab151004ac7f415d721d8d83675b783d26165e250fdafbe70",
+    "source": "test-source",
+    "unit": "t"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "WB",
+    "period": "2020-02",
+    "price": "1010",
+    "price_exp": "0",
+    "published": "1583107200",
+    "record": "bd2d30f24bf1d3539114d9e4f0cfaea1bc3b6b71d62309c47429ff60e3487d11",
+    "source": "test-source",
+    "unit": "t"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "WB",
+    "period": "2020-03",
+    "price": "990",
+    "price_exp": "0",
+    "published": "1585785600",
+    "record": "be7dff3547c36215688d84990c6e7565770314f948d29e48abd0845461d189f7",
+    "source": "test-source",
+    "unit": "t"
+   }
+  ]
+ },
+ "name": "fx_conversion"
+}

@@ -1,0 +1,11 @@
+{
+  "id": "GCPI-001-v1-draft",
+  "markets": {"PH": "65", "ID": "35"},
+  "signals": ["COCONUT_OIL"],
+  "corroborators": {"PH": ["ID", "COCONUT_OIL"], "ID": ["PH", "COCONUT_OIL"]},
+  "min_coverage_bp": "7000",
+  "max_publication_lag_days": "90",
+  "bands_bp": ["1000", "2000", "4000"],
+  "circuit_breaker_bp": "4000",
+  "base_period": "2016-02"
+}

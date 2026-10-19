@@ -1,0 +1,308 @@
+{
+ "description": "A quarantined move with no later publication: the period stays PENDING_CONFIRMATION with no decision, and every later period waits for it.",
+ "expected": {
+  "engine": "GCPI-ENGINE-v1",
+  "methodology": "GCPI-test",
+  "methodology_hash": "041b198835b523103ecc29a2c89b3d8d35998da0439506a3788534cf49e3d4c5",
+  "periods": [
+   {
+    "accepted": [
+     "ID",
+     "PH"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "10000",
+    "decided_at": "2020-02",
+    "input_commitment": "1a87c3d2d2f4919cd882ef3719eaeeb0af2abf61d216ff776593896764b31a2b",
+    "level": "930000000000000000",
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2020-02",
+      "decision": "ACCEPTED",
+      "observations": [
+       "b11087b2a2b39ec6d4293e2f13dcd49a7be4c28b169d070ea94f8335dab23696"
+      ],
+      "price": "800000000000000000"
+     },
+     "PH": {
+      "band": "normal",
+      "decided_at": "2020-02",
+      "decision": "ACCEPTED",
+      "observations": [
+       "480fc7cff1f68140e22ed67530923690992109e661a05548daae61d0a51dd7eb"
+      ],
+      "price": "1000000000000000000"
+     }
+    },
+    "matched": [],
+    "period": "2020-02",
+    "reason": "base",
+    "status": "VALID"
+   },
+   {
+    "accepted": [
+     "ID"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "3500",
+    "decided_at": null,
+    "input_commitment": "fd40d00656d065d7ab88d02b686cdd18dc5c7cfaf2de1c6bfcc38be20d4f7080",
+    "level": null,
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2020-03",
+      "decision": "ACCEPTED",
+      "observations": [
+       "7a38c360a3a3ec0255ea18c591e2e7a630648f33816f12b10d3485ee8cdc3c2e"
+      ],
+      "price": "810000000000000000"
+     },
+     "PH": {
+      "band": "quarantine",
+      "decided_at": null,
+      "decision": "PENDING",
+      "observations": [
+       "4d4592f219c2f368a6ec9b5ca508b3dfb6be6c1793b6333d8ffe706b4db26644"
+      ],
+      "price": "1500000000000000000"
+     }
+    },
+    "matched": [],
+    "period": "2020-03",
+    "reason": "market_pending",
+    "status": "PENDING_CONFIRMATION"
+   },
+   {
+    "accepted": [
+     "ID"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "3500",
+    "decided_at": null,
+    "input_commitment": "3677b77b530c470b3494e0f08c9618331b5567f0d64d21697de93fac340d3333",
+    "level": null,
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2020-04",
+      "decision": "ACCEPTED",
+      "observations": [
+       "34029663352ad8c5383908737a7765517e0644c3c3d21c4f5c1eac5349f45867"
+      ],
+      "price": "810000000000000000"
+     },
+     "PH": {
+      "band": null,
+      "decided_at": "2020-04",
+      "decision": "ABSENT",
+      "observations": [],
+      "price": null
+     }
+    },
+    "matched": [],
+    "period": "2020-04",
+    "reason": "earlier_period_pending",
+    "status": "PENDING_CONFIRMATION"
+   },
+   {
+    "accepted": [
+     "ID"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "3500",
+    "decided_at": null,
+    "input_commitment": "3cd467ca9406673a845e31c5efceb6f8a2949b0f91379ddafbfcec6c1dfc8413",
+    "level": null,
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2020-05",
+      "decision": "ACCEPTED",
+      "observations": [
+       "1687992bcd34a2a170aa12fb96bcc8b4bdf73438bab42fdc17142423507e145f"
+      ],
+      "price": "820000000000000000"
+     },
+     "PH": {
+      "band": null,
+      "decided_at": "2020-05",
+      "decision": "ABSENT",
+      "observations": [],
+      "price": null
+     }
+    },
+    "matched": [],
+    "period": "2020-05",
+    "reason": "earlier_period_pending",
+    "status": "PENDING_CONFIRMATION"
+   }
+  ]
+ },
+ "expected_sha256": "28a2c6c3577657a0cf25ddc77e1ca05e9488fe6a9d6ebe318b46856e685806e4",
+ "input": {
+  "first": "2020-01",
+  "last": "2020-05",
+  "methodology": {
+   "bands_bp": [
+    "1000",
+    "2000",
+    "4000"
+   ],
+   "base_period": "2020-02",
+   "circuit_breaker_bp": "4000",
+   "corroborators": {
+    "ID": [
+     "PH",
+     "COCONUT_OIL"
+    ],
+    "PH": [
+     "ID",
+     "COCONUT_OIL"
+    ]
+   },
+   "id": "GCPI-test",
+   "markets": {
+    "ID": "35",
+    "PH": "65"
+   },
+   "max_publication_lag_days": "90",
+   "min_coverage_bp": "7000",
+   "signals": [
+    "COCONUT_OIL"
+   ]
+  },
+  "observations": [
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "PH",
+    "period": "2020-01",
+    "price": "100",
+    "price_exp": "2",
+    "published": "1580601600",
+    "record": "ed31f25015b65571d0e23d53a0f7ebf4286430610707cc2a1224bbed129b0617",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "PH",
+    "period": "2020-02",
+    "price": "100",
+    "price_exp": "2",
+    "published": "1583107200",
+    "record": "28307c2c28bb13fc8c0d1228d4225f9b23651e4d1f7b87a46348fecbf745f068",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "PH",
+    "period": "2020-03",
+    "price": "150",
+    "price_exp": "2",
+    "published": "1585785600",
+    "record": "dd7abd51718141bbc14bf2d8cc9c772694eb77aac4628565562f11c43f202f82",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2020-01",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1580601600",
+    "record": "60ddea58e87483cb9e142ced4c7ecf81258dd3b71460b499ff22f4fb9f4728ea",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2020-02",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1583107200",
+    "record": "7b8b87b9a2611631a06660a7491197c1161cbcdb6088c42303976fcff4bfc132",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2020-03",
+    "price": "81",
+    "price_exp": "2",
+    "published": "1585785600",
+    "record": "42cf840fbaea8c2b8a4b70d89d45cb85d4825e44ce91afbd3bb51ab1045cabde",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2020-04",
+    "price": "81",
+    "price_exp": "2",
+    "published": "1588377600",
+    "record": "24f9d82643e1e3d7e44d9834004493d39b2d68d3dcb474c9db8eab7af265a592",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2020-05",
+    "price": "82",
+    "price_exp": "2",
+    "published": "1591056000",
+    "record": "94fcd960f65e0981c4c0112266dfc91c60e4ea73f0fef9aff60dfbb144fd593d",
+    "source": "test-source",
+    "unit": "kg"
+   }
+  ]
+ },
+ "name": "unresolved_pending"
+}

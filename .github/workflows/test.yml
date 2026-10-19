@@ -52,6 +52,9 @@ jobs:
       - name: Run GCPI source registry tests
         run: python3 -m unittest discover -s test/gcpi -v
 
+      - name: Run GCPI reference engine tests (JavaScript)
+        run: node --test test/gcpi/*.test.cjs
+
       - name: Simulate deployment script (dry-run)
         env:
           # A local simulation needs no real key, and this job runs code from any pushed branch.
