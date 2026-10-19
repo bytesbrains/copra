@@ -16,7 +16,9 @@ The contract side of item 1 in [what remains of #92](CONTRACTS.md#what-remains-o
 
 On anvil, the verifier accepts the collector's observation with 2 of 3 notaries. The notaries sign EIP-712 typed data built locally, and the contract recovers them from its own digest. When the publisher revises a value, every notary reproduces the new value and none of them signs it.
 
-**What this is not:** independently operated. Two or more operators running this code, or their own, is still the people part of #92. The CDB adapter was written against the research parser's format; `coconutboard.in` refused connections from where this was built. **It has not yet been run against the live site.**
+**What this is not:** independently operated. Two or more operators running this code, or their own, is still the people part of #92.
+
+**Against the live site** (2026-10-19). `collect.py observe --period 2026-09` reads Kochi milling copra as `16346.666666` Rs/quintal, the only `Milling Copra | September` row under the report's `Product | Date | Kochi` header, with 95.4712 INR/USD from 21 ECB days. Two retrievals give the same observation apart from `published`. 2026-08, 2026-01, 2025-06 and 2024-12 parse too. With live retrievals in place of the fixtures, the e2e flow submits: three notaries each fetch CDB and the ECB themselves, all reproduce the collector's observation, and the verifier on anvil accepts it with two signatures. CDB publishes a monthly average with as many decimals as it computed (`16346.666666`, six here), and the adapter takes those bytes exactly. To repeat it: `GCPI_LIVE=1 python3 -m unittest discover -s test/gcpi -p test_collector_e2e.py`.
 
 ## How a notary attests
 

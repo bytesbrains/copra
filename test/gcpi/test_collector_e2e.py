@@ -22,6 +22,7 @@ import chain as chainlib  # noqa: E402
 import collect  # noqa: E402
 import notary as notarylib  # noqa: E402
 import sources  # noqa: E402
+from fetch import Transport  # noqa: E402
 
 engine = sources.engine
 PERIOD = "2026-09"
@@ -141,6 +142,15 @@ class EndToEnd(unittest.TestCase):
         with self.assertRaisesRegex(collect.CollectError, "0 usable attestations"):
             self.collect(now["src"], log=refusals.append)
         self.assertEqual(sum("would_equivocate" in m for m in refusals), 3, refusals)
+
+    @unittest.skipUnless(os.environ.get("GCPI_LIVE"), "set GCPI_LIVE=1 to retrieve from coconutboard.in and the ECB")
+    def test_LiveRetrievalsReachQuorum(self):
+        # Every retrieval, the collector's and each notary's, is its own session to the publishers.
+        live = lambda: Transport(sources.Cdb.hosts)
+        self.urls = [self.serve(k, live) for k in KEYS[1:4]]
+        r = self.collect(live())
+        self.assertEqual(r["status"], "submitted")
+        self.assertTrue(self.chain.submitted(r["commitment"]))
 
 
 if __name__ == "__main__":
