@@ -56,7 +56,7 @@ So the contracts after finalizing period *L* hold what `engine.py` returns for `
 - **Submitters** post `submitBond`, returned by `refundBond` once the period closes. It is an anti-spam lockup only, and nothing slashes it.
 - **Notaries** post `notaryBond`. It is slashed only for two faults a contract can prove:
   - **Equivocation:** one notary signed two observations of the same market, source and period with different normalized prices or bases. Two retrievals of the same value, or the same value written differently, are not equivocation.
-  - **Premature attestation:** a signed period that has not begun, or a publication time still in the future.
+  - **Premature attestation:** a signed period that has not begun, or a publication time still in the future. "Future" is measured against `block.timestamp`, which only moves forward, so a signature that was not premature when it was made can never become slashable later. The contract's clock can lag real time by a block, though, so a notary signs only after a block whose timestamp has passed both the period's start and the publication time.
 - **Slashing pays the reporter half the bond** and keeps the rest in the contract for good. The notary never counts again.
 - **Leaving is delayed.** A notary that unbonds stops counting at once, stays slashable through the delay, and can withdraw afterwards.
 - **Stake never weighs on a value.** A signature either counts or it does not.
