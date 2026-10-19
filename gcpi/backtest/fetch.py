@@ -56,6 +56,17 @@ def cached(cache, name, refresh):
     return path if os.path.exists(path) and not refresh else None
 
 
+def cdb_gaps(out, this_year):
+    """The complete years with no CDB rows, per market and for the Kochi daily series. CDB has reported every
+    market in every year since FIRST_YEAR (gcpi/backtest/data/dataset.csv), so an empty year is a failed
+    scrape: a changed form or result table, or the site refusing us, never missing data."""
+    years = range(FIRST_YEAR, this_year)
+    gaps = {name: [y for y in years if not rows.get(str(y))] for name, rows in out["monthly"].items()}
+    daily = {d[-4:] for d, _ in out["daily_kochi"]}
+    gaps["Kochi daily"] = [y for y in years if str(y) not in daily]
+    return {name: ys for name, ys in gaps.items() if ys}
+
+
 def main(argv):
     if len(argv) < 2:
         print(__doc__)
@@ -88,7 +99,14 @@ def main(argv):
         for y in range(FIRST_YEAR, this_year + 1):
             out["daily_kochi"] += cdb_copra.daily("1", f"01/01/{y}", f"31/12/{y}")
             time.sleep(0.3)
-        json.dump(out, open(os.path.join(cache, "cdb.json"), "w"))
+        gaps = cdb_gaps(out, this_year)
+        if gaps:
+            raise SystemExit(f"CDB: no rows for {gaps}. The form or its result table has changed, or the site "
+                             "refused the requests; cdb.json is not written.")
+        path = os.path.join(cache, "cdb.json")
+        with open(path + ".part", "w") as f:
+            json.dump(out, f)
+        os.replace(path + ".part", path)
 
     print("ICC weekly price reports")
     icc_dir = os.path.join(cache, "icc")
