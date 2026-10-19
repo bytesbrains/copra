@@ -10,7 +10,7 @@
 
 | Done when (#91) | Status |
 |---|---|
-| Two independent implementations produce byte-identical results on every test vector | **Met.** Python (`engine.py`) and JavaScript with BigInt (`engine.cjs`) give the same canonical bytes on all 24 vectors and on the ln/exp table. They also agree on 129 months of real Phase 2 inputs under both methodologies below. |
+| Two independent implementations produce byte-identical results on every test vector | **Met.** Python (`engine.py`) and JavaScript with BigInt (`engine.cjs`) give the same canonical bytes on all 27 vectors and on the ln/exp table. They also agree on 129 months of real Phase 2 inputs under both methodologies below. |
 | The engine reproduces the Phase 2 backtest values exactly | **Met, as far as fixed point allows.** Under the Phase 2 rules, the engine gives a value in the same 128 headline months as the backtest. Every level is within 4.4 × 10⁻¹⁶ of the backtest's float level, which is float rounding. Every discrete statistic is identical: band counts, coverage, the months of each R(h) maximum. The R(h) values agree within 10⁻¹². On the committed open dataset, which CI checks, the band counts for CDB and PSA match `results.json` exactly. |
 
 "Exactly" cannot mean bit-equal to the backtest. The backtest is floating point, which §6.3 rules out of the consensus path. What the engine fixes is its *own* output, to the last unit. Agreement with the float backtest is the check that the integer method is the same method.
@@ -160,7 +160,7 @@ A non-valid period publishes no level (Invariant 5). Every record carries:
 
 ## 8. Test vectors
 
-[`engine/vectors/`](engine/vectors/) holds 24 inputs with their expected canonical output and its SHA-256, plus [`arithmetic.json`](engine/vectors/arithmetic.json), a table of ln and exp results. `make_vectors.py` regenerates them. `test_engine.py` checks every vector's *intended* outcome independently of the stored bytes, so a regenerated vector cannot quietly pin a wrong answer.
+[`engine/vectors/`](engine/vectors/) holds 27 inputs with their expected canonical output and its SHA-256, plus [`arithmetic.json`](engine/vectors/arithmetic.json), a table of ln and exp results. `make_vectors.py` regenerates them. `test_engine.py` checks every vector's *intended* outcome independently of the stored bytes, so a regenerated vector cannot quietly pin a wrong answer.
 
 | Vector | Shows |
 |---|---|
@@ -178,6 +178,9 @@ A non-valid period publishes no level (Invariant 5). Every record carries:
 | `disputed_and_duplicate` | Two conflicting attested values: DISPUTED. A resubmitted observation counts once. |
 | `circuit_breaker` | An index move held and then confirmed, and another held and then rejected |
 | `no_base` | A base period without full coverage |
+| `closer_tie` | A value relatively equidistant from the reference and the pending value: the tie goes to the reference (#92) |
+| `bands_disabled` | The Phase 2 research rules: no bands and no breaker, so a spike is accepted as published (#92) |
+| `long_pending` | A market pending for 30 months: every period in between waits, then all are decided at once (#92) |
 | `error_*` (6) | Structural errors: the same error code from both implementations |
 
 ## Reproducing
@@ -206,7 +209,7 @@ GCPI-001 fixes the bands, weights, coverage and aggregation. The engine had to f
 
 ## Limitations
 
-- **No Solidity yet.** The on-chain GCPIEngine is Phase 5 (#92). The arithmetic and encoding were chosen so that it can be a line-by-line port: truncating division, 256-bit bounds, and SHA-256 over packed fields.
+- **The Solidity port is a third implementation** ([CONTRACTS](CONTRACTS.md), #92). It matches every vector byte for byte. Porting it found a case where Python and JavaScript disagreed, a trailing newline, now fixed. It also found that no vector pinned the tie rule, and `closer_tie` now does.
 - **FX is an input, not a rule.** Each observation carries its rate. §6.2's FX rule (which feed, which date, maximum age) is collection-side and still to be set in #92.
 - **The v1 run uses ICC,** whose data cannot back v1 (BACKTEST.md). It tests the engine on real price behaviour, not on v1's eventual sources.
 - **Observation `published` times in `reproduce.py` are synthetic** (the first day of the next month). The backtest has no per-observation publication record.

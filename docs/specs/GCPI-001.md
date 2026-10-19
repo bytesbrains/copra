@@ -1023,7 +1023,7 @@ Publish test vectors for normal conditions, missing sources, extreme movements, 
 **Exit criterion:** Independent implementations produce identical results.
 
 **Status (#91):** met. See [ENGINE](../../gcpi/ENGINE.md):
-- Python and JavaScript engines give byte-identical output on 24 published vectors and on the 2016–2026 backtest inputs.
+- Python and JavaScript engines give byte-identical output on 27 published vectors and on the 2016–2026 backtest inputs.
 - They reproduce the Phase 2 backtest values within float rounding.
 - Under the v1 draft rules, 125 of 129 headline months would have been VALID.
 - The engine had to fix eight rules that this specification leaves open. They are [listed for the v1 RFC](../../gcpi/ENGINE.md#choices-the-spec-left-open).
@@ -1035,6 +1035,10 @@ Deploy independent collectors and source-verification mechanisms.
 Test collusion, replay attacks, outages, and false publications.
 
 **Exit criterion:** The system does not rely on a single collector or privileged submitter for correctness.
+
+**Status (#92):** the on-chain side is built; the collectors are not. See [CONTRACTS](../../gcpi/CONTRACTS.md):
+- Anyone may submit an observation that *k* of the listed notaries attest, and anyone may finalize. The result does not depend on the submitter, the finalizer, the order or a keeper outage.
+- Not yet: independently operated collectors, a notary service, and *n*, *k*, the operators and the bond sizes ([what remains](../../gcpi/CONTRACTS.md#what-remains-of-92)).
 
 ## Phase 5 — Smart contracts and public testnet
 
@@ -1050,6 +1054,11 @@ Perform:
 - Public reproducibility testing.
 
 **Exit criterion:** Verified on-chain behavior matches the reference implementation.
+
+**Status (#92):** behavior matches; deployment and review are open. See [CONTRACTS](../../gcpi/CONTRACTS.md):
+- `ObservationVerifier`, `GCPIEngine` and `GCPIRegistry` (§11) reproduce every published vector byte for byte, and they have no owner, setter or upgrade path.
+- Unit, property-based, fuzz and adversarial tests are done.
+- Not yet: the Base Sepolia deployment, the independent security review and the incentive analysis.
 
 ## Phase 6 — Shadow mainnet publication
 
