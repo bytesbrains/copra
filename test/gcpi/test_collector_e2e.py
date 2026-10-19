@@ -101,10 +101,11 @@ class EndToEnd(unittest.TestCase):
             cls.dir.cleanup()
 
     def serve(self, key, source):
-        """A notary over HTTP, retrieving whatever source() returns at the time it is asked."""
+        """A notary over HTTP, retrieving whatever source() returns at the time it is asked: no reuse, since
+        these tests change the source between requests."""
         n = notarylib.Notary(sources.adapters(), self.chain, ["--private-key", key],
                              os.path.join(self.dir.name, f"{key[-6:]}-{len(self.servers)}.jsonl"),
-                             transport=lambda a: source(), clock=self.chain.timestamp)
+                             transport=lambda a: source(), clock=self.chain.timestamp, retrieval_ttl=0)
         server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), notarylib.handler(n, quiet=True))
         threading.Thread(target=server.serve_forever, daemon=True).start()
         self.servers.append(server)
