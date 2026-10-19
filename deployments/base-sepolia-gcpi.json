@@ -1,0 +1,42 @@
+{
+  "network": "Base Sepolia",
+  "chainId": 84532,
+  "deployedAt": "2026-10-19T18:17:56Z",
+  "deployer": "0x91d3019b38185b517Bb98B7BB4953c137F5EEb8E",
+  "methodology": {
+    "id": "GCPI-1-draft.1-IN-testnet",
+    "file": "gcpi/engine/methodology/gcpi-1-draft.1-in-testnet.json",
+    "hash": "68b11d46362d4a7054a194de5daf753f9256e46d706b22c433d3da718d4ea37b"
+  },
+  "contracts": {
+    "ObservationVerifier": "0x7F697F7970124eDB2417746C665387B894330224",
+    "GCPIEngine": "0x87c7D995670E671C00f42B544f2CDFfB988275F0",
+    "GCPIRegistry": "0xB79a2931931587D5cA6B036C8663D0b50b3c72A5"
+  },
+  "parameters": {
+    "firstPeriod": "2026-09",
+    "notaries": [
+      "0x35c8090f9C5d1c16227298D904AAaD8603107134",
+      "0x99b4d54729Ca4C47D7E30E93fCB09ba73281c01B",
+      "0x19DF5bc4cd926895f0C3Ef7039B88d0FC061CD65"
+    ],
+    "notaryOperator": "copra.dev runs all three: not independent (#92)",
+    "threshold": 2,
+    "submitBondWei": "10000000000000",
+    "notaryBondWei": "100000000000000",
+    "unbondingDelaySeconds": 86400,
+    "rewardPerPeriodWei": "0",
+    "poolWei": "0"
+  },
+  "transactions": {
+    "deploy": {
+      "ObservationVerifier": "0x10db9aeb901037529cafb32329438ab2bb5a7c558e7ac22cfa0fc536c66a8a2d",
+      "GCPIEngine": "0xbce5c8db68275b085a75394597776b7d8b5f9a5bbf09116cd04b93449fb92242",
+      "GCPIRegistry": "created by the GCPIEngine constructor, in the GCPIEngine transaction"
+    },
+    "firstObservation": "0x2dab7cf821554e6808bad9389c47febda8ce6bd7f746c2cca95e1c7f93066157"
+  },
+  "explorers": {
+    "basescan": "https://sepolia.basescan.org"
+  }
+}

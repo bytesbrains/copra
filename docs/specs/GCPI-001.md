@@ -1059,7 +1059,8 @@ Perform:
 **Status (#92):** behavior matches; deployment and review are open. See [CONTRACTS](../../gcpi/CONTRACTS.md):
 - `ObservationVerifier`, `GCPIEngine` and `GCPIRegistry` (§11) reproduce every published vector byte for byte, and they have no owner, setter or upgrade path.
 - Unit, property-based, fuzz and adversarial tests are done.
-- Not yet: the Base Sepolia deployment, the independent security review and the incentive analysis.
+- Deployed to Base Sepolia on 2026-10-19 with the India testnet methodology. Its first observation (IN 2026-09) was attested by notaries that copra.dev runs ([CONTRACTS](../../gcpi/CONTRACTS.md#what-remains-of-92), item 3).
+- Not yet: the independent security review and the incentive analysis.
 
 ## Phase 6 — Shadow mainnet publication
 
