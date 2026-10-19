@@ -20,20 +20,27 @@ class ChainError(Exception):
 
 
 def signer_from_env(prefix):
-    """cast's signer arguments from <prefix>_KEY or <prefix>_KEYSTORE (password in ETH_PASSWORD), never both."""
+    """cast's signer arguments from <prefix>_KEY, or <prefix>_KEYSTORE with <prefix>_PASSWORD_FILE, never both.
+    The password file goes only to the commands that sign: cast reads ETH_PASSWORD as a password file for
+    every command, and then refuses a `cast call` that has no keystore."""
     key, keystore = os.environ.get(f"{prefix}_KEY"), os.environ.get(f"{prefix}_KEYSTORE")
     if key and keystore:
         raise ChainError(f"{prefix}_KEY and {prefix}_KEYSTORE are both set; set only one signer")
     if key:
         return ["--private-key", key]
     if keystore:
-        return ["--keystore", keystore]
+        password = os.environ.get(f"{prefix}_PASSWORD_FILE")
+        if not password:
+            raise ChainError(f"{prefix}_KEYSTORE needs {prefix}_PASSWORD_FILE, the file holding its password")
+        return ["--keystore", keystore, "--password-file", password]
     raise ChainError(f"{prefix}_KEY or {prefix}_KEYSTORE must be set")
 
 
 def cast(*args, timeout=120):
+    # Without ETH_PASSWORD: cast would read it as a password file for every command (signer_from_env).
+    env = {k: v for k, v in os.environ.items() if k != "ETH_PASSWORD"}
     try:
-        r = subprocess.run(["cast", *args], capture_output=True, text=True, timeout=timeout)
+        r = subprocess.run(["cast", *args], capture_output=True, text=True, timeout=timeout, env=env)
     except (OSError, subprocess.TimeoutExpired) as e:
         raise ChainError(f"cast {args[0]}: {e}") from e
     if r.returncode != 0:

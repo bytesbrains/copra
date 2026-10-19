@@ -9,7 +9,8 @@ failure exits non-zero and nothing is sent.
 Usage:
   collect.py observe --period 2026-09 [--source cdb-market-price --market IN] [--out DIR]
   collect.py submit  --period 2026-09 --notary URL [URL ...] --rpc-url URL --verifier 0x.. --chain-id N
-                     [--out DIR] [--dry-run]                      signer from COLLECTOR_KEY or COLLECTOR_KEYSTORE
+                     [--out DIR] [--dry-run]
+                     signer from COLLECTOR_KEY, or COLLECTOR_KEYSTORE and COLLECTOR_PASSWORD_FILE
   collect.py refund  --commitment HEX --rpc-url URL --verifier 0x.. --chain-id N
 """
 

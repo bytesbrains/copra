@@ -18,7 +18,8 @@ A notary's bond is slashed for two provable faults (§5.4), and this refuses bot
     Losing the log loses that protection, so it belongs on durable storage.
 
 Usage: notary.py --rpc-url URL --verifier 0x.. --chain-id N --log notary.jsonl [--listen 127.0.0.1:8645]
-                 [--serve cdb-market-price:IN ...]      signer from NOTARY_KEY or NOTARY_KEYSTORE
+                 [--serve cdb-market-price:IN ...]
+                 signer from NOTARY_KEY, or NOTARY_KEYSTORE and NOTARY_PASSWORD_FILE
 """
 
 import argparse

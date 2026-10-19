@@ -15,6 +15,7 @@ import tempfile
 import threading
 import time
 import unittest
+import unittest.mock
 
 sys.path.insert(0, os.path.dirname(__file__))
 from collector_fixtures import ROOT, FakeSources, ecb_days, ecb_zip  # noqa: E402
@@ -95,9 +96,10 @@ class EndToEnd(unittest.TestCase):
 
     def serve(self, key, source):
         """A notary over HTTP, retrieving whatever source() returns at the time it is asked: no reuse, since
-        these tests change the source between requests."""
-        n = notarylib.Notary(sources.adapters(), self.chain, ["--private-key", key],
-                             os.path.join(self.dir.name, f"{key[-6:]}-{len(self.servers)}.jsonl"),
+        these tests change the source between requests. `key` is a private key or cast's signer arguments."""
+        signer = key if isinstance(key, list) else ["--private-key", key]
+        n = notarylib.Notary(sources.adapters(), self.chain, signer,
+                             os.path.join(self.dir.name, f"notary-{len(self.servers)}.jsonl"),
                              transport=lambda a: source(), clock=self.chain.timestamp, retrieval_ttl=0)
         server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), notarylib.handler(n, quiet=True))
         threading.Thread(target=server.serve_forever, daemon=True).start()
@@ -109,9 +111,19 @@ class EndToEnd(unittest.TestCase):
                                  .quantize(decimal.Decimal("0.0001")))
         return FakeSources({("1", 2026, 9): [value]}, ecb_zip(ecb_days(PERIOD, inr)))
 
-    def collect(self, src, log=lambda m: None):
-        return collect.submit(sources.Cdb(), PERIOD, self.urls, self.chain, ["--private-key", KEYS[4]],
+    def collect(self, src, log=lambda m: None, signer=None):
+        return collect.submit(sources.Cdb(), PERIOD, self.urls, self.chain, signer or ["--private-key", KEYS[4]],
                               transport=src, out=self.dir.name, now=self.chain.timestamp(), log=log)
+
+    def keystore(self, prefix, key):
+        """The environment that names `key` in a password-protected keystore, as an operator would set it."""
+        d = tempfile.mkdtemp(dir=self.dir.name)
+        password = os.path.join(d, "password")
+        with open(password, "w") as f:
+            f.write("e2e")
+        chainlib.cast("wallet", "import", "signer", "--private-key", key, "--keystore-dir", d,
+                      "--unsafe-password", "e2e")
+        return {f"{prefix}_KEYSTORE": os.path.join(d, "signer"), f"{prefix}_PASSWORD_FILE": password}
 
     def test_ACollectorsObservationIsAcceptedWithTwoOfThreeNotaries(self):
         src = self.source("13456.78")
@@ -136,6 +148,21 @@ class EndToEnd(unittest.TestCase):
         with self.assertRaisesRegex(collect.CollectError, "0 usable attestations"):
             self.collect(now["src"], log=refusals.append)
         self.assertEqual(sum("would_equivocate" in m for m in refusals), 3, refusals)
+
+    def test_KeystoreSignersAttestAndSubmit(self):
+        # Without its password file a keystore signer would prompt, and an ETH_PASSWORD set to make it stop
+        # prompting breaks every cast call instead. Each signer is named the way notary.py and collect.py read it.
+        # An ETH_PASSWORD left over from the old instructions must not break them either.
+        env = {**self.keystore("NOTARY", KEYS[1]), **self.keystore("COLLECTOR", KEYS[4]),
+               "ETH_PASSWORD": os.path.join(self.dir.name, "stale-password")}
+        with unittest.mock.patch.dict(os.environ, env):
+            notary, collector = chainlib.signer_from_env("NOTARY"), chainlib.signer_from_env("COLLECTOR")
+            self.assertEqual(chainlib.address_of(notary), self.notaries[0])
+            src = self.source("13456.78")
+            self.urls = [self.serve(notary, lambda: src), self.serve(KEYS[2], lambda: src)]
+            r = self.collect(src, signer=collector)
+        self.assertEqual(r["status"], "submitted")
+        self.assertTrue(self.chain.submitted(r["commitment"]))
 
     @unittest.skipUnless(os.environ.get("GCPI_LIVE"), "set GCPI_LIVE=1 to retrieve from coconutboard.in and the ECB")
     def test_LiveRetrievalsReachQuorum(self):
