@@ -152,13 +152,15 @@ class EndToEnd(unittest.TestCase):
     def test_KeystoreSignersAttestAndSubmit(self):
         # Without its password file a keystore signer would prompt, and an ETH_PASSWORD set to make it stop
         # prompting breaks every cast call instead. Each signer is named the way notary.py and collect.py read it.
-        env = {**self.keystore("NOTARY", KEYS[1]), **self.keystore("COLLECTOR", KEYS[4])}
+        # An ETH_PASSWORD left over from the old instructions must not break them either.
+        env = {**self.keystore("NOTARY", KEYS[1]), **self.keystore("COLLECTOR", KEYS[4]),
+               "ETH_PASSWORD": os.path.join(self.dir.name, "stale-password")}
         with unittest.mock.patch.dict(os.environ, env):
             notary, collector = chainlib.signer_from_env("NOTARY"), chainlib.signer_from_env("COLLECTOR")
-        self.assertEqual(chainlib.address_of(notary), self.notaries[0])
-        src = self.source("13456.78")
-        self.urls = [self.serve(notary, lambda: src), self.serve(KEYS[2], lambda: src)]
-        r = self.collect(src, signer=collector)
+            self.assertEqual(chainlib.address_of(notary), self.notaries[0])
+            src = self.source("13456.78")
+            self.urls = [self.serve(notary, lambda: src), self.serve(KEYS[2], lambda: src)]
+            r = self.collect(src, signer=collector)
         self.assertEqual(r["status"], "submitted")
         self.assertTrue(self.chain.submitted(r["commitment"]))
 

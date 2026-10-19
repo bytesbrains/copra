@@ -37,8 +37,10 @@ def signer_from_env(prefix):
 
 
 def cast(*args, timeout=120):
+    # Without ETH_PASSWORD: cast would read it as a password file for every command (signer_from_env).
+    env = {k: v for k, v in os.environ.items() if k != "ETH_PASSWORD"}
     try:
-        r = subprocess.run(["cast", *args], capture_output=True, text=True, timeout=timeout)
+        r = subprocess.run(["cast", *args], capture_output=True, text=True, timeout=timeout, env=env)
     except (OSError, subprocess.TimeoutExpired) as e:
         raise ChainError(f"cast {args[0]}: {e}") from e
     if r.returncode != 0:
