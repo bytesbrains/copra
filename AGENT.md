@@ -27,6 +27,7 @@ This document provides autonomous coding assistants and contributors with critic
 - `test/`: Foundry unit and integration tests (`CopraProtocol.t.sol`).
 - `script/`: Deployment scripts (`DeployCopra.s.sol` for testnet, `DeployCopraMainnet.s.sol` for Base mainnet; see `docs/MAINNET_DEPLOY.md`).
 - `scripts/`: Operational utilities (oracle feeder script, hook setup).
+- `gcpi/collector/`: GCPI's reference collector and notary (Python standard library plus `cast`). A notary signs only an observation it retrieved itself, and logs every signature so it never equivocates. See `gcpi/COLLECTORS.md`.
 - `docs/`: Technical specifications (`WHITEPAPER.md`, `ARCHITECTURE.md`).
 - `web/`: Frontend landing page and dApp interface.
 - `.githooks/`: Pre-commit (gitleaks + forge fmt) and pre-push (`scripts/check-committed-files.sh` on the commits being pushed, then forge test) hooks. Enable with `scripts/setup_hooks.sh`.

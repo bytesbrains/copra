@@ -1036,9 +1036,10 @@ Test collusion, replay attacks, outages, and false publications.
 
 **Exit criterion:** The system does not rely on a single collector or privileged submitter for correctness.
 
-**Status (#92):** the on-chain side is built; the collectors are not. See [CONTRACTS](../../gcpi/CONTRACTS.md):
+**Status (#92):** the on-chain side is built, and so is reference collector and notary software; nobody operates it yet. See [CONTRACTS](../../gcpi/CONTRACTS.md) and [COLLECTORS](../../gcpi/COLLECTORS.md):
 - Anyone may submit an observation that *k* of the listed notaries attest, and anyone may finalize. The result does not depend on the submitter, the finalizer, the order or a keeper outage.
-- Not yet: independently operated collectors, a notary service, and *n*, *k*, the operators and the bond sizes ([what remains](../../gcpi/CONTRACTS.md#what-remains-of-92)).
+- A reference notary signs only an observation it retrieved itself, and never two values for one market, source and period. A reference collector gathers *k* attestations and submits. On anvil, the verifier accepts its observation with 2 of 3 notaries.
+- Not yet: independently operated collectors and notaries, and *n*, *k*, the operators and the bond sizes ([what remains](../../gcpi/CONTRACTS.md#what-remains-of-92)).
 
 ## Phase 5 — Smart contracts and public testnet
 
