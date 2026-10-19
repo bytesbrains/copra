@@ -51,6 +51,7 @@ contract DeployGCPITest is Test {
         vm.warp(closes - 1);
         GCPIEngine e = script.deploy(c, KEY);
         assertEq(e.methodologyId(), "GCPI-1-draft.1-IN-testnet");
+        // engine.py: sha256(canonical(gcpi-1-draft.1-in-testnet.json)). Editing the file makes a new version (§13.5).
         assertEq(
             GCPIMath.hex32(e.methodologyHash()), "68b11d46362d4a7054a194de5daf753f9256e46d706b22c433d3da718d4ea37b"
         );
