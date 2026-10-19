@@ -29,8 +29,11 @@
     "poolWei": "0"
   },
   "transactions": {
-    "deploy": ["0x10db9aeb901037529cafb32329438ab2bb5a7c558e7ac22cfa0fc536c66a8a2d",
-               "0xbce5c8db68275b085a75394597776b7d8b5f9a5bbf09116cd04b93449fb92242"],
+    "deploy": {
+      "ObservationVerifier": "0x10db9aeb901037529cafb32329438ab2bb5a7c558e7ac22cfa0fc536c66a8a2d",
+      "GCPIEngine": "0xbce5c8db68275b085a75394597776b7d8b5f9a5bbf09116cd04b93449fb92242",
+      "GCPIRegistry": "created by the GCPIEngine constructor, in the GCPIEngine transaction"
+    },
     "firstObservation": "0x2dab7cf821554e6808bad9389c47febda8ce6bd7f746c2cca95e1c7f93066157"
   },
   "explorers": {
