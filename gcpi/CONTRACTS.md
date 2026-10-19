@@ -126,7 +126,7 @@ These are not in this change. Each needs people or decisions, not just code:
    - A notary service that signs the commitment after a TLSNotary session.
    - A collector that builds observations and gathers *k* signatures.
 
-   The contract side of both is done, and a reference implementation of both now exists ([COLLECTORS](COLLECTORS.md)): notaries that sign only what they retrieved themselves, a collector, and a CDB adapter. Nobody operates either yet, and the CDB adapter has not been run against the live site.
+   The contract side of both is done, and a reference implementation of both now exists ([COLLECTORS](COLLECTORS.md)): notaries that sign only what they retrieved themselves, a collector, and a CDB adapter. Nobody operates either yet. The CDB adapter has been run against the live site, and the collector and three notaries on anvil reach quorum from live retrievals (COLLECTORS, "Against the live site").
 2. ***n*, *k*, the notary operators and the bond sizes** (§5.3.6, §5.4: "set in Phase 4"). The deploy script's defaults are placeholders: 0.0001 ETH per submission, 0.01 ETH per notary, a 30-day unbonding delay and no reward.
 3. **A Base Sepolia deployment.** `DeployGCPI` refuses Base mainnet (#93 comes first). It also refuses a methodology whose base period has closed, and the v1 draft's 2016-02 base is such a placeholder (ENGINE choice 8). A testnet run needs a methodology version with a base period that is still open.
 4. **An independent security review** (§16 Phase 5, §17).
