@@ -11,7 +11,7 @@
 | Done when (#92) | Status |
 |---|---|
 | On-chain results match the reference engine for every test vector | **Met.** Each published vector runs through the real contracts: observations are submitted with notary signatures at their publication time, and each period is finalized as soon as its window closes. The on-chain state, encoded as the engine encodes its output, has the vector's SHA-256 for all 21 output vectors. Three of the six error vectors revert with the engine's error code. The other three cannot be expressed through a typed ABI (a JSON number, a decimal with a leading zero, an unknown field), and a test pins that it is exactly those three. |
-| Unit, property-based and fuzz tests, plus an independent security review | **Tests met; the review is not done.** 59 Forge tests, fuzz tests among them, cover the arithmetic, the attestation rules and §14's threats ([table](#threat-model-14)). Two mutation checks were run by hand: a band off by one basis point and a tie decided the other way. Both fail the vectors. No independent review has taken place. |
+| Unit, property-based and fuzz tests, plus an independent security review | **Tests met; the review is not done.** 61 Forge tests, fuzz tests among them, cover the arithmetic, the attestation rules and §14's threats ([table](#threat-model-14)). Two mutation checks were run by hand: a band off by one basis point and a tie decided the other way. Both fail the vectors. No independent review has taken place. |
 | Correctness does not depend on any single collector or submitter | **Met by the contracts; not yet shown with real collectors.** Anyone may submit an attested observation and anyone may finalize. Acceptance needs *k* distinct notaries from the list fixed at deployment, and the caller of `finalize()` cannot change the result. Tests show that the finalizer, the submission order and a three-year keeper outage all leave the output unchanged. No independently operated collector exists yet ([what remains](#what-remains-of-92)). |
 
 ## The contracts
@@ -126,7 +126,7 @@ These are not in this change. Each needs people or decisions, not just code:
    - A notary service that signs the commitment after a TLSNotary session.
    - A collector that builds observations and gathers *k* signatures.
 
-   The contract side of both is done. Neither exists yet.
+   The contract side of both is done, and a reference implementation of both now exists ([COLLECTORS](COLLECTORS.md)): notaries that sign only what they retrieved themselves, a collector, and a CDB adapter. Nobody operates either yet, and the CDB adapter has not been run against the live site.
 2. ***n*, *k*, the notary operators and the bond sizes** (§5.3.6, §5.4: "set in Phase 4"). The deploy script's defaults are placeholders: 0.0001 ETH per submission, 0.01 ETH per notary, a 30-day unbonding delay and no reward.
 3. **A Base Sepolia deployment.** `DeployGCPI` refuses Base mainnet (#93 comes first). It also refuses a methodology whose base period has closed, and the v1 draft's 2016-02 base is such a placeholder (ENGINE choice 8). A testnet run needs a methodology version with a base period that is still open.
 4. **An independent security review** (§16 Phase 5, §17).
