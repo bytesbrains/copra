@@ -1,14 +1,19 @@
 # Run with: python3 -m unittest discover -s test/gcpi
 # The parsers behind gcpi/SOURCES.md's numbers (#87). The data itself cannot be committed (ICC's PDFs are
 # all rights reserved), so these pin the parsing on synthetic inputs shaped like the real ones.
+import contextlib
+import importlib.util
 import io
+import json
 import os
 import sys
+import tempfile
 import unittest
 import zipfile
 
 ROOT = os.path.join(os.path.dirname(__file__), "..", "..")
 sys.path.insert(0, os.path.join(ROOT, "gcpi", "research"))
+import cdb_copra  # noqa: E402
 import icc_archive  # noqa: E402
 import psa_copra  # noqa: E402
 import worldbank_cmo  # noqa: E402
@@ -136,6 +141,63 @@ class PsaQuery(unittest.TestCase):
         sel = {v["code"]: v["selection"]["values"] for v in q["query"]}
         self.assertEqual(sel, {"Geolocation": ["0"], "Commodity": ["8", "9"]})
         self.assertEqual(q["response"], {"format": "json"})
+
+
+def _backtest_fetch():
+    # By path: gcpi/collector has a fetch.py too, and the suite shares one sys.path.
+    spec = importlib.util.spec_from_file_location("backtest_fetch", os.path.join(ROOT, "gcpi", "backtest", "fetch.py"))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+class CdbScrapeThatFindsNothingFails(unittest.TestCase):
+    """#108: an empty parse is a failed scrape, never an empty cache reported as ready."""
+
+    def setUp(self):
+        self.fetch = _backtest_fetch()
+        self.dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.dir.cleanup)
+        for name in [*self.fetch.FILES, "psa.json"]:
+            open(os.path.join(self.dir.name, name), "w").close()
+        patch = lambda obj, name, value: (self.addCleanup(setattr, obj, name, getattr(obj, name)),
+                                          setattr(obj, name, value))
+        patch(self.fetch, "FIRST_YEAR", 2024)
+        patch(self.fetch.time, "sleep", lambda s: None)
+        patch(self.fetch.time, "strftime", lambda f: {"%Y": "2026", "%Y-%m": "2026-10"}.get(f, "2026-10-19"))
+        patch(self.fetch.icc_archive, "months", lambda a, b: [])
+        self.patch = patch
+
+    def scrape(self, monthly, daily):
+        self.patch(cdb_copra, "monthly", monthly)
+        self.patch(cdb_copra, "daily", daily)
+        with contextlib.redirect_stdout(io.StringIO()):
+            return self.fetch.main(["fetch.py", self.dir.name])
+
+    def test_an_empty_scrape_writes_no_cache(self):
+        with self.assertRaisesRegex(SystemExit, "no rows"):
+            self.scrape(lambda m, y: [], lambda m, a, b: [])
+        self.assertFalse(os.path.exists(os.path.join(self.dir.name, "cdb.json")))
+
+    def test_one_empty_market_year_is_enough_to_fail(self):
+        monthly = lambda m, y: [] if (m, y) == ("2", 2025) else [("January", 3500.0)]
+        daily = lambda m, a, b: [(f"01-01-{a[-4:]}", 3500.0)]
+        with self.assertRaises(SystemExit) as e:
+            self.scrape(monthly, daily)
+        self.assertIn("'Alappuzha': [2025]", str(e.exception))
+
+    def test_the_current_year_may_be_empty_and_a_full_scrape_is_written(self):
+        monthly = lambda m, y: [] if y == 2026 else [("January", 3500.0)]
+        daily = lambda m, a, b: [] if a.endswith("2026") else [(f"01-01-{a[-4:]}", 3500.0)]
+        self.assertEqual(self.scrape(monthly, daily), 0)
+        with open(os.path.join(self.dir.name, "cdb.json")) as f:
+            self.assertEqual(len(json.load(f)["daily_kochi"]), 2)
+
+    def test_the_research_script_exits_non_zero_on_no_rows(self):
+        self.patch(cdb_copra, "monthly", lambda m, y: [])
+        self.patch(cdb_copra.time, "sleep", lambda s: None)
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(cdb_copra.main(["cdb_copra.py", "2025", "2025"]), 1)
 
 
 if __name__ == "__main__":

@@ -73,6 +73,7 @@ def main(argv):
     first = int(argv[1]) if len(argv) > 1 else 2006
     last = int(argv[2]) if len(argv) > 2 else int(time.strftime("%Y"))
     window = argv[3] if len(argv) > 3 else None
+    failed = False
     for mid, name in MARKETS.items():
         counts = {}
         for y in range(first, last + 1):
@@ -81,11 +82,19 @@ def main(argv):
         have = [y for y, n in counts.items() if n]
         gaps = {y: n for y, n in counts.items() if y >= (have[0] if have else last) and n < 12}
         print(f"{name:10s} monthly averages from {have[0] if have else '-'}; years short of 12 months: {gaps}")
+        if not have:
+            failed = True
     if window:
         start, end = window.split("-")
         days = daily(DAILY_MARKET, start, end)
         repeats = sum(1 for a, b in zip(days, days[1:]) if a[1] == b[1])
         print(f"{MARKETS[DAILY_MARKET]} daily {start}..{end}: {len(days)} values, {repeats} equal to the previous day")
+        failed = failed or not days
+    if failed:
+        # Zero rows is a parse that found nothing (a changed form, or the site refusing us), not data (#108).
+        print("no Milling Copra rows for a market or the daily window: the form or the site has changed",
+              file=sys.stderr)
+        return 1
     return 0
 
 
