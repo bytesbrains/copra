@@ -121,7 +121,7 @@ Asking PSA, CDB and CDA for a signed or at least stable machine-readable feed is
 
 ## Recommended source set
 
-For #90 to accept, amend or reject:
+For #90 to accept, amend or reject. *Decided in #90 ([GCPI-001 §21](../docs/specs/GCPI-001.md#21-v1-decision-record)): the basis, grade, roles and cadence are adopted. The headline is the Philippines and Indonesia, as #88 recommended. Every blocker below still stands.*
 
 | Component | Source | Status before v1 can use it |
 |---|---|---|

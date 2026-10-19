@@ -8,7 +8,8 @@
 **Reference unit:** USD per kilogram of standardized milling copra\
 **License proposal:** CC0 for methodology; Apache-2.0 or MIT for implementation\
 **Status:** Proposed architecture — subject to data-source validation, historical backtesting, economic modeling, and security review\
-**Companion:** [COPRA-001](COPRA-001.md), the $COPRA reserve and redemption protocol that consumes this index
+**Companion:** [COPRA-001](COPRA-001.md), the $COPRA reserve and redemption protocol that consumes this index\
+**Decisions:** §21 records the v1 choices settled from the source research, backtest and authentication research ([SOURCES](../../gcpi/SOURCES.md) #87, [BACKTEST](../../gcpi/BACKTEST.md) #88, [AUTHENTICATION](../../gcpi/AUTHENTICATION.md) #89), decided in #90. They are draft decisions: v1 is released only through §13.6–§13.9.
 
 ---
 
@@ -100,6 +101,14 @@ If an adjustment cannot be verified, the observation must be excluded rather tha
 
 For the initial version, directly comparable quotations should be preferred over complex normalization.
 
+## 2.4 v1 reference definition (decided, #90; §19 Q1)
+
+- **Basis: domestic.** No public, redistributable export-basis (FOB or CIF) copra price exists: the World Bank published copra only for 1960–2014, ICC publishes only domestic prices, and Oil World is subscription-only ([SOURCES §1](../../gcpi/SOURCES.md#1-there-is-no-public-export-price-to-anchor-to)). A §2.3 normalization to an export basis therefore has nothing to normalize to. **v1 applies no delivery-basis and no quality adjustment.** Every observation enters at the basis its source publishes (farmgate or wholesale), and the methodology version records that basis per source.
+- **Markets: the export-linked producers.** The headline is the **Philippines and Indonesia**. Their copra moves together (r = +0.75 for monthly changes, 2016–2026) and with world coconut oil (+0.78, +0.72). India and Sri Lanka move with them only weakly (+0.12 to +0.34) and trade at drifting premia of 1.7–1.9× ([BACKTEST §1](../../gcpi/BACKTEST.md#1-correlations-and-spreads)). **India and Sri Lanka are published as separate per-country sub-indices**, under the same rules, and never enter the headline.
+- **Grade: dried milling copra,** as each listed source defines its milling grade (Philippines: Resecada, not Corriente). The methodology version records each source's own definition verbatim.
+- **Not set in v1: numeric quality limits** (moisture, foreign matter, oil content). No open source publishes them per quotation, so a number here could not be checked against any observation. Until one can, §17's "the reference commodity is unambiguously defined" is not met.
+- **Naming.** Every published value carries its basket. The v1 headline is not described as a global price: two producers are not the world ([SOURCES](../../gcpi/SOURCES.md#what-would-make-a-global-index-defensible)).
+
 ---
 
 # 3. Global Market Coverage
@@ -108,16 +117,16 @@ For the initial version, directly comparable quotations should be preferred over
 
 | Market                   | Candidate public sources                                              | Initial role |
 | ------------------------ | --------------------------------------------------------------------- | ------------ |
-| Philippines              | Philippine Coconut Authority, ICC, industry price publications        | Core         |
-| Indonesia                | ICC and published Indonesian commodity reports                        | Core         |
-| India                    | Coconut Development Board, AGMARKNET, recognized wholesale quotations | Core         |
-| Sri Lanka                | Coconut Development Authority                                         | Core         |
+| Philippines              | Philippine Coconut Authority, ICC, industry price publications        | Headline     |
+| Indonesia                | ICC and published Indonesian commodity reports                        | Headline     |
+| India                    | Coconut Development Board, AGMARKNET, recognized wholesale quotations | Sub-index    |
+| Sri Lanka                | Coconut Development Authority                                         | Sub-index    |
 | Papua New Guinea         | Official commodity and export reports                                 | Expansion    |
 | Solomon Islands          | Government and commodity-sector reports                               | Expansion    |
 | Vanuatu                  | Government and commodity-sector reports                               | Expansion    |
 | Other qualifying markets | Publicly verifiable official or recognized industry publications      | Expansion    |
 
-This list is a discovery target, not a declaration that every source currently provides suitable automated access.
+This list is a discovery target, not a declaration that every source currently provides suitable automated access. Roles are as decided in §2.4. Phase 1 found no open, reliable source for either headline market today (§21).
 
 ## 3.2 Market inclusion criteria
 
@@ -179,6 +188,15 @@ A fixed-weight index and a periodically reweighted index must be identified as d
 
 This avoids hidden governance over the reference price.
 
+## 4.4 v1 weights (decided, #90; §19 Q3)
+
+**Production weights, fixed: Philippines 0.65, Indonesia 0.35.**
+
+- **Data:** FAOSTAT coconut oil production, 2021–2023 average: Philippines 49.0%, Indonesia 26.3% of the four core markets. Within the pair that is 0.651 and 0.349, rounded to two decimals.
+- **Substitution (§4.1):** FAOSTAT has no copra item. Coconut oil production stands in for copra milled. Under a common oil extraction rate, the rate cancels from the within-pair shares, so no conversion figure enters the weights. If the two countries' rates differ, the weights inherit that difference. This is a documented limitation, not an estimate.
+- **Sensitivity:** export weights give the Philippines 0.62. The two headlines never differ by more than 1.1% in level ([BACKTEST §3](../../gcpi/BACKTEST.md#3-weighting-production-vs-exports)). For this pair the choice barely matters. It would matter a great deal for a four-market basket (up to 26%), which is one more reason India is not in the headline.
+- Sub-indices have one market each and need no weights.
+
 ---
 
 # 5. Data Acquisition Network
@@ -212,6 +230,12 @@ Each collector shall:
 7. Submit the observation through the defined protocol.
 8. Make the supporting record independently retrievable.
 
+Two rules follow from the research (#88, #89):
+
+- **The publication time comes from the content or from the first attested retrieval, never from HTTP headers.** ICC's September 2026 PDF reported a `Last-Modified` of the day it was probed ([AUTHENTICATION](../../gcpi/AUTHENTICATION.md#what-each-source-offers-an-attestation)).
+- **An input that its publisher can revise is pinned to a vintage.** The World Bank revised its 1999–2014 copra history by −14% to +10% in one edition and withdrew it in the next ([BACKTEST](../../gcpi/BACKTEST.md#data-quality-findings)). An unpinned input would let a finalized period change under it.
+- **The commitment in step 6 covers the value's bytes and their position in the response,** not the whole response. Some pages change on every request (a CSRF token), so collectors agree on the price but not on a whole-response hash.
+
 ## 5.3 Source authenticity
 
 Multiple collectors reading the same website do not create multiple independent price sources.
@@ -230,6 +254,29 @@ Where publishers provide digitally signed feeds, GCPI should verify those signat
 
 Where publishers do not, the protocol must explicitly document the remaining trust assumptions and use verifiable retrieval or attestation mechanisms.
 
+**Decided for v1 (#90; §19 Q7),** from [AUTHENTICATION](../../gcpi/AUTHENTICATION.md):
+
+**5.3.1 Mechanism (v1).** An observation is accepted when at least *k* of the *n* notaries listed in the methodology version attest, through TLS attestation with selective disclosure, to the same value bytes from the listed source location. A publisher signature against a key listed in the methodology version substitutes for notary attestations. The notary list, *k*, the source locations, the publisher keys and the parsers for non-structured formats are part of the methodology version. No contract owner or other key can change them. A vendor's attestor key may be one of the *n* if its operator is independent. A vendor's verifier contract that has an owner or can be upgraded may never be the gate: on Base on 18 October 2026, both Reclaim and Primus deployments were upgradeable proxies controlled by a single key.
+
+**5.3.2 Disputes.** Within the challenge window, anyone may submit a second valid attestation set for the same source and period. If the two disagree, the market is missing for that period (§8.4) and the conflict is recorded. No vote decides between them. UMA's DVM, a token-holder vote, is not used: it is the "majority stake determines the price" that §5.4 forbids.
+
+**5.3.3 Challenge window.** 3 days per period, which adds about 5% to a monthly finalization delay.
+
+**5.3.4 PDF and XLSX sources.** The attestation covers the transcript and the file's hash. The value is extracted by a parser pinned in the methodology version, which anyone can rerun on the attested bytes. A disputed parse is a conflict under 5.3.2.
+
+**5.3.5 Publisher signatures.** GCPI asks PSA, CDB and CDA to sign their releases. It is the only mechanism with no third party. Contacting publishers is a project decision, not part of this specification.
+
+**5.3.6 Remaining trust assumptions.** GCPI v1 assumes that:
+1. **Publishers** publish what they mean to. Authentication does not detect a wrong publication; §7 must.
+2. **Fewer than *k* listed notaries collude** with a submitter. For proxy-mode attestation, also that no network-level attacker sits between a notary and the publisher.
+3. **The Web PKI** issued the publisher's certificate correctly. A mis-issued certificate would let attestations of a fake server pass.
+4. **The publisher's CDN** (Cloudflare for PSA and ICC on 18 October 2026) serves the publisher's content. TLS ends at the CDN.
+5. **The pinned parser** for PDF and XLSX sources is correct. Anyone can check this by rerunning it on the attested bytes.
+6. **At least one honest submitter** brings each market's observation each period. Otherwise the market is missing.
+7. **Methodology governance** (§13.4–§13.11) changes the notary list, the sources and the keys only through a new version.
+
+Not settled here, and left to Phase 4 (#92): *n*, *k*, and the notary operators. TLSNotary, the best-fitting design, supports only TLS 1.2, and PSA's OpenSTAT accepts only TLS 1.3. No mechanism recommended here can attest PSA today.
+
 ## 5.4 Permissionless submission
 
 Anyone may submit a valid observation.
@@ -237,6 +284,8 @@ Anyone may submit a valid observation.
 Collector registration must not be necessary for ordinary participation.
 
 A security-bond or staking system may be introduced to discourage spam and fraudulent attestations, but it must not allow wealthy participants to determine the price by majority stake alone.
+
+**Decided for v1 (#90):** submitters post a small anti-spam bond, returned at finalization. Notaries post a larger bond, slashable **only for objective, on-chain-provable faults**: signing two different values for the same source and period, or signing a period that has not happened. "This price is false" is never a slashing condition, because no contract can prove it without an arbiter. Stake never counts toward accepting a value. Bond sizes are set in Phase 4 (#92).
 
 ---
 
@@ -341,6 +390,17 @@ The following are initial research parameters, not production-approved constants
 
 These thresholds must be tested against historical copra prices and calibrated to the actual publication cadence.
 
+**Decided for v1 (#90; §19 Q6): the bands above, scaled by √(weeks per period).** As written, they fit a weekly series: 86% of weekly Philippine changes fall in "normal". At monthly cadence they would send 43% of months to corroboration or stronger confirmation, almost all of them genuine moves. √(52/12) ≈ 2.08, fixed at **2** for monthly so that the bands are exact in fixed point:
+
+| Monthly change | Treatment |
+| -------------- | --------- |
+| 0–10%          | Normal validation |
+| 10–20%         | Additional corroboration |
+| 20–40%         | Strong confirmation required |
+| Above 40%      | Quarantine pending deterministic recovery conditions |
+
+On 2016–2026 the scaled bands put 81% of headline months in "normal" and none in quarantine. Neither genuine shock (the 2017–19 fall of −62%, the 2024–25 rise of +145%) would have been quarantined. PSA's broken post-2024 series would still have been quarantined in 8 of 30 months under the bands as written ([BACKTEST §5](../../gcpi/BACKTEST.md#5-anomaly-thresholds)). The bands are fixed for the version; recalibrating them is a new version.
+
 ## 7.4 Rolling historical reference
 
 The protocol should compare each observation against more than one previous value.
@@ -370,6 +430,8 @@ Example:
 This is stronger evidence of a global market movement than a 25% increase isolated to one market.
 
 However, regional supply shocks are legitimate. The protocol must not require every country to move together.
+
+**Decided for v1 (#90):** corroboration compares the **Philippines with Indonesia, and both with world coconut oil** (World Bank monthly, CFR Europe). It does not compare across all four core markets: India and Sri Lanka move with the export-linked pair only weakly, so a four-market check would raise false alarms. Each change of basis in the World Bank's coconut oil series (four so far) is treated as a break, not a price move. Coconut oil stays a corroboration signal and never enters the index (§2.2).
 
 ## 7.6 Quarantine and recovery
 
@@ -411,6 +473,8 @@ Where:
 
 Only observations satisfying all validation requirements may enter the calculation.
 
+In v1 this formula sets only the level of the base period. Later periods are chain-linked from it (§8.4).
+
 ## 8.2 Freshness rules
 
 Each source must have a documented publication schedule or expected cadence.
@@ -424,6 +488,8 @@ A proposed weekly-index policy is:
 
 An unchanged price must not be represented as a new observation merely because a collector retrieved it again.
 
+**v1 (monthly, §8.6):** an observation belongs to the month it reports, not the month it was published. A period can finalize only after its sources publish it, which is up to about two months after month end. CDB's daily values must not be used as daily observations: 65–90% of them repeat the previous day ([BACKTEST](../../gcpi/BACKTEST.md#data-quality-findings)).
+
 ## 8.3 Minimum coverage
 
 The proposed minimum publication requirements are:
@@ -434,6 +500,13 @@ The proposed minimum publication requirements are:
 - Required currency-conversion inputs available and valid.
 
 The exact thresholds must be validated against historical availability.
+
+**Decided for v1 (#90; §19 Q8):**
+- **Headline: at least 70% of headline weight.** With weights of 0.65 and 0.35, that means both markets. Otherwise the period is non-valid.
+- **Drop "at least three markets" for the headline,** which a two-market basket cannot meet.
+- **A sub-index is valid only when its one market is valid.**
+
+On 2016–2026 data both headline markets were present in 126 of 129 months. The longest run of non-valid months was one ([BACKTEST §6](../../gcpi/BACKTEST.md#6-minimum-coverage)). Expect about one non-valid month in 40.
 
 ## 8.4 Missing markets
 
@@ -453,6 +526,28 @@ Therefore, GCPI must publish:
 
 The production methodology should evaluate fixed-basket, matched-market, and chain-linked aggregation methods before selecting the final missing-data policy.
 
+**Decided for v1 (#90; §19 Q5): matched-market chain-linking,** combined with the coverage rule of §8.3. This is the method the backtest tested ([BACKTEST §4](../../gcpi/BACKTEST.md#4-missing-market-handling)):
+
+```
+I_b = Σ(W_i × P_i,b) / Σ(W_i)                                  base period b, every market valid
+I_t = I_s × exp( Σ_{i∈M}(W_i × ln(P_i,t / P_i,s)) / Σ_{i∈M}(W_i) )
+```
+
+Where:
+- s = the last finalized VALID period before t.
+- M = the markets valid in both t and s.
+- b = the base period, fixed in the methodology version.
+
+Why:
+- **Renormalization moves the index when no price moves.** Dropping a market from a renormalized four-market level moved it by up to 47% in the backtest, and it snapped back when the market returned. Chain-linking does not jump.
+- **Chain-linking also settles §19 Q4.** The index moves by each market's own change, so a persistent premium between markets never enters it.
+- **Chain-linking is not a licence to estimate.** It loses the missing market's own moves for good. So when a large share of weight is missing, the period is non-valid (§8.3) rather than linked. For the v1 headline, the coverage rule makes any missing market a non-valid period. Linking then happens only across non-valid periods, from the last valid one.
+
+Consequences that the methodology version must state:
+- **The headline is a chain index in USD/kg at the base period, not the weighted mean of today's prices.** The two drift apart over time.
+- **The reference engine (#91) fixes ln and exp in fixed point** (§6.3), with their precision and rounding, as part of the version. Independent implementations must match byte for byte.
+- **The comparability flag of item 5 above** is published every period.
+
 ## 8.5 Finalization
 
 A calculation period may be finalized only when all required validation and coverage rules pass.
@@ -462,6 +557,18 @@ Finalization must be deterministic and permissionless.
 Once finalized, the index record is immutable.
 
 Later corrections must be published as separate correction records; historical outputs must not be silently overwritten.
+
+## 8.6 Cadence (decided, #90)
+
+**Monthly.** The calculation period is a calendar month, in UTC.
+
+| Option | Decision | Why |
+|---|---|---|
+| Daily | **No** | No source supports it. CDB's daily values are mostly carried forward. CDA's daily bulletin exists only for 2026 and is a sub-index source. |
+| Weekly | **Not in v1** | Only ICC publishes weekly headline-market prices, and ICC's data is all rights reserved. A weekly version needs an open weekly primary source for the Philippines or Indonesia, and is a new methodology version. |
+| Monthly | **Yes** | The most that open headline sources support ([BACKTEST §7](../../gcpi/BACKTEST.md#7-cadence)). |
+
+**What this costs consumers.** A monthly index published up to about two months late settles a COPRA-001 redemption about 3–4 months after the request. Monthly cadence also needs much more collateral than weekly cadence would: about 180–320% against 140–160% ([BACKTEST](../../gcpi/BACKTEST.md#ratios-implied-by-132)). Sizing that is COPRA-001's job (#96). GCPI's cadence is set by its sources, not by what a consumer would prefer.
 
 ---
 
@@ -695,6 +802,110 @@ The GCPI protocol must not give any administrator the authority to force all con
 
 This approach allows innovation without granting hidden control over historical or current index values.
 
+## 13.4 Governance: why it is part of the methodology
+
+§13.1–§13.3 make each version immutable and let consumers choose. They do not say who writes the next version, or how it comes to be released. For a benchmark meant to be neutral, that process is where control would hide. Sources, weights, thresholds, notaries and parsers are all fixed per version (§3.3, §4.3, §5.3.1), so whoever writes the next version chooses them.
+
+§13.4–§13.11 define that process. They follow the IOSCO *Principles for Financial Benchmarks* (2013) where those apply to a benchmark with no administrator: Principle 3 (conflicts of interest), 5 (oversight), 10 (periodic review), 12 (changes to the methodology) and 13 (transition) ([IOSCO FR07/13](https://www.iosco.org/library/pubdocs/pdf/IOSCOPD415.pdf)). Whether GCPI or anyone running it is a benchmark administrator in law is a question for the legal review (#98), not for this section.
+
+**The process binds the reference repository's version series, not the world.** Anyone may fork this methodology and publish their own index. They may not call it a GCPI version unless it went through this process. A process with no authority behind it works only if it is checkable. So every step below leaves a public record, and a version whose record is incomplete is not a GCPI version.
+
+## 13.5 Version identity and commitment (§13.1)
+
+- **Identifier.** Released versions are numbered `GCPI-1`, `GCPI-2`, and so on, and are never reused. A sub-index carries its version and market: `GCPI-1/IN`. Drafts are `GCPI-1-draft.N` and must never be read by a contract that settles value.
+- **Bundle.** A version is a set of files:
+  - this specification at that version;
+  - a parameter file (sources and their locations, weights, bands, coverage, base period, notary list, *k*, publisher keys, challenge window);
+  - the reference engine source (#91) and its test vectors;
+  - the pinned parsers for PDF and XLSX sources;
+  - the review reports of §13.8.
+- **Manifest.** The bundle's manifest lists every file's path and SHA-256. It is encoded canonically, as JSON under RFC 8785 (JCS).
+- **Commitment.** The version's commitment is the SHA-256 of the manifest. A git commit hash is not the commitment: it names a repository state, and that state is not the same thing as the bundle.
+- **On-chain record.** Each version's contracts store the identifier and the commitment immutably at deployment (§11.3). Every finalized period records both (§12.1).
+- **What a change means.** Any change to any file in the bundle is a new version. Nothing of the bundle can be edited after release, including typo fixes. A correction to the prose that leaves every computed value unchanged may be published as an erratum beside the version. It does not change the commitment, and it cannot change a number.
+
+## 13.6 Proposing a version: public RFC
+
+- **Who:** anyone may propose a new version. Proposing requires no permission and no stake.
+- **Where:** a pull request adding `gcpi/rfcs/NNNN-<title>.md` to the reference repository, opened together with a public discussion thread (#95). Comments are public and stay public.
+- **What an RFC contains:**
+  1. The problem it solves, with evidence.
+  2. Every change, as a diff of the bundle.
+  3. A backtest of the proposed version against the current one, on the open historical dataset (§12.2). It must show where their values would have diverged and by how much.
+  4. Whether the new version continues the old series (comparable) or starts a new one. A version that changes sources, weights or aggregation starts a new series unless the RFC shows the two series cannot diverge (§4.3).
+  5. The effect on known consumers. This includes $COPRA (§15), which binds one version at deployment (COPRA-001 §4.3) and is not moved by a new release.
+  6. The author's conflicts of interest (§13.11).
+
+## 13.7 Comment period
+
+- **At least 30 days** from the moment the RFC is marked ready for comment.
+- **Any substantive change to the proposal restarts the period**, with at least 14 days remaining.
+- **The author publishes a response to every substantive comment.** Each response says whether the comment was accepted and why. That record is part of the bundle.
+- **No expedited path.** No emergency shortens the period or changes a released version. That costs liveness, not safety: a version whose sources fail produces a non-valid status (§9.4, Invariant 10), never a wrong value. Only a new version can fix it.
+
+## 13.8 Independent review
+
+A version may be released only after **at least two independent reviewers** have each published a written report on the complete bundle.
+
+- **Independent** means the reviewer:
+  - is not the RFC's author;
+  - is not employed, paid or funded by copra.dev, BytesBrains or the RFC's author;
+  - holds no $COPRA, no COPRA-001 position and no other exposure to a GCPI consumer.
+  Each reviewer states this in the report.
+- **What a reviewer must do:**
+  - Rebuild the test vectors from the bundle and confirm they match.
+  - Reproduce the RFC's backtest from the open dataset.
+  - Check the parameters against the evidence cited for them.
+  - Report every finding.
+- **A report that raises a blocking finding blocks release,** until a new revision answers it and a reviewer confirms the answer.
+- **If no independent reviewer can be found, the version stays a draft.** It is not released with fewer reviewers.
+
+## 13.9 Release and adoption
+
+- **A version is released when its record is complete:**
+  - the RFC;
+  - a comment period that has run in full;
+  - a response to every comment;
+  - two independent review reports with no open blocking finding;
+  - the bundle and its commitment, published.
+  The reference repository's maintainers merge a release only when that record is complete. They may refuse to merge. They cannot release a version whose record is incomplete, because anyone can check the record.
+- **Release is not adoption.** Releasing a version deploys its own immutable contracts (§13.2). It changes no other version, and it moves no consumer. Each consumer decides whether, and when, to bind the new version (§13.3).
+
+## 13.10 Periodic review and retirement
+
+- **Review.** At least once a year, every released version that is still producing values gets a public review. It covers:
+  - source availability;
+  - data breaks;
+  - coverage achieved;
+  - non-valid periods and their causes;
+  - incidents.
+  A review can only recommend. Anything it finds is acted on through an RFC.
+- **Retirement.** A version is never switched off. If its sources stop publishing, it stops producing VALID periods and says why (§9.4). The repository may mark a version as superseded, with at least 6 months' notice and a link to its successor. That is a notice to consumers, not an action on the version, which keeps finalizing whatever its sources allow.
+
+## 13.11 The reference registry, the site, and conflicts of interest
+
+copra.dev runs this repository today, and will run its site (#94). copra.dev also builds $COPRA, the first consumer of GCPI (§15, COPRA-001). Minters and holders of $COPRA have opposite exposure to every GCPI value. Anyone with such a position has an interest in the index level, and in the next version's sources, weights and thresholds.
+
+**copra.dev's registry and site are a soft default.** They decide what a visitor sees first. They decide no value and bind no consumer.
+
+They **may**:
+- List released versions, each with its identifier, commitment, contracts and review reports.
+- Show one version by default, and say so wherever they do.
+- Keep a version list on-chain, if that list can only be appended to.
+
+They **may not**:
+- Remove a released version from the list, or hide its values.
+- Present the default as the only GCPI, or as endorsed by anyone but copra.dev.
+- Call a version recommended without linking its review reports.
+- Stand between a consumer and a version. Consumers read a version's own contracts, bound immutably (COPRA-001 §4.3). Nothing like $COPRA v1's owner-repointable `CopraRegistry` (`src/CopraRegistry.sol`) may sit in that path. An on-chain default pointer, if one exists, is advisory and must never be read for a price.
+
+**Disclosure.** The site, every RFC and every version bundle carry this statement:
+
+> copra.dev builds $COPRA, which settles against GCPI. copra.dev runs this repository and chooses which GCPI version its site shows first. That choice is not part of any methodology and binds no one. Every released version, its review reports and its full record are listed regardless of that choice.
+
+- **RFC authors and reviewers** each declare their $COPRA holdings, any COPRA-001 positions, and who pays them.
+- **A declared conflict does not disqualify an author.** It does disqualify a reviewer (§13.8).
+
 ---
 
 # 14. Security and Adversarial Threat Model
@@ -861,6 +1072,7 @@ GCPI v1 may be considered ready for production consideration only when:
 - The economic incentives for operation are documented.
 - The $COPRA reserve mechanism is separately validated.
 - An independent security review is completed.
+- The version was released through §13.6–§13.9, including two independent reviews.
 
 ---
 
@@ -927,6 +1139,22 @@ The following decisions must be resolved empirically, not by intuition:
 
 These questions should be answered before deploying immutable production contracts.
 
+Status after #90. The details are in §21.
+
+| Q | Status | Where |
+|---|---|---|
+| 1. Grade and basis | **Decided:** domestic basis, dried milling copra, export-linked headline. Numeric quality limits are still open. | §2.4 |
+| 2. Reliable, verifiable sources | **Open, and blocking.** There is no open, reliable Philippine series (PSA broke in 2024; ICC is all rights reserved) and no primary Indonesian source. | §21 |
+| 3. Weights | **Decided:** production, 0.65 / 0.35 | §4.4 |
+| 4. Regional spreads | **Decided:** India and Sri Lanka become sub-indices; chain-linking keeps premia out of the index | §2.4, §8.4 |
+| 5. Missing sources | **Decided:** matched-market chain-linking, plus the coverage rule | §8.4 |
+| 6. Volatility thresholds | **Decided:** §7.3 bands ×2 at monthly cadence | §7.3 |
+| 7. Authentication | **Decided:** k-of-n notaries fixed per version; disputes by counter-evidence. *n*, *k* and the operators are set in Phase 4 (#92). | §5.3 |
+| 8. Minimum coverage | **Decided:** 70% of headline weight | §8.3 |
+| 9. Financing | Open | §10.4 |
+| 10. Regulation | Open: #98 | — |
+| Cadence (not in the original list) | **Decided:** monthly | §8.6 |
+
 ---
 
 # 20. Long-Term Vision
@@ -940,5 +1168,36 @@ Its rules should be publicly inspectable, its results independently reproducible
 The protocol should continue functioning when its original developers disappear, subject to the continued availability of trustworthy commodity data, participating infrastructure, the underlying blockchain, and sufficient execution incentives.
 
 **GCPI should not ask the world to trust whoever publishes its price. It should provide the evidence and mathematics necessary for the world to verify that price independently.**
+
+---
+
+# 21. v1 Decision Record
+
+Decided in #90 from the research in #87, #88 and #89. They are draft decisions. They bind nothing until a version containing them is released through §13.6–§13.9. Its RFC is where anyone can challenge them.
+
+| Decision | v1 value | Evidence |
+|---|---|---|
+| Reference basis (Q1) | Domestic, as published; no basis or quality adjustment | [SOURCES §1](../../gcpi/SOURCES.md#1-there-is-no-public-export-price-to-anchor-to) |
+| Grade (Q1) | Dried milling copra, each source's milling grade recorded verbatim | [SOURCES](../../gcpi/SOURCES.md#answers-to-the-issues-questions) |
+| Headline basket | Philippines + Indonesia | [BACKTEST §1](../../gcpi/BACKTEST.md#1-correlations-and-spreads) |
+| Sub-indices | India (CDB), Sri Lanka (CDA), each on its own | [BACKTEST §1](../../gcpi/BACKTEST.md#1-correlations-and-spreads) |
+| Weights (Q3) | Production: 0.65 / 0.35, fixed | [BACKTEST §3](../../gcpi/BACKTEST.md#3-weighting-production-vs-exports) |
+| Aggregation (Q5) | Matched-market chain-linking, weighted geometric mean of relatives | [BACKTEST §4](../../gcpi/BACKTEST.md#4-missing-market-handling) |
+| Coverage (Q8) | At least 70% of headline weight; no market count | [BACKTEST §6](../../gcpi/BACKTEST.md#6-minimum-coverage) |
+| Anomaly bands (Q6) | §7.3 ×2: 10 / 20 / 40% | [BACKTEST §5](../../gcpi/BACKTEST.md#5-anomaly-thresholds) |
+| Corroboration | Philippines ↔ Indonesia, both ↔ world coconut oil | [SOURCES §2](../../gcpi/SOURCES.md#2-the-core-markets-split-into-two-regimes) |
+| Cadence | Monthly, calendar month UTC | [BACKTEST §7](../../gcpi/BACKTEST.md#7-cadence) |
+| Authentication (Q7) | k-of-n listed notaries; publisher signatures substitute; disputes make the market missing | [AUTHENTICATION](../../gcpi/AUTHENTICATION.md#recommendation) |
+| Challenge window | 3 days per period | [AUTHENTICATION](../../gcpi/AUTHENTICATION.md#recommendation) |
+| Governance | §13.4–§13.11 | IOSCO Principles 3, 5, 10, 12, 13 |
+
+**What still blocks freezing v1.** These are data problems, not method problems:
+
+1. **No open, reliable Philippine series.** PSA's series broke in January 2024 and is withdrawn until PSA explains it. ICC's is reliable but all rights reserved.
+2. **No primary Indonesian source.** The coverage rule (§8.3) needs both headline markets, so without one no headline period can be VALID.
+3. **Republication terms** have not been confirmed by PSA, CDB or CDA. FAOSTAT's licence clause needs a legal read (#98).
+4. **Numeric quality limits** for the reference grade (§2.4).
+5. **No attestation for PSA.** It is TLS 1.3 only, and TLSNotary is TLS 1.2 only.
+6. **Two independent reviewers** (§13.8) have not yet been found.
 
 *End of GCPI-001, Draft v1.0.*

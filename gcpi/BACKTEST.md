@@ -8,7 +8,7 @@
 
 ## Recommended methodology
 
-For #90 to decide. Each choice links to its evidence.
+For #90 to decide. Each choice links to its evidence. *Decided in #90: all adopted as recommended, in [GCPI-001 §21](../docs/specs/GCPI-001.md#21-v1-decision-record). The monthly band factor is fixed at exactly 2.*
 
 | Choice | Recommendation | Evidence |
 |---|---|---|
