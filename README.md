@@ -34,7 +34,7 @@ Further technical documentation:
 - [Whitepaper](docs/WHITEPAPER.md)
 - [Architecture & Security Model](docs/ARCHITECTURE.md)
 - Draft specs: [GCPI-001](docs/specs/GCPI-001.md), the Global Copra Price Index, and [COPRA-001](docs/specs/COPRA-001.md), the reserve and redemption protocol that would replace the v1 vault. Comment on them in [Discussions](https://github.com/bytesbrains/copra/discussions)
-- GCPI Phase 1 [source research report](gcpi/SOURCES.md) and machine-readable [source registry](gcpi/sources.json); Phase 2 [methodology backtest](gcpi/BACKTEST.md) with its [dataset](gcpi/backtest/data/); [source authentication](gcpi/AUTHENTICATION.md) research (#89); the v1 decisions and the methodology governance process are in [GCPI-001 §13 and §21](docs/specs/GCPI-001.md#21-v1-decision-record) (#90)
+- GCPI Phase 1 [source research report](gcpi/SOURCES.md) and machine-readable [source registry](gcpi/sources.json); Phase 2 [methodology backtest](gcpi/BACKTEST.md) with its [dataset](gcpi/backtest/data/); [source authentication](gcpi/AUTHENTICATION.md) research (#89); the v1 decisions and the methodology governance process are in [GCPI-001 §13 and §21](docs/specs/GCPI-001.md#21-v1-decision-record) (#90); Phase 3 [reference engine](gcpi/ENGINE.md), in Python and JavaScript, with published [test vectors](gcpi/engine/vectors/) (#91)
 - [Contributing Guidelines](CONTRIBUTING.md)
 - [Security Policy](SECURITY.md)
 

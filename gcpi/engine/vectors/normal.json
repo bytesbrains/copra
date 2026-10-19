@@ -1,0 +1,424 @@
+{
+ "description": "Two markets with small moves every month: every period VALID and comparable.",
+ "expected": {
+  "engine": "GCPI-ENGINE-v1",
+  "methodology": "GCPI-test",
+  "methodology_hash": "041b198835b523103ecc29a2c89b3d8d35998da0439506a3788534cf49e3d4c5",
+  "periods": [
+   {
+    "accepted": [
+     "ID",
+     "PH"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "10000",
+    "decided_at": "2020-02",
+    "input_commitment": "b6d4ce58a12dcd7ec200fb49862ba8f5f9551b307265ba69be0b2667a5e2b59b",
+    "level": "933500000000000000",
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2020-02",
+      "decision": "ACCEPTED",
+      "observations": [
+       "932b7692fa2edf4657043cc30b675367bd34498f626e18f03b5fb4058003590f"
+      ],
+      "price": "810000000000000000"
+     },
+     "PH": {
+      "band": "normal",
+      "decided_at": "2020-02",
+      "decision": "ACCEPTED",
+      "observations": [
+       "480fc7cff1f68140e22ed67530923690992109e661a05548daae61d0a51dd7eb"
+      ],
+      "price": "1000000000000000000"
+     }
+    },
+    "matched": [],
+    "period": "2020-02",
+    "reason": "base",
+    "status": "VALID"
+   },
+   {
+    "accepted": [
+     "ID",
+     "PH"
+    ],
+    "candidate": null,
+    "comparable": true,
+    "coverage_bp": "10000",
+    "decided_at": "2020-03",
+    "input_commitment": "5375bf1ba986f8830d0a0953687f5ee355551c246c70ff1981ad21ad3acd7bfb",
+    "level": "941490999893895631",
+    "linked_from": "2020-02",
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2020-03",
+      "decision": "ACCEPTED",
+      "observations": [
+       "8870a59705a07dec2297d2a2f4993db69e704cb7d5e26662a395e25aaefb589a"
+      ],
+      "price": "800000000000000000"
+     },
+     "PH": {
+      "band": "normal",
+      "decided_at": "2020-03",
+      "decision": "ACCEPTED",
+      "observations": [
+       "ab7a1282abef3881305b2f35cd60e5e3fe0c4228dc4bd75b1e8bea5902beb0c0"
+      ],
+      "price": "1020000000000000000"
+     }
+    },
+    "matched": [
+     "ID",
+     "PH"
+    ],
+    "period": "2020-03",
+    "reason": "linked",
+    "status": "VALID"
+   },
+   {
+    "accepted": [
+     "ID",
+     "PH"
+    ],
+    "candidate": null,
+    "comparable": true,
+    "coverage_bp": "10000",
+    "decided_at": "2020-04",
+    "input_commitment": "7ade0ececeb289b6bbd88cca9a7226aaf98b6c0f9ea309131c77ef57565cf987",
+    "level": "947612521996210193",
+    "linked_from": "2020-03",
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2020-04",
+      "decision": "ACCEPTED",
+      "observations": [
+       "cd6e3ae1fa70e72d8ceee4a6c22b9bc83bc2425b7e3fdf1c4d56ff08f45ec2b3"
+      ],
+      "price": "830000000000000000"
+     },
+     "PH": {
+      "band": "normal",
+      "decided_at": "2020-04",
+      "decision": "ACCEPTED",
+      "observations": [
+       "9149327999cb2bdfaeeb0164cd2b71a2a81df3a1cb07a19c3d007f032c0b4944"
+      ],
+      "price": "1010000000000000000"
+     }
+    },
+    "matched": [
+     "ID",
+     "PH"
+    ],
+    "period": "2020-04",
+    "reason": "linked",
+    "status": "VALID"
+   },
+   {
+    "accepted": [
+     "ID",
+     "PH"
+    ],
+    "candidate": null,
+    "comparable": true,
+    "coverage_bp": "10000",
+    "decided_at": "2020-05",
+    "input_commitment": "a9bd9b3f4e46977a2831d10e8fbb08c974235d3b0acceb87a70392a25096e84b",
+    "level": "969871028153825582",
+    "linked_from": "2020-04",
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2020-05",
+      "decision": "ACCEPTED",
+      "observations": [
+       "7da943f4a9b1045adebb5b462b6933427fcbf07116eb109d917b360d72dd3997"
+      ],
+      "price": "840000000000000000"
+     },
+     "PH": {
+      "band": "normal",
+      "decided_at": "2020-05",
+      "decision": "ACCEPTED",
+      "observations": [
+       "90ae7e80c48f80ca6ee03ea43a3424a29fab7ce0c6755da7e6f94e4168ebe7cb"
+      ],
+      "price": "1040000000000000000"
+     }
+    },
+    "matched": [
+     "ID",
+     "PH"
+    ],
+    "period": "2020-05",
+    "reason": "linked",
+    "status": "VALID"
+   },
+   {
+    "accepted": [
+     "ID",
+     "PH"
+    ],
+    "candidate": null,
+    "comparable": true,
+    "coverage_bp": "10000",
+    "decided_at": "2020-06",
+    "input_commitment": "240d5d68dc425cae1f93774e718702cf89dfd28b921fa2633f1945b10e3620c2",
+    "level": "963799089876721463",
+    "linked_from": "2020-05",
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2020-06",
+      "decision": "ACCEPTED",
+      "observations": [
+       "43b0142c5605c38dbac16fb37fd917a1eb4ace9590ff3b645ffdbd3eff4d8808"
+      ],
+      "price": "840000000000000000"
+     },
+     "PH": {
+      "band": "normal",
+      "decided_at": "2020-06",
+      "decision": "ACCEPTED",
+      "observations": [
+       "bd6d59afd1d9774a8e4179cb06ec968bc89d7db66ebafe6fb7768f734fa833f5"
+      ],
+      "price": "1030000000000000000"
+     }
+    },
+    "matched": [
+     "ID",
+     "PH"
+    ],
+    "period": "2020-06",
+    "reason": "linked",
+    "status": "VALID"
+   }
+  ]
+ },
+ "expected_sha256": "74cd1c718f65d5a9b26e4fed0f357a2cad703249a4d572774ae67bb94349a6e4",
+ "input": {
+  "first": "2020-01",
+  "last": "2020-06",
+  "methodology": {
+   "bands_bp": [
+    "1000",
+    "2000",
+    "4000"
+   ],
+   "base_period": "2020-02",
+   "circuit_breaker_bp": "4000",
+   "corroborators": {
+    "ID": [
+     "PH",
+     "COCONUT_OIL"
+    ],
+    "PH": [
+     "ID",
+     "COCONUT_OIL"
+    ]
+   },
+   "id": "GCPI-test",
+   "markets": {
+    "ID": "35",
+    "PH": "65"
+   },
+   "max_publication_lag_days": "90",
+   "min_coverage_bp": "7000",
+   "signals": [
+    "COCONUT_OIL"
+   ]
+  },
+  "observations": [
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "PH",
+    "period": "2020-01",
+    "price": "100",
+    "price_exp": "2",
+    "published": "1580601600",
+    "record": "ed31f25015b65571d0e23d53a0f7ebf4286430610707cc2a1224bbed129b0617",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "PH",
+    "period": "2020-02",
+    "price": "100",
+    "price_exp": "2",
+    "published": "1583107200",
+    "record": "28307c2c28bb13fc8c0d1228d4225f9b23651e4d1f7b87a46348fecbf745f068",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "PH",
+    "period": "2020-03",
+    "price": "102",
+    "price_exp": "2",
+    "published": "1585785600",
+    "record": "310123113e8a6a4c75567245aa67f65c27be27301de10ec7f8d262b385143d55",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "PH",
+    "period": "2020-04",
+    "price": "101",
+    "price_exp": "2",
+    "published": "1588377600",
+    "record": "32aebc29349936daae77d742e0c0094ce9596393259e97c9971e9ccd37b0e6a4",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "PH",
+    "period": "2020-05",
+    "price": "104",
+    "price_exp": "2",
+    "published": "1591056000",
+    "record": "d8c77db7e21587c53989166889d693b8b70d2f148c8e9bf907ca65b3e62dd843",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "PH",
+    "period": "2020-06",
+    "price": "103",
+    "price_exp": "2",
+    "published": "1593648000",
+    "record": "804d763979f9e647e4c141937bd4bb8dd4f2faac181f65292cf3f705afa68834",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2020-01",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1580601600",
+    "record": "60ddea58e87483cb9e142ced4c7ecf81258dd3b71460b499ff22f4fb9f4728ea",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2020-02",
+    "price": "81",
+    "price_exp": "2",
+    "published": "1583107200",
+    "record": "0ab26db1b53f0f5d441ffc1d28a0b72af3e1f00acbeecd6f2a6df7554ab9c955",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2020-03",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1585785600",
+    "record": "9bf4c6acc346f8c36ddc96dceb32520eb2410dfb893adc086fd6da3880188263",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2020-04",
+    "price": "83",
+    "price_exp": "2",
+    "published": "1588377600",
+    "record": "a335e79f2de23666568309e7534896caf8924817c9032aebbe1ff845f785a505",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2020-05",
+    "price": "84",
+    "price_exp": "2",
+    "published": "1591056000",
+    "record": "ecd3fa62f0140e8c1d854caa0c4ab85c4a3303e03df559fdf379273a3585ce94",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2020-06",
+    "price": "84",
+    "price_exp": "2",
+    "published": "1593648000",
+    "record": "ab12c14edb56fd310a720817a839ea7c58123a35c3e82d29a5e02f2f49751603",
+    "source": "test-source",
+    "unit": "kg"
+   }
+  ]
+ },
+ "name": "normal"
+}

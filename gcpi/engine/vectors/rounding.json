@@ -1,0 +1,269 @@
+{
+ "description": "Rounding edges. February's Philippine price normalizes to exactly n + 1/2 wei (rounds up), and so does the base level. In March Indonesia moves exactly 10%: normal, since bounds are inclusive. In April it moves 10% plus one wei: not normal, and with no corroborator it waits.",
+ "expected": {
+  "engine": "GCPI-ENGINE-v1",
+  "methodology": "GCPI-test",
+  "methodology_hash": "f271f4bf57dc5cc8ae3893a458a52eb8dfc25fee4ce59bed8ad5de3cd51eb04a",
+  "periods": [
+   {
+    "accepted": [
+     "ID",
+     "PH"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "10000",
+    "decided_at": "2020-02",
+    "input_commitment": "b20b38526cecbe383dc89382ba86a4eea83cda1879a27f6cc90e6bd3a4033c58",
+    "level": "1000000000000000001",
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2020-02",
+      "decision": "ACCEPTED",
+      "observations": [
+       "dce1d5dd19f5a4f21a37d0366054e398b266a86ae3913ac513df8eb0c40ec055"
+      ],
+      "price": "1000000000000000000"
+     },
+     "PH": {
+      "band": "normal",
+      "decided_at": "2020-02",
+      "decision": "ACCEPTED",
+      "observations": [
+       "62d76ea30f16713aea33162f5e4da96632a46a6d2c2ac4d0530336b117a1f828"
+      ],
+      "price": "1000000000000000001"
+     }
+    },
+    "matched": [],
+    "period": "2020-02",
+    "reason": "base",
+    "status": "VALID"
+   },
+   {
+    "accepted": [
+     "ID",
+     "PH"
+    ],
+    "candidate": null,
+    "comparable": true,
+    "coverage_bp": "10000",
+    "decided_at": "2020-03",
+    "input_commitment": "88ca7edcbaf48a8f797ef5f432af234c1a8de8e5ff37ffccdadd9510a0039c9d",
+    "level": "1100000000000000001",
+    "linked_from": "2020-02",
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2020-03",
+      "decision": "ACCEPTED",
+      "observations": [
+       "bcb8a50476a9e6dd0779b9a8145d5748e88a569df0ad847fb4ba0c704db87a39"
+      ],
+      "price": "1100000000000000000"
+     },
+     "PH": {
+      "band": "normal",
+      "decided_at": "2020-03",
+      "decision": "ACCEPTED",
+      "observations": [
+       "98cf256d774ccac3b45f901ae87da98565cd467bfa13221f975a4696b2894d50"
+      ],
+      "price": "1100000000000000001"
+     }
+    },
+    "matched": [
+     "ID",
+     "PH"
+    ],
+    "period": "2020-03",
+    "reason": "linked",
+    "status": "VALID"
+   },
+   {
+    "accepted": [
+     "PH"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "6500",
+    "decided_at": null,
+    "input_commitment": "893ef36984362d49b698744c69dcdbaf4b23008581eb4427562dd038d279edeb",
+    "level": null,
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "corroborate",
+      "decided_at": null,
+      "decision": "PENDING",
+      "observations": [
+       "6243ef371138fb9ce126efe8d0f54183dc30b4f3717b19ed5f7231c3babde715"
+      ],
+      "price": "1210000000000000001"
+     },
+     "PH": {
+      "band": "normal",
+      "decided_at": "2020-04",
+      "decision": "ACCEPTED",
+      "observations": [
+       "edb906256ad9ff3e2bf59b1920bf2b2d2e4365e652b73df9431fc063e60258a0"
+      ],
+      "price": "1210000000000000001"
+     }
+    },
+    "matched": [],
+    "period": "2020-04",
+    "reason": "market_pending",
+    "status": "PENDING_CONFIRMATION"
+   }
+  ]
+ },
+ "expected_sha256": "f4c7d5778ea130829d3d26126b1d82685657b23e7fdafe9a4ee7b43ff0bb595f",
+ "input": {
+  "first": "2020-01",
+  "last": "2020-04",
+  "methodology": {
+   "bands_bp": [
+    "1000",
+    "2000",
+    "4000"
+   ],
+   "base_period": "2020-02",
+   "circuit_breaker_bp": "4000",
+   "corroborators": {},
+   "id": "GCPI-test",
+   "markets": {
+    "ID": "35",
+    "PH": "65"
+   },
+   "max_publication_lag_days": "90",
+   "min_coverage_bp": "7000",
+   "signals": []
+  },
+  "observations": [
+   {
+    "basis": "",
+    "currency": "PHP",
+    "fx": "2",
+    "fx_exp": "0",
+    "fx_source": "test-fx",
+    "market": "PH",
+    "period": "2020-01",
+    "price": "2000000000000000001",
+    "price_exp": "18",
+    "published": "1580601600",
+    "record": "50acfa6590a9c8271a0cc6da0fff0decf1a212ef5468a63b1c1fd65e2660dcef",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "PHP",
+    "fx": "2",
+    "fx_exp": "0",
+    "fx_source": "test-fx",
+    "market": "PH",
+    "period": "2020-02",
+    "price": "2000000000000000001",
+    "price_exp": "18",
+    "published": "1583107200",
+    "record": "6c47a1a8383884f0de0cd7680ab011fd54d47fc51bdbd6ef821e00ad864a6dd2",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "PH",
+    "period": "2020-03",
+    "price": "1100000000000000001",
+    "price_exp": "18",
+    "published": "1585785600",
+    "record": "75c4f7dc6e58b68fd48f13752c8d29d15cdb1796be3e9f19747c1e8d9f253d06",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "PH",
+    "period": "2020-04",
+    "price": "1210000000000000001",
+    "price_exp": "18",
+    "published": "1588377600",
+    "record": "29c4b26a6e32d41231ceb4aee2b4477a59fa39d6cc291da42e342e8aec9b1e7b",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2020-01",
+    "price": "1",
+    "price_exp": "0",
+    "published": "1580601600",
+    "record": "98e48079d1feba95d8d76e34b6d6f35be7588748883d0e7246b078bd44c0190b",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2020-02",
+    "price": "1",
+    "price_exp": "0",
+    "published": "1583107200",
+    "record": "4a5fcffff8b66afde5c4d0293a84c1bfd9f289af006af3154c0a05cfc9c98dc0",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2020-03",
+    "price": "11",
+    "price_exp": "1",
+    "published": "1585785600",
+    "record": "1beb92016ca9402d9a75e6425f08c646fca24e5d92fef798585b8daf16bdf062",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2020-04",
+    "price": "1210000000000000001",
+    "price_exp": "18",
+    "published": "1588377600",
+    "record": "871d887074437901874ec2d6322d4bb2ed1fea94d414851a0baf8a8b63413060",
+    "source": "test-source",
+    "unit": "kg"
+   }
+  ]
+ },
+ "name": "rounding"
+}

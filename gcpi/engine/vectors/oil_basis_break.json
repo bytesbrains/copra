@@ -1,0 +1,344 @@
+{
+ "description": "A 15% Philippine move whose only same-direction corroborator is coconut oil across a change of delivery basis: a break, not a move, so the observation waits for the next month.",
+ "expected": {
+  "engine": "GCPI-ENGINE-v1",
+  "methodology": "GCPI-test",
+  "methodology_hash": "041b198835b523103ecc29a2c89b3d8d35998da0439506a3788534cf49e3d4c5",
+  "periods": [
+   {
+    "accepted": [
+     "ID",
+     "PH"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "10000",
+    "decided_at": "2020-02",
+    "input_commitment": "6f336a3b83796405ae1eeee824615906c0cdf66840627357783768f335847989",
+    "level": "930000000000000000",
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2020-02",
+      "decision": "ACCEPTED",
+      "observations": [
+       "b11087b2a2b39ec6d4293e2f13dcd49a7be4c28b169d070ea94f8335dab23696"
+      ],
+      "price": "800000000000000000"
+     },
+     "PH": {
+      "band": "normal",
+      "decided_at": "2020-02",
+      "decision": "ACCEPTED",
+      "observations": [
+       "480fc7cff1f68140e22ed67530923690992109e661a05548daae61d0a51dd7eb"
+      ],
+      "price": "1000000000000000000"
+     }
+    },
+    "matched": [],
+    "period": "2020-02",
+    "reason": "base",
+    "status": "VALID"
+   },
+   {
+    "accepted": [
+     "ID",
+     "PH"
+    ],
+    "candidate": null,
+    "comparable": true,
+    "coverage_bp": "10000",
+    "decided_at": "2020-04",
+    "input_commitment": "183f31be8309843df602479e18b3c08aae9b694aafa0ec4d6dc5b3bec34f2484",
+    "level": "1013968658522745011",
+    "linked_from": "2020-02",
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2020-03",
+      "decision": "ACCEPTED",
+      "observations": [
+       "2463c4171d4bde1e8c30ee36264287d3117929ee7875009473f06d8e45c063e9"
+      ],
+      "price": "790000000000000000"
+     },
+     "PH": {
+      "band": "corroborate",
+      "decided_at": "2020-04",
+      "decision": "ACCEPTED",
+      "observations": [
+       "3efd300e4e03fb98128687e7f6ba2cc586697a5e8c563f67356b81b60ecc2df1"
+      ],
+      "price": "1150000000000000000"
+     }
+    },
+    "matched": [
+     "ID",
+     "PH"
+    ],
+    "period": "2020-03",
+    "reason": "linked",
+    "status": "VALID"
+   },
+   {
+    "accepted": [
+     "ID",
+     "PH"
+    ],
+    "candidate": null,
+    "comparable": true,
+    "coverage_bp": "10000",
+    "decided_at": "2020-04",
+    "input_commitment": "38cb7964b2c2a2a60c7526136f8e0e0cdb432284700a85aacba6cfe0fbcad799",
+    "level": "1019691098395984764",
+    "linked_from": "2020-03",
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2020-04",
+      "decision": "ACCEPTED",
+      "observations": [
+       "6339884dfb8e08d145ccca53de5436aa20c3b9b4efb5d52f0c31b0d0df4378a0"
+      ],
+      "price": "790000000000000000"
+     },
+     "PH": {
+      "band": "normal",
+      "decided_at": "2020-04",
+      "decision": "ACCEPTED",
+      "observations": [
+       "885b87174f6c74727e9341acb5fd01d01795910d01edb38dcebcda0a20bc13b7"
+      ],
+      "price": "1160000000000000000"
+     }
+    },
+    "matched": [
+     "ID",
+     "PH"
+    ],
+    "period": "2020-04",
+    "reason": "linked",
+    "status": "VALID"
+   }
+  ]
+ },
+ "expected_sha256": "8b1fce3ad0d9574539423e02bc09d7840fa66e519d27342fe6f7059600d8795b",
+ "input": {
+  "first": "2020-01",
+  "last": "2020-04",
+  "methodology": {
+   "bands_bp": [
+    "1000",
+    "2000",
+    "4000"
+   ],
+   "base_period": "2020-02",
+   "circuit_breaker_bp": "4000",
+   "corroborators": {
+    "ID": [
+     "PH",
+     "COCONUT_OIL"
+    ],
+    "PH": [
+     "ID",
+     "COCONUT_OIL"
+    ]
+   },
+   "id": "GCPI-test",
+   "markets": {
+    "ID": "35",
+    "PH": "65"
+   },
+   "max_publication_lag_days": "90",
+   "min_coverage_bp": "7000",
+   "signals": [
+    "COCONUT_OIL"
+   ]
+  },
+  "observations": [
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "PH",
+    "period": "2020-01",
+    "price": "100",
+    "price_exp": "2",
+    "published": "1580601600",
+    "record": "ed31f25015b65571d0e23d53a0f7ebf4286430610707cc2a1224bbed129b0617",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "PH",
+    "period": "2020-02",
+    "price": "100",
+    "price_exp": "2",
+    "published": "1583107200",
+    "record": "28307c2c28bb13fc8c0d1228d4225f9b23651e4d1f7b87a46348fecbf745f068",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "PH",
+    "period": "2020-03",
+    "price": "115",
+    "price_exp": "2",
+    "published": "1585785600",
+    "record": "d8c441336a353b86149d05892c88f5ae489fffa58c327827ccf6d7017dbb75ee",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "PH",
+    "period": "2020-04",
+    "price": "116",
+    "price_exp": "2",
+    "published": "1588377600",
+    "record": "8bc1bdfca0ae278b00189c000e6d2f14d250e04c0a20d523f16c59a37f51e6a4",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2020-01",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1580601600",
+    "record": "60ddea58e87483cb9e142ced4c7ecf81258dd3b71460b499ff22f4fb9f4728ea",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2020-02",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1583107200",
+    "record": "7b8b87b9a2611631a06660a7491197c1161cbcdb6088c42303976fcff4bfc132",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2020-03",
+    "price": "79",
+    "price_exp": "2",
+    "published": "1585785600",
+    "record": "c5280d34a834e30928ac3fc4eda495ced02a74d3d8ebf9211179a4a9aa001735",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2020-04",
+    "price": "79",
+    "price_exp": "2",
+    "published": "1588377600",
+    "record": "bdaca41ccb12eaf4ea3394236d69610e2344ef9c28a5950b0dd6d817a71da15e",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "crude-cif-rotterdam",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "COCONUT_OIL",
+    "period": "2020-01",
+    "price": "100000",
+    "price_exp": "2",
+    "published": "1580601600",
+    "record": "8bc62d96979fef99f8c3e8a207465e415557ab864f7c3618461c7f36482fdd52",
+    "source": "test-source",
+    "unit": "t"
+   },
+   {
+    "basis": "crude-cif-rotterdam",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "COCONUT_OIL",
+    "period": "2020-02",
+    "price": "100000",
+    "price_exp": "2",
+    "published": "1583107200",
+    "record": "18e8120a5a736e3c1457774f28fa9b272ce3f00b2a0635e5cf8a0c1996546e63",
+    "source": "test-source",
+    "unit": "t"
+   },
+   {
+    "basis": "cfr-europe",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "COCONUT_OIL",
+    "period": "2020-03",
+    "price": "120000",
+    "price_exp": "2",
+    "published": "1585785600",
+    "record": "2727f1e80fc3e2cc9cac6f143687feb27cf5a8aad419806a05b531d9c86370a1",
+    "source": "test-source",
+    "unit": "t"
+   },
+   {
+    "basis": "cfr-europe",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "COCONUT_OIL",
+    "period": "2020-04",
+    "price": "120000",
+    "price_exp": "2",
+    "published": "1588377600",
+    "record": "156b0c7d87ded9741843868baf332d101a7a6baf8646c144ea0305e49ff614bc",
+    "source": "test-source",
+    "unit": "t"
+   }
+  ]
+ },
+ "name": "oil_basis_break"
+}

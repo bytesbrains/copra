@@ -342,6 +342,14 @@ The specification must define:
 
 Reference implementations in different programming languages must produce byte-for-byte identical results.
 
+**Defined by the reference engine (#91), as a draft for v1:**
+- Prices and levels are integers in 10⁻¹⁸ USD/kg, and ln and exp are computed at 10³⁶.
+- Every division rounds toward zero, except the few marked half up.
+- Input bounds keep every intermediate below 2²⁵⁵.
+- The Python and JavaScript implementations agree byte for byte on every published vector.
+
+The full rules are in [ENGINE §2](../../gcpi/ENGINE.md#2-arithmetic-63).
+
 ---
 
 # 7. Historical Price Validation
@@ -545,7 +553,7 @@ Why:
 
 Consequences that the methodology version must state:
 - **The headline is a chain index in USD/kg at the base period, not the weighted mean of today's prices.** The two drift apart over time.
-- **The reference engine (#91) fixes ln and exp in fixed point** (§6.3), with their precision and rounding, as part of the version. Independent implementations must match byte for byte.
+- **The reference engine (#91) fixes ln and exp in fixed point** (§6.3), with their precision and rounding, as part of the version. Independent implementations must match byte for byte. *Done: [ENGINE §2 and §6](../../gcpi/ENGINE.md#6-the-index-81-83-84-9).*
 - **The comparability flag of item 5 above** is published every period.
 
 ## 8.5 Finalization
@@ -613,6 +621,8 @@ Possible states:
 - UNAVAILABLE
 
 A stale or unavailable index must not be presented as a newly verified price.
+
+The reference engine (#91) defines when each state applies and in what order of priority ([ENGINE §6](../../gcpi/ENGINE.md#6-the-index-81-83-84-9)).
 
 ---
 
@@ -1011,6 +1021,12 @@ The library must accept canonical observations and produce a deterministic resul
 Publish test vectors for normal conditions, missing sources, extreme movements, currency conversion, and rounding.
 
 **Exit criterion:** Independent implementations produce identical results.
+
+**Status (#91):** met. See [ENGINE](../../gcpi/ENGINE.md):
+- Python and JavaScript engines give byte-identical output on 24 published vectors and on the 2016–2026 backtest inputs.
+- They reproduce the Phase 2 backtest values within float rounding.
+- Under the v1 draft rules, 125 of 129 headline months would have been VALID.
+- The engine had to fix eight rules that this specification leaves open. They are [listed for the v1 RFC](../../gcpi/ENGINE.md#choices-the-spec-left-open).
 
 ## Phase 4 — Decentralized collection and verification
 
