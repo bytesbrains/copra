@@ -148,6 +148,24 @@ VECTORS = [
            methodology(signals=[], corroborators={"PH": ["ID"], "ID": ["PH"]}, circuit_breaker_bp="1500", bands_bp=["2000", "3000", "5000"]),
            series("PH", [100, 100, 118, 119, 119, 140, 120]) + series("ID", [80, 80, 94, 95, 95, 112, 96])),
 
+    vector("bands_disabled", "The Phase 2 research rules: no market bands and no circuit breaker. A one-month "
+           "+60% spike is accepted as published, with no band, and the index follows it there and back.",
+           methodology(bands_bp=None, circuit_breaker_bp=None),
+           series("PH", [100, 100, 160, 101, 102]) + series("ID", [80, 80, 81, 81, 82]) + OIL([100000] * 5)),
+
+    vector("closer_tie", "A tie goes to the reference (ENGINE §5). The Philippines jumps 50% and is quarantined. "
+           "Next month's 120 passes against both 100 and the pending 150, and is relatively exactly as far "
+           "from each (20/100 = 30/150). So it joins the reference, and the 150 is rejected.",
+           methodology(signals=[], corroborators={}, bands_bp=["2500", "3000", "4000"]),
+           series("PH", [100, 100, 150, 120, 121]) + series("ID", [80, 80, 80, 80, 80])),
+
+    vector("long_pending", "The Philippines is quarantined in March 2020 and publishes nothing for 30 months, then "
+           "confirms the move. Every period in between waits for it, and is decided at once. On-chain, the "
+           "confirming call computes 24 of them and advance() the rest (#92).",
+           methodology(signals=[], corroborators={}),
+           series("PH", [100, 100, 150], months=MONTHS[:3]) + [obs("PH", "2022-10", 151)]
+           + [obs("ID", f"{2020 + (m - 1) // 12}-{(m - 1) % 12 + 1:02d}", 80) for m in range(1, 35)]),
+
     vector("no_base", "The base period lacks a market: the index has no base level, and later periods are "
            "UNAVAILABLE even when both markets publish.",
            methodology(), series("PH", [100, 100, 101]) + series("ID", [80, None, 81])),

@@ -1,0 +1,1743 @@
+{
+ "description": "The Philippines is quarantined in March 2020 and publishes nothing for 30 months, then confirms the move. Every period in between waits for it, and is decided at once. On-chain, the confirming call computes 24 of them and advance() the rest (#92).",
+ "expected": {
+  "engine": "GCPI-ENGINE-v1",
+  "methodology": "GCPI-test",
+  "methodology_hash": "f271f4bf57dc5cc8ae3893a458a52eb8dfc25fee4ce59bed8ad5de3cd51eb04a",
+  "periods": [
+   {
+    "accepted": [
+     "ID",
+     "PH"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "10000",
+    "decided_at": "2020-02",
+    "input_commitment": "1a87c3d2d2f4919cd882ef3719eaeeb0af2abf61d216ff776593896764b31a2b",
+    "level": "930000000000000000",
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2020-02",
+      "decision": "ACCEPTED",
+      "observations": [
+       "b11087b2a2b39ec6d4293e2f13dcd49a7be4c28b169d070ea94f8335dab23696"
+      ],
+      "price": "800000000000000000"
+     },
+     "PH": {
+      "band": "normal",
+      "decided_at": "2020-02",
+      "decision": "ACCEPTED",
+      "observations": [
+       "480fc7cff1f68140e22ed67530923690992109e661a05548daae61d0a51dd7eb"
+      ],
+      "price": "1000000000000000000"
+     }
+    },
+    "matched": [],
+    "period": "2020-02",
+    "reason": "base",
+    "status": "VALID"
+   },
+   {
+    "accepted": [
+     "ID",
+     "PH"
+    ],
+    "candidate": null,
+    "comparable": true,
+    "coverage_bp": "10000",
+    "decided_at": "2022-10",
+    "input_commitment": "cf4b719146ca3c34d7b0acdc7aaaae0c7072d180d5eba6d1d640f5fd94c95c67",
+    "level": "1210437213041201662",
+    "linked_from": "2020-02",
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2020-03",
+      "decision": "ACCEPTED",
+      "observations": [
+       "8870a59705a07dec2297d2a2f4993db69e704cb7d5e26662a395e25aaefb589a"
+      ],
+      "price": "800000000000000000"
+     },
+     "PH": {
+      "band": "quarantine",
+      "decided_at": "2022-10",
+      "decision": "ACCEPTED",
+      "observations": [
+       "4d4592f219c2f368a6ec9b5ca508b3dfb6be6c1793b6333d8ffe706b4db26644"
+      ],
+      "price": "1500000000000000000"
+     }
+    },
+    "matched": [
+     "ID",
+     "PH"
+    ],
+    "period": "2020-03",
+    "reason": "linked",
+    "status": "VALID"
+   },
+   {
+    "accepted": [
+     "ID"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "3500",
+    "decided_at": "2022-10",
+    "input_commitment": "2f63866f9d83ec02910c53b280e38beac848de131ec471654bc01a630dec65e3",
+    "level": null,
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2020-04",
+      "decision": "ACCEPTED",
+      "observations": [
+       "7483c6a15e4fce7aee6acc7c6217cfadbb7d94ab906308eee8265c55d1685fe2"
+      ],
+      "price": "800000000000000000"
+     },
+     "PH": {
+      "band": null,
+      "decided_at": "2020-04",
+      "decision": "ABSENT",
+      "observations": [],
+      "price": null
+     }
+    },
+    "matched": [],
+    "period": "2020-04",
+    "reason": "coverage",
+    "status": "INSUFFICIENT_COVERAGE"
+   },
+   {
+    "accepted": [
+     "ID"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "3500",
+    "decided_at": "2022-10",
+    "input_commitment": "66c3279e1f73be648af5690a222ccb36884cecda0df9fa1d114631c3f8ed254f",
+    "level": null,
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2020-05",
+      "decision": "ACCEPTED",
+      "observations": [
+       "9d516eb25a9fba9c2a47fa5e664e4b59019fa855bd1722aa57d75af6c8586fe7"
+      ],
+      "price": "800000000000000000"
+     },
+     "PH": {
+      "band": null,
+      "decided_at": "2020-05",
+      "decision": "ABSENT",
+      "observations": [],
+      "price": null
+     }
+    },
+    "matched": [],
+    "period": "2020-05",
+    "reason": "coverage",
+    "status": "INSUFFICIENT_COVERAGE"
+   },
+   {
+    "accepted": [
+     "ID"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "3500",
+    "decided_at": "2022-10",
+    "input_commitment": "f77e1a029b7c49b304a7146fafddfd6deb201d477e1bbf447a45b7e8822c71fe",
+    "level": null,
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2020-06",
+      "decision": "ACCEPTED",
+      "observations": [
+       "c2fca7dc4bdab41a41ccf6f9d8a62ee27807e2730bd33b47f52dd6567a0215b2"
+      ],
+      "price": "800000000000000000"
+     },
+     "PH": {
+      "band": null,
+      "decided_at": "2020-06",
+      "decision": "ABSENT",
+      "observations": [],
+      "price": null
+     }
+    },
+    "matched": [],
+    "period": "2020-06",
+    "reason": "coverage",
+    "status": "INSUFFICIENT_COVERAGE"
+   },
+   {
+    "accepted": [
+     "ID"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "3500",
+    "decided_at": "2022-10",
+    "input_commitment": "68a18b563a9aacda33ee238a0813afd697985b9f839a6f89d4ce96d460d597b8",
+    "level": null,
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2020-07",
+      "decision": "ACCEPTED",
+      "observations": [
+       "bc878491703e13562bb56295325318982da6c4a00782866a4e8b848c4966e6a2"
+      ],
+      "price": "800000000000000000"
+     },
+     "PH": {
+      "band": null,
+      "decided_at": "2020-07",
+      "decision": "ABSENT",
+      "observations": [],
+      "price": null
+     }
+    },
+    "matched": [],
+    "period": "2020-07",
+    "reason": "coverage",
+    "status": "INSUFFICIENT_COVERAGE"
+   },
+   {
+    "accepted": [
+     "ID"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "3500",
+    "decided_at": "2022-10",
+    "input_commitment": "31beed6755f2d6fb26245508ae2aed75cca4bbca3316cd45a2f33a1b8741d664",
+    "level": null,
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2020-08",
+      "decision": "ACCEPTED",
+      "observations": [
+       "c5d6de2b1b0f5da54ed4b8f3ffe9f0fa29cf73a3813b9f7fe291626ead24f11a"
+      ],
+      "price": "800000000000000000"
+     },
+     "PH": {
+      "band": null,
+      "decided_at": "2020-08",
+      "decision": "ABSENT",
+      "observations": [],
+      "price": null
+     }
+    },
+    "matched": [],
+    "period": "2020-08",
+    "reason": "coverage",
+    "status": "INSUFFICIENT_COVERAGE"
+   },
+   {
+    "accepted": [
+     "ID"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "3500",
+    "decided_at": "2022-10",
+    "input_commitment": "62d29fe6aeebb8b4d6e9139ecde1540855b5d2890617e7c3cc974991ac9f1e9e",
+    "level": null,
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2020-09",
+      "decision": "ACCEPTED",
+      "observations": [
+       "cab8010ee9e4c199872586942e454bac2a989844cc120472acea3faed195fd5a"
+      ],
+      "price": "800000000000000000"
+     },
+     "PH": {
+      "band": null,
+      "decided_at": "2020-09",
+      "decision": "ABSENT",
+      "observations": [],
+      "price": null
+     }
+    },
+    "matched": [],
+    "period": "2020-09",
+    "reason": "coverage",
+    "status": "INSUFFICIENT_COVERAGE"
+   },
+   {
+    "accepted": [
+     "ID"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "3500",
+    "decided_at": "2022-10",
+    "input_commitment": "2e5db54b90e29bdbff8c95217bf345d541cfb535c1cefccf8500c60581ed0dba",
+    "level": null,
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2020-10",
+      "decision": "ACCEPTED",
+      "observations": [
+       "8812fa0f838370d7ab48805212ecca8efd2d0e6edfc4524c97dcbcd8f8a5cc56"
+      ],
+      "price": "800000000000000000"
+     },
+     "PH": {
+      "band": null,
+      "decided_at": "2020-10",
+      "decision": "ABSENT",
+      "observations": [],
+      "price": null
+     }
+    },
+    "matched": [],
+    "period": "2020-10",
+    "reason": "coverage",
+    "status": "INSUFFICIENT_COVERAGE"
+   },
+   {
+    "accepted": [
+     "ID"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "3500",
+    "decided_at": "2022-10",
+    "input_commitment": "db3290e7036ddd010533f2341548394865732d346c11c4bb6e69cec2c06938c7",
+    "level": null,
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2020-11",
+      "decision": "ACCEPTED",
+      "observations": [
+       "7f7a1ee4ba80b17355b46dff4496d606ddae3f0ae8b7a84d88be1998ff54c577"
+      ],
+      "price": "800000000000000000"
+     },
+     "PH": {
+      "band": null,
+      "decided_at": "2020-11",
+      "decision": "ABSENT",
+      "observations": [],
+      "price": null
+     }
+    },
+    "matched": [],
+    "period": "2020-11",
+    "reason": "coverage",
+    "status": "INSUFFICIENT_COVERAGE"
+   },
+   {
+    "accepted": [
+     "ID"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "3500",
+    "decided_at": "2022-10",
+    "input_commitment": "463a89fecb9f26745b2a4fc38b15d4bee0c12098ecd550e3e6e59b2eeb003f95",
+    "level": null,
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2020-12",
+      "decision": "ACCEPTED",
+      "observations": [
+       "a4ad4db478bfa736f1594f9159cc4f6627d2569c6ae58eb3a6285d3c5e2e864a"
+      ],
+      "price": "800000000000000000"
+     },
+     "PH": {
+      "band": null,
+      "decided_at": "2020-12",
+      "decision": "ABSENT",
+      "observations": [],
+      "price": null
+     }
+    },
+    "matched": [],
+    "period": "2020-12",
+    "reason": "coverage",
+    "status": "INSUFFICIENT_COVERAGE"
+   },
+   {
+    "accepted": [
+     "ID"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "3500",
+    "decided_at": "2022-10",
+    "input_commitment": "3e25f5a025d0840201559c00ed26f0c93100cb739a736b0566a49035f6671614",
+    "level": null,
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2021-01",
+      "decision": "ACCEPTED",
+      "observations": [
+       "c17f8bc117965c6f483838020eb0c8160432df4a511d7d2f201453b8d427c582"
+      ],
+      "price": "800000000000000000"
+     },
+     "PH": {
+      "band": null,
+      "decided_at": "2021-01",
+      "decision": "ABSENT",
+      "observations": [],
+      "price": null
+     }
+    },
+    "matched": [],
+    "period": "2021-01",
+    "reason": "coverage",
+    "status": "INSUFFICIENT_COVERAGE"
+   },
+   {
+    "accepted": [
+     "ID"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "3500",
+    "decided_at": "2022-10",
+    "input_commitment": "e556380eca2e214bc9bc9ab2c57703dd183a6250924a1f6cff6fc57d00f5992d",
+    "level": null,
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2021-02",
+      "decision": "ACCEPTED",
+      "observations": [
+       "755b201efa192c6f8fd2aa99658b16b76bbb3694282d6c669375c88b1f70d734"
+      ],
+      "price": "800000000000000000"
+     },
+     "PH": {
+      "band": null,
+      "decided_at": "2021-02",
+      "decision": "ABSENT",
+      "observations": [],
+      "price": null
+     }
+    },
+    "matched": [],
+    "period": "2021-02",
+    "reason": "coverage",
+    "status": "INSUFFICIENT_COVERAGE"
+   },
+   {
+    "accepted": [
+     "ID"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "3500",
+    "decided_at": "2022-10",
+    "input_commitment": "5a696b82bde55d6f6b8bc6b98bf40b2434bd0fc5d36f67dd5ec49d0e89e7c71c",
+    "level": null,
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2021-03",
+      "decision": "ACCEPTED",
+      "observations": [
+       "71ff7985c9e01f6eb23931687daff9e484726cd9f9243aa87e04591c4b9b8b52"
+      ],
+      "price": "800000000000000000"
+     },
+     "PH": {
+      "band": null,
+      "decided_at": "2021-03",
+      "decision": "ABSENT",
+      "observations": [],
+      "price": null
+     }
+    },
+    "matched": [],
+    "period": "2021-03",
+    "reason": "coverage",
+    "status": "INSUFFICIENT_COVERAGE"
+   },
+   {
+    "accepted": [
+     "ID"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "3500",
+    "decided_at": "2022-10",
+    "input_commitment": "cc5d7bf923d6c8888b426afc4ad191de0ca20f11b6ce14d7ffc3cf0b485a3a8a",
+    "level": null,
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2021-04",
+      "decision": "ACCEPTED",
+      "observations": [
+       "73cd4aaea1fefa21041259e1485ac8622c9df01d2f0aa35c20f1f50cf7182a6e"
+      ],
+      "price": "800000000000000000"
+     },
+     "PH": {
+      "band": null,
+      "decided_at": "2021-04",
+      "decision": "ABSENT",
+      "observations": [],
+      "price": null
+     }
+    },
+    "matched": [],
+    "period": "2021-04",
+    "reason": "coverage",
+    "status": "INSUFFICIENT_COVERAGE"
+   },
+   {
+    "accepted": [
+     "ID"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "3500",
+    "decided_at": "2022-10",
+    "input_commitment": "d479aa639db8b3741a15cb4df51b8b127d1960df265c6347180aed2c814aff1b",
+    "level": null,
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2021-05",
+      "decision": "ACCEPTED",
+      "observations": [
+       "62a78f2b776eb69bc60cb6fdda96b48a4a519bd07836e02640be2c01143c149a"
+      ],
+      "price": "800000000000000000"
+     },
+     "PH": {
+      "band": null,
+      "decided_at": "2021-05",
+      "decision": "ABSENT",
+      "observations": [],
+      "price": null
+     }
+    },
+    "matched": [],
+    "period": "2021-05",
+    "reason": "coverage",
+    "status": "INSUFFICIENT_COVERAGE"
+   },
+   {
+    "accepted": [
+     "ID"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "3500",
+    "decided_at": "2022-10",
+    "input_commitment": "4b53e3c8b399050341051d254ac48dc0c09121c57a1dcdc561b8bcb7e69f6433",
+    "level": null,
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2021-06",
+      "decision": "ACCEPTED",
+      "observations": [
+       "e4c8c045374460667c926733aa6f026694272e445a4b10b329673337f1369cd0"
+      ],
+      "price": "800000000000000000"
+     },
+     "PH": {
+      "band": null,
+      "decided_at": "2021-06",
+      "decision": "ABSENT",
+      "observations": [],
+      "price": null
+     }
+    },
+    "matched": [],
+    "period": "2021-06",
+    "reason": "coverage",
+    "status": "INSUFFICIENT_COVERAGE"
+   },
+   {
+    "accepted": [
+     "ID"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "3500",
+    "decided_at": "2022-10",
+    "input_commitment": "7e004b0cb8750eed5cbc0d38d2020f19a51c29b54aed93ab90a0e9cce9a0f252",
+    "level": null,
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2021-07",
+      "decision": "ACCEPTED",
+      "observations": [
+       "a268935fd8c9e20a8209723651ceafce6377505a2fe6e558701f5e48fb52a13c"
+      ],
+      "price": "800000000000000000"
+     },
+     "PH": {
+      "band": null,
+      "decided_at": "2021-07",
+      "decision": "ABSENT",
+      "observations": [],
+      "price": null
+     }
+    },
+    "matched": [],
+    "period": "2021-07",
+    "reason": "coverage",
+    "status": "INSUFFICIENT_COVERAGE"
+   },
+   {
+    "accepted": [
+     "ID"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "3500",
+    "decided_at": "2022-10",
+    "input_commitment": "eaf260c6af29b17f619aaefca5dad44202095a23035c63a959e693814061a326",
+    "level": null,
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2021-08",
+      "decision": "ACCEPTED",
+      "observations": [
+       "008040c1a46e5af6e3023cdd5324bb190fe91c6af82ca9e424f43f7027f81986"
+      ],
+      "price": "800000000000000000"
+     },
+     "PH": {
+      "band": null,
+      "decided_at": "2021-08",
+      "decision": "ABSENT",
+      "observations": [],
+      "price": null
+     }
+    },
+    "matched": [],
+    "period": "2021-08",
+    "reason": "coverage",
+    "status": "INSUFFICIENT_COVERAGE"
+   },
+   {
+    "accepted": [
+     "ID"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "3500",
+    "decided_at": "2022-10",
+    "input_commitment": "00236d34e461feda246051c5130e3b9b393901fa46207d65587a1ea184d74acd",
+    "level": null,
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2021-09",
+      "decision": "ACCEPTED",
+      "observations": [
+       "d8f2154c297a69a42dad30aeba5beba55a9e15d395e77a04bace9d6e296351cb"
+      ],
+      "price": "800000000000000000"
+     },
+     "PH": {
+      "band": null,
+      "decided_at": "2021-09",
+      "decision": "ABSENT",
+      "observations": [],
+      "price": null
+     }
+    },
+    "matched": [],
+    "period": "2021-09",
+    "reason": "coverage",
+    "status": "INSUFFICIENT_COVERAGE"
+   },
+   {
+    "accepted": [
+     "ID"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "3500",
+    "decided_at": "2022-10",
+    "input_commitment": "ec27ee3a6510e99f900e0eb35d0c0d4d72c0ff91fd88db660ac11695b1cb125d",
+    "level": null,
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2021-10",
+      "decision": "ACCEPTED",
+      "observations": [
+       "5ab5e39df228f2294c58673159cb51d74a8d8a641ccf101a6072989bb6d1997e"
+      ],
+      "price": "800000000000000000"
+     },
+     "PH": {
+      "band": null,
+      "decided_at": "2021-10",
+      "decision": "ABSENT",
+      "observations": [],
+      "price": null
+     }
+    },
+    "matched": [],
+    "period": "2021-10",
+    "reason": "coverage",
+    "status": "INSUFFICIENT_COVERAGE"
+   },
+   {
+    "accepted": [
+     "ID"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "3500",
+    "decided_at": "2022-10",
+    "input_commitment": "b6a3a5577b1b4bae6b5783b5375b9e9faaddbbebd5eca8cb9fb3ccf2173f7861",
+    "level": null,
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2021-11",
+      "decision": "ACCEPTED",
+      "observations": [
+       "72330e6f7955ce6e7152f529e55ed5c373a0cc55a367ab7f815d094adc93874e"
+      ],
+      "price": "800000000000000000"
+     },
+     "PH": {
+      "band": null,
+      "decided_at": "2021-11",
+      "decision": "ABSENT",
+      "observations": [],
+      "price": null
+     }
+    },
+    "matched": [],
+    "period": "2021-11",
+    "reason": "coverage",
+    "status": "INSUFFICIENT_COVERAGE"
+   },
+   {
+    "accepted": [
+     "ID"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "3500",
+    "decided_at": "2022-10",
+    "input_commitment": "80da56874bb24cb34ff2d7e0ba15196460add51515561684013e94894d9ee1b9",
+    "level": null,
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2021-12",
+      "decision": "ACCEPTED",
+      "observations": [
+       "09748a00199b5b80370a28be4eaab4bfb1272c2faa525769bc9b8c8e1a197766"
+      ],
+      "price": "800000000000000000"
+     },
+     "PH": {
+      "band": null,
+      "decided_at": "2021-12",
+      "decision": "ABSENT",
+      "observations": [],
+      "price": null
+     }
+    },
+    "matched": [],
+    "period": "2021-12",
+    "reason": "coverage",
+    "status": "INSUFFICIENT_COVERAGE"
+   },
+   {
+    "accepted": [
+     "ID"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "3500",
+    "decided_at": "2022-10",
+    "input_commitment": "7aa947dd7e83c983f102672678f83a2b6279224d6850dde42d3422de76004317",
+    "level": null,
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2022-01",
+      "decision": "ACCEPTED",
+      "observations": [
+       "f277086dee7ffc5f08c5d44fd1d448d6dd9f4be4d4df3cdac00d794b77d85405"
+      ],
+      "price": "800000000000000000"
+     },
+     "PH": {
+      "band": null,
+      "decided_at": "2022-01",
+      "decision": "ABSENT",
+      "observations": [],
+      "price": null
+     }
+    },
+    "matched": [],
+    "period": "2022-01",
+    "reason": "coverage",
+    "status": "INSUFFICIENT_COVERAGE"
+   },
+   {
+    "accepted": [
+     "ID"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "3500",
+    "decided_at": "2022-10",
+    "input_commitment": "e2517cc74d7c08c326a115bdb72278da600ac59ff91d0554fec64df1dd71fd84",
+    "level": null,
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2022-02",
+      "decision": "ACCEPTED",
+      "observations": [
+       "9de6f63da567c9d3e3da894b5d710838dba07c3a537fbeae82f2d2a45e0c1abc"
+      ],
+      "price": "800000000000000000"
+     },
+     "PH": {
+      "band": null,
+      "decided_at": "2022-02",
+      "decision": "ABSENT",
+      "observations": [],
+      "price": null
+     }
+    },
+    "matched": [],
+    "period": "2022-02",
+    "reason": "coverage",
+    "status": "INSUFFICIENT_COVERAGE"
+   },
+   {
+    "accepted": [
+     "ID"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "3500",
+    "decided_at": "2022-10",
+    "input_commitment": "0ccf093d2b425242e502e19b54ed24deeb539ec0d94854bb9753807b1917f1e5",
+    "level": null,
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2022-03",
+      "decision": "ACCEPTED",
+      "observations": [
+       "6f488f5eba30485846e37374c10c76b0e67baba0f1aee106900369a6cbcc5fa9"
+      ],
+      "price": "800000000000000000"
+     },
+     "PH": {
+      "band": null,
+      "decided_at": "2022-03",
+      "decision": "ABSENT",
+      "observations": [],
+      "price": null
+     }
+    },
+    "matched": [],
+    "period": "2022-03",
+    "reason": "coverage",
+    "status": "INSUFFICIENT_COVERAGE"
+   },
+   {
+    "accepted": [
+     "ID"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "3500",
+    "decided_at": "2022-10",
+    "input_commitment": "84b15ec529bd07f51704b80b5267a013c118b9c0fc8e1ef9d672259038b6c2db",
+    "level": null,
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2022-04",
+      "decision": "ACCEPTED",
+      "observations": [
+       "eaf04c4b6f55d86031715b1fd0f967e05b5ee45cb0aef1c6e9f0fd76f32564dc"
+      ],
+      "price": "800000000000000000"
+     },
+     "PH": {
+      "band": null,
+      "decided_at": "2022-04",
+      "decision": "ABSENT",
+      "observations": [],
+      "price": null
+     }
+    },
+    "matched": [],
+    "period": "2022-04",
+    "reason": "coverage",
+    "status": "INSUFFICIENT_COVERAGE"
+   },
+   {
+    "accepted": [
+     "ID"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "3500",
+    "decided_at": "2022-10",
+    "input_commitment": "3f4eadfcfc54b4eec6967a6b43fa40c3dee8f2dbca4b615c3dd8a8e9193fff66",
+    "level": null,
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2022-05",
+      "decision": "ACCEPTED",
+      "observations": [
+       "3afb62e32b870603d1f0b455e48457bd7d8398afecdff2e2e9ae50dea7321f2f"
+      ],
+      "price": "800000000000000000"
+     },
+     "PH": {
+      "band": null,
+      "decided_at": "2022-05",
+      "decision": "ABSENT",
+      "observations": [],
+      "price": null
+     }
+    },
+    "matched": [],
+    "period": "2022-05",
+    "reason": "coverage",
+    "status": "INSUFFICIENT_COVERAGE"
+   },
+   {
+    "accepted": [
+     "ID"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "3500",
+    "decided_at": "2022-10",
+    "input_commitment": "c76b90f3ba0b724c3f13e0f356750c649671507ec61ccc188e6684e08568b07f",
+    "level": null,
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2022-06",
+      "decision": "ACCEPTED",
+      "observations": [
+       "4da0e6c72944682a01263914966091aab47883fa206d330b279da3b5c4c4ba0f"
+      ],
+      "price": "800000000000000000"
+     },
+     "PH": {
+      "band": null,
+      "decided_at": "2022-06",
+      "decision": "ABSENT",
+      "observations": [],
+      "price": null
+     }
+    },
+    "matched": [],
+    "period": "2022-06",
+    "reason": "coverage",
+    "status": "INSUFFICIENT_COVERAGE"
+   },
+   {
+    "accepted": [
+     "ID"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "3500",
+    "decided_at": "2022-10",
+    "input_commitment": "cf3e851e53f4761df37ad93437883b3a3ab13de2e64517152dd583581e1332a3",
+    "level": null,
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2022-07",
+      "decision": "ACCEPTED",
+      "observations": [
+       "19ad3598eb79a1116f5c0a4477ce2d88779ba7e6a52c755b2937ebf82a3f1e37"
+      ],
+      "price": "800000000000000000"
+     },
+     "PH": {
+      "band": null,
+      "decided_at": "2022-07",
+      "decision": "ABSENT",
+      "observations": [],
+      "price": null
+     }
+    },
+    "matched": [],
+    "period": "2022-07",
+    "reason": "coverage",
+    "status": "INSUFFICIENT_COVERAGE"
+   },
+   {
+    "accepted": [
+     "ID"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "3500",
+    "decided_at": "2022-10",
+    "input_commitment": "474b661959dcb0e3a4a52437045370fd531a8468ee171b34c1f07d9bc8638a54",
+    "level": null,
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2022-08",
+      "decision": "ACCEPTED",
+      "observations": [
+       "f699e5ed857f1ab756739e04b33f8c1e64618c63940df0d75d7413b4831797cd"
+      ],
+      "price": "800000000000000000"
+     },
+     "PH": {
+      "band": null,
+      "decided_at": "2022-08",
+      "decision": "ABSENT",
+      "observations": [],
+      "price": null
+     }
+    },
+    "matched": [],
+    "period": "2022-08",
+    "reason": "coverage",
+    "status": "INSUFFICIENT_COVERAGE"
+   },
+   {
+    "accepted": [
+     "ID"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "3500",
+    "decided_at": "2022-10",
+    "input_commitment": "f447d00bd26b2f17410fb7a78d0469841394cb7ee842b3448a2722a7eb8e46d9",
+    "level": null,
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2022-09",
+      "decision": "ACCEPTED",
+      "observations": [
+       "1f94f376f1a07e31f31b1497c554467fbb4fb064846017692661a81db4f7ae0e"
+      ],
+      "price": "800000000000000000"
+     },
+     "PH": {
+      "band": null,
+      "decided_at": "2022-09",
+      "decision": "ABSENT",
+      "observations": [],
+      "price": null
+     }
+    },
+    "matched": [],
+    "period": "2022-09",
+    "reason": "coverage",
+    "status": "INSUFFICIENT_COVERAGE"
+   },
+   {
+    "accepted": [
+     "ID",
+     "PH"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "10000",
+    "decided_at": "2022-10",
+    "input_commitment": "7b698142c0e09c425f102208522d5560603bde3d29b587223a17263396c91855",
+    "level": "1215676339818517183",
+    "linked_from": "2020-03",
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2022-10",
+      "decision": "ACCEPTED",
+      "observations": [
+       "595c2d7536a804b9e3ffa73ebc8aa4c226507fed2d3cbbe7e2b36472983596a3"
+      ],
+      "price": "800000000000000000"
+     },
+     "PH": {
+      "band": "normal",
+      "decided_at": "2022-10",
+      "decision": "ACCEPTED",
+      "observations": [
+       "30275fc260084dd6e35b8f40be6b7d60704d6032db98bd9f455d63f4372a769c"
+      ],
+      "price": "1510000000000000000"
+     }
+    },
+    "matched": [
+     "ID",
+     "PH"
+    ],
+    "period": "2022-10",
+    "reason": "linked",
+    "status": "VALID"
+   }
+  ]
+ },
+ "expected_sha256": "639d9d68afca37afa6ad9f08e07e7b5d3da2d4c239e664adb3cf2bb548e283db",
+ "input": {
+  "first": "2020-01",
+  "last": "2022-10",
+  "methodology": {
+   "bands_bp": [
+    "1000",
+    "2000",
+    "4000"
+   ],
+   "base_period": "2020-02",
+   "circuit_breaker_bp": "4000",
+   "corroborators": {},
+   "id": "GCPI-test",
+   "markets": {
+    "ID": "35",
+    "PH": "65"
+   },
+   "max_publication_lag_days": "90",
+   "min_coverage_bp": "7000",
+   "signals": []
+  },
+  "observations": [
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "PH",
+    "period": "2020-01",
+    "price": "100",
+    "price_exp": "2",
+    "published": "1580601600",
+    "record": "ed31f25015b65571d0e23d53a0f7ebf4286430610707cc2a1224bbed129b0617",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "PH",
+    "period": "2020-02",
+    "price": "100",
+    "price_exp": "2",
+    "published": "1583107200",
+    "record": "28307c2c28bb13fc8c0d1228d4225f9b23651e4d1f7b87a46348fecbf745f068",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "PH",
+    "period": "2020-03",
+    "price": "150",
+    "price_exp": "2",
+    "published": "1585785600",
+    "record": "dd7abd51718141bbc14bf2d8cc9c772694eb77aac4628565562f11c43f202f82",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "PH",
+    "period": "2022-10",
+    "price": "151",
+    "price_exp": "2",
+    "published": "1667347200",
+    "record": "7466fbb2158364aa8f8c662f2c452d98a7bd49ec5b25ffb30a66f49f75891d29",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2020-01",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1580601600",
+    "record": "60ddea58e87483cb9e142ced4c7ecf81258dd3b71460b499ff22f4fb9f4728ea",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2020-02",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1583107200",
+    "record": "7b8b87b9a2611631a06660a7491197c1161cbcdb6088c42303976fcff4bfc132",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2020-03",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1585785600",
+    "record": "9bf4c6acc346f8c36ddc96dceb32520eb2410dfb893adc086fd6da3880188263",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2020-04",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1588377600",
+    "record": "c190fbd1f60e781bdd46421b494e2de7ad44f816417035acba261fc50beb9486",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2020-05",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1591056000",
+    "record": "dd9812f99b48aa794c6200c795a1b8922064dd1a5424bbb6e3dc2cc7e402adfc",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2020-06",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1593648000",
+    "record": "28cd626eb6451172ac138112032459ca8b3412a8a7f6703b71b1b52ad4a00156",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2020-07",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1596326400",
+    "record": "70aed26abc3e64513f943ec95eb531b40e98b722a8af16a0f61ed0c3d368a6c0",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2020-08",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1599004800",
+    "record": "e2119fe2e161622f4b0fdd01c7dd93cd0e43caa5373cef94c3ad7170d9deabf0",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2020-09",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1601596800",
+    "record": "27c4106e5d07519e48ed964aa4cb2837af4d52406d4cedeb61bb0b325c04d795",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2020-10",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1604275200",
+    "record": "ab4deb7c4198a8e69bad022bc5eab0311a5133386a474a743aefb89d1f706289",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2020-11",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1606867200",
+    "record": "43fb623a9f090d57380111da05a12d1e0c5bf67fd59a70c0fc227f03068da49a",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2020-12",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1609545600",
+    "record": "75833a034046ee4a2ee02b45ca23f927fe7e3e4107b5aed5b00fa889c2c4f76a",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2021-01",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1612224000",
+    "record": "1d564f74cfd6dbec04b97f7c16b24fa91ea3b33d06cab19b2dd4d1296bdd07a6",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2021-02",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1614643200",
+    "record": "41b074eb02982cc5f10701e823be61fdbaede942f0f9e811bcf7259f7a8d8af4",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2021-03",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1617321600",
+    "record": "1e6daf3c2f76ec75d5cb8dbbfd2f982cfdaf2a5bbcfdc092f38093ea1b219ee6",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2021-04",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1619913600",
+    "record": "f0ff3cae2313eec475d192c0afc376c40e5e108c6677c73374841d5ee94e3aa1",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2021-05",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1622592000",
+    "record": "210bf554a4b6540d6445ad49d3601dd572cedff0f68aabe739bfb040f8c09e67",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2021-06",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1625184000",
+    "record": "8f8605e4151535c3b0be8dcc7296e3064944799bf5906e43e6279081ef3a2375",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2021-07",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1627862400",
+    "record": "9a05698d4db678430e9c608f7efec5adfa7cd870ea2b9ee677939825f8a8465c",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2021-08",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1630540800",
+    "record": "5a8790f1f19ec19c0a4f09bf7b3c0678263760d738200ef3386f5aba42623c2e",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2021-09",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1633132800",
+    "record": "4769267903bb266a44e8103f68f4d687051fc91cb8c2f3c54a644d7d7c07c9bf",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2021-10",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1635811200",
+    "record": "07992e6f02a116b1de31634de92bf75d710b4cedcc4871b9b8d56e53f120d620",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2021-11",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1638403200",
+    "record": "ed831594ef27c8bf2787441d9ee2eaab50b05ae43ddd2f55a938df7adb88da2b",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2021-12",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1641081600",
+    "record": "314ee8a17d1e06864d2a7df0ebbcb3771889502b8a6e856693f4b0edaac9e2ba",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2022-01",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1643760000",
+    "record": "2533973d5fed8f5b8ea5ffad0975e48becc3f4084148b95ee83fe89aae7157f5",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2022-02",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1646179200",
+    "record": "967b4ad1022670a2992502c63e7ccd24c103aac9e2199d108ca4d9ff9c00e9ee",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2022-03",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1648857600",
+    "record": "2adff0f7acdcaa8cf8449a2d9d11d246105615d8db5a89558b92677b1f5ecfff",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2022-04",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1651449600",
+    "record": "e7f4b9a021ba5d566c51aeb6ec92b033e869a1c205b1d32a3baeaa3c6a8e84a4",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2022-05",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1654128000",
+    "record": "4901141e3d2f10b37148dabf7dea2cce4f83e4ae1d0d207eac85229780e9f23d",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2022-06",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1656720000",
+    "record": "be2f73f39797405ca0e78d9e9fabe4a254590b1ac216ef0cc286d3fe28f8852b",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2022-07",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1659398400",
+    "record": "db92b317a3dcf1bffd81bf15e1aca69c778c584cc2060a7f13c8a4f00da7bd8c",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2022-08",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1662076800",
+    "record": "1e92dea129d635948cd153667eb0d5a32585019f4d4b881f78a856e8a4e6f79a",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2022-09",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1664668800",
+    "record": "bfaa1be76a78f7f284d0dc66d215dd72c03c4c0361ae4816bcdd1f59de19715d",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2022-10",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1667347200",
+    "record": "882c4fae9eac33b5135e6be76ef7575d41327e3fb927c092fc84310ab58a3170",
+    "source": "test-source",
+    "unit": "kg"
+   }
+  ]
+ },
+ "name": "long_pending"
+}
