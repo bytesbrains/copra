@@ -6,6 +6,10 @@ source over TLS and it served this value". Being the TLS client, it knows the va
 is proxy mode's (§5.3.6 #2): no network attacker between it and the publisher. The contracts check only the
 signature, so a TLSNotary backend can replace the retrieval later without changing them.
 
+It answers anyone (anyone may collect), and each answer may cost a retrieval from the publisher. So it
+attests only periods the verifier still accepts, and reuses its own retrieval of a market and period for
+RETRIEVAL_TTL: however many requests arrive, the publisher sees one retrieval per period in that time.
+
 A notary's bond is slashed for two provable faults (§5.4), and this refuses both before signing:
   - premature: it signs only once the chain's own clock has passed the period's start and the publication
     time (gcpi/CONTRACTS.md), and only for a month that has ended;
@@ -38,6 +42,7 @@ engine = sources.engine
 # `published` is the collector's first retrieval (§5.2), so the notary's own retrieval must follow it closely.
 ATTEST_WINDOW = 24 * 3600
 MAX_BODY = 64 * 1024
+RETRIEVAL_TTL = 600
 
 
 class Refused(Exception):
@@ -47,13 +52,16 @@ class Refused(Exception):
 
 
 class Notary:
-    def __init__(self, adapters, chain, signer, log_path, transport=None, clock=time.time):
+    def __init__(self, adapters, chain, signer, log_path, transport=None, clock=time.time,
+                 retrieval_ttl=RETRIEVAL_TTL):
         self.adapters, self.chain, self.signer, self.log_path = adapters, chain, signer, log_path
         self.transport = transport or (lambda adapter: Transport(adapter.hosts))
-        self.clock = clock
+        self.clock, self.retrieval_ttl = clock, retrieval_ttl
         self.address = chain.address_of(signer)
+        self.first_period, self.lag_days, self.challenge_window = chain.window()
         self._lock = threading.Lock()
         self._signed = {}
+        self._retrievals, self._retrieving = {}, {}
         if os.path.exists(log_path):
             with open(log_path) as f:
                 for line in f:
@@ -75,6 +83,24 @@ class Notary:
             finally:
                 os.close(d)
 
+    def _retrieve(self, adapter, period):
+        """The adapter's observation from this notary's own retrieval, made at most retrieval_ttl ago. A
+        failure is kept as long as a success, and concurrent requests for one key share one retrieval."""
+        key = (adapter.source, adapter.market, period)
+        with self._lock:
+            lock = self._retrieving.setdefault(key, threading.Lock())
+        with lock:
+            hit = self._retrievals.get(key)
+            if hit is None or self.clock() - hit[0] >= self.retrieval_ttl:
+                try:
+                    hit = (self.clock(), adapter.observe(self.transport(adapter), period)[0], None)
+                except SourceError as e:
+                    hit = (self.clock(), None, e)
+                self._retrievals[key] = hit
+        if hit[2] is not None:
+            raise Refused("source", str(hit[2]))
+        return hit[1]
+
     def attest(self, obs):
         """{signer, signature, commitment} for an observation this notary reproduced, or Refused."""
         try:
@@ -85,19 +111,22 @@ class Notary:
         if adapter is None:
             raise Refused("not_served", f"{obs['source']}:{obs['market']}")
         now, published = int(self.clock()), int(obs["published"])
-        start = engine.period_start(engine.ym_index(obs["period"]))
+        t = engine.ym_index(obs["period"])
+        start = engine.period_start(t)
         if published > now:
             raise Refused("published_in_future")
         if now - published > ATTEST_WINDOW:
-            raise Refused("published_too_old", f"{now - published} s before this retrieval")
+            raise Refused("published_too_old", f"{now - published} s before this request")
         if not sources.ended(obs["period"], now):
             raise Refused("period_not_ended")
-        if self.chain.timestamp() < max(start, published):
+        if t < self.first_period:
+            raise Refused("out_of_range", "the verifier accepts no period before its first")
+        chain_now = self.chain.timestamp()
+        if chain_now >= engine.period_start(t + 1) + self.lag_days * 86400 + self.challenge_window:
+            raise Refused("window_closed", "the verifier no longer accepts this period")
+        if chain_now < max(start, published):
             raise Refused("chain_clock_behind", "signing now could be slashed as premature")
-        try:
-            mine, _ = adapter.observe(self.transport(adapter), obs["period"])
-        except SourceError as e:
-            raise Refused("source", str(e))
+        mine = self._retrieve(adapter, obs["period"])
         differ = sorted(f for f in mine if mine[f] != obs[f])
         if differ:
             raise Refused("mismatch", ", ".join(differ))

@@ -70,6 +70,7 @@ def observation_tuple(o):
 class Chain:
     def __init__(self, rpc_url, verifier, chain_id):
         self.rpc_url, self.verifier, self.chain_id = rpc_url, verifier, int(chain_id)
+        self._window = None
 
     def _rpc(self, *args):
         return cast(*args, "--rpc-url", self.rpc_url)
@@ -91,6 +92,14 @@ class Chain:
 
     def threshold(self):
         return int(self.call("threshold()(uint256)").split()[0])
+
+    def window(self):
+        """(firstPeriod, maxPublicationLagDays, CHALLENGE_WINDOW): the periods the verifier accepts. All are
+        immutable, so they are read once."""
+        if self._window is None:
+            self._window = tuple(int(self.call(f"{f}()(uint256)").split()[0])
+                                 for f in ("firstPeriod", "maxPublicationLagDays", "CHALLENGE_WINDOW"))
+        return self._window
 
     def submit_bond(self):
         return int(self.call("submitBond()(uint256)").split()[0])

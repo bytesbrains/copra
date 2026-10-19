@@ -58,6 +58,9 @@ class FakeChain:
     def threshold(self):
         return self.k
 
+    def window(self):
+        return engine.ym_index(PERIOD) - 12, 90, 2 * 86400  # not the deployed 3 days: it is read, not assumed
+
     def submit_bond(self):
         return 10 ** 14
 
@@ -231,6 +234,43 @@ class Notary(unittest.TestCase):
                 self.assertEqual(json.loads(e.exception.read())["refused"], code)
         obs = self.proposed()
         self.assertEqual(collect.ask(url, obs)["commitment"], engine.commitment(obs))
+
+    def test_OnlyPeriodsTheVerifierStillAcceptsAreAttested(self):
+        old = collect.propose(sources.Cdb(), fake(period="2025-08"), "2025-08", self.now)[0]
+        self.refused(self.notary(fake(period="2025-08")), old, "out_of_range")
+        obs = self.proposed()
+        closes = engine.period_start(engine.ym_index(PERIOD) + 1) + (90 + 2) * 86400
+        self.chain.now = closes
+        self.refused(self.notary(), obs, "window_closed")
+        self.chain.now = closes - 1
+        self.notary().attest(obs)
+
+    def test_ItRetrievesOncePerPeriodHoweverOftenItIsAsked(self):
+        retrievals = []
+        src = lambda a: retrievals.append(1) or fake()
+        n = notarylib.Notary(sources.adapters(), self.chain, "0x" + "0" * 39 + "1", self.log, transport=src,
+                             clock=lambda: self.now)
+        obs = self.proposed()
+        threads = [threading.Thread(target=n.attest, args=(obs,)) for _ in range(8)]
+        for th in threads:
+            th.start()
+        for th in threads:
+            th.join()
+        n.attest(obs)
+        self.assertEqual(len(retrievals), 1, "concurrent and repeated requests share one retrieval")
+        self.now += notarylib.RETRIEVAL_TTL
+        n.attest(obs)
+        self.assertEqual(len(retrievals), 2, "and it is made again once it is RETRIEVAL_TTL old")
+
+    def test_AFailedRetrievalIsNotRetriedOnEveryRequest(self):
+        retrievals = []
+        src = lambda a: retrievals.append(1) or FakeSources({}, ecb_zip(ecb_days(PERIOD, INR)))
+        n = notarylib.Notary(sources.adapters(), self.chain, "0x" + "0" * 39 + "1", self.log, transport=src,
+                             clock=lambda: self.now)
+        obs = self.proposed()
+        for _ in range(3):
+            self.refused(n, obs, "source")
+        self.assertEqual(len(retrievals), 1)
 
     def test_ListenTakesHostAndPortOnly(self):
         self.assertEqual(notarylib.listen_address("127.0.0.1:8645"), ("127.0.0.1", 8645))

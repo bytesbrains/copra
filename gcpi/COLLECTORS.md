@@ -38,8 +38,10 @@ How this relates to §5.3.1, which says notaries attest "through TLS attestation
 | `malformed` | The engine's structural check fails (gcpi/ENGINE.md §1) |
 | `not_served` | It runs no adapter for that source and market |
 | `published_in_future` | `published` is later than its own clock |
-| `published_too_old` | `published` is more than 24 hours before its own retrieval. `published` is the collector's first retrieval (§5.2), so the notary's must follow it closely. |
+| `published_too_old` | `published` is more than 24 hours before the request. `published` is the collector's first retrieval (§5.2), so the notary's must follow it closely. The retrieval it compares against is never later than the request, and at most 10 minutes earlier (see Exposure), so it is never more than 24 hours after `published` either. |
 | `period_not_ended` | The month is not over, so a monthly average is still partial |
+| `out_of_range` | The period is before the verifier's first |
+| `window_closed` | The verifier no longer accepts the period: it closed `CHALLENGE_WINDOW` (3 days) after the freshness window |
 | `chain_clock_behind` | The chain's clock has not passed both the period's start and `published`. Signing now could be slashed as premature ([CONTRACTS](CONTRACTS.md)). |
 | `source` | Its own retrieval failed or the adapter did not recognise the response |
 | `mismatch` | Its retrieval gave a different observation; the fields are listed |
@@ -50,7 +52,7 @@ How this relates to §5.3.1, which says notaries attest "through TLS attestation
 
 **What is signed is built locally.** The EIP-712 typed data comes from the chain id and verifier address the notary was started with, not from an RPC call to `attestationDigest`. A node that lied about the digest could otherwise make a notary sign a commitment it never checked. At start, the notary checks that the RPC serves the configured chain.
 
-**Exposure.** `/attest` takes no credentials, by design: anyone may run a collector, so anyone may ask. Each request costs the notary a retrieval from the publisher and the ECB, so a notary reachable from the internet belongs behind a proxy that rate-limits it. It listens on `127.0.0.1:8645` unless `--listen HOST:PORT` (an IPv6 host in brackets) says otherwise.
+**Exposure.** `/attest` takes no credentials, by design: anyone may run a collector, so anyone may ask. What a request can cost is bounded instead (#112). A notary attests only the few periods the verifier still accepts, and reuses its own retrieval of a market and period for 10 minutes (`RETRIEVAL_TTL`), failures included, with concurrent requests sharing one retrieval. So the publisher and the ECB see at most one retrieval per open period every 10 minutes, however many requests arrive and from however many addresses. A revision inside those 10 minutes is a `mismatch`, never a signature for both values. A proxy in front still limits the requests themselves, each of which costs an RPC call. It listens on `127.0.0.1:8645` unless `--listen HOST:PORT` (an IPv6 host in brackets) says otherwise.
 
 ## How a collector submits
 
