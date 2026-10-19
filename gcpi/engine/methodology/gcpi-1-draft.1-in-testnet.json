@@ -1,0 +1,11 @@
+{
+  "id": "GCPI-1-draft.1-IN-testnet",
+  "markets": {"IN": "100"},
+  "signals": [],
+  "corroborators": {},
+  "min_coverage_bp": "7000",
+  "max_publication_lag_days": "90",
+  "bands_bp": ["1000", "2000", "4000"],
+  "circuit_breaker_bp": "4000",
+  "base_period": "2026-09"
+}
