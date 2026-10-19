@@ -14,7 +14,7 @@ So Q7's real question is which parties GCPI trusts, how many, who chooses them, 
 
 ## Recommendation
 
-For #90 to decide.
+For #90 to decide. *Decided in #90: adopted as GCPI-001 §5.3.1–§5.3.6 and §5.4 ([§21](../docs/specs/GCPI-001.md#21-v1-decision-record)).*
 
 | Layer | Recommendation | Trust that remains |
 |---|---|---|
@@ -136,7 +136,7 @@ Collectors post stake, and fraud is slashed.
 
 ## Proposed text for GCPI-001 §5.3
 
-For #90 to adopt. It states the remaining trust assumptions explicitly, as the issue asks.
+For #90 to adopt. It states the remaining trust assumptions explicitly, as the issue asks. *Adopted in #90 as [GCPI-001 §5.3](../docs/specs/GCPI-001.md#53-source-authenticity).*
 
 > **5.3.1 Mechanism (v1).** An observation is accepted when at least *k* of the *n* notaries listed in the methodology version attest, through TLS attestation with selective disclosure, to the same value bytes from the listed source location. A publisher signature against a key listed in the methodology version substitutes for notary attestations. The notary list, *k*, the source locations, the publisher keys and the parsers for non-structured formats are part of the methodology version. No contract owner or other key can change them.
 >

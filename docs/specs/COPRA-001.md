@@ -27,7 +27,7 @@ GCPI-001 §15 requires the reserve protocol to be specified and audited separate
 3. **Neutrality.** The protocol and its developers hold no position in the copra price and earn nothing from its direction. Fees depend on volume, never on price movement.
 4. **Price tracking in both directions.** A holder gains when GCPI rises and loses when it falls.
 5. **Fair exit.** No holder's ability to exit depends on redeeming before other holders.
-6. **Slow oracle.** GCPI is published per calculation period (daily or weekly). The design must stay safe when the price is hours to days old.
+6. **Slow oracle.** GCPI is published per calculation period: monthly in v1 (GCPI-001 §8.6), up to about two months after the month ends. The design must stay safe when the price is weeks to months old.
 7. **Immutability.** No proxies, no upgrade path, no pause, no administrator who can move collateral or change risk parameters.
 
 ## 1.2 Why v1 cannot meet them
@@ -232,7 +232,7 @@ A redemption is settled at the price of a period **whose source observations had
 
 Settlement at `k + 1` rather than `k` is required because sources for period `k` are published during period `k`, so a request made late in period `k` could already know most of `P_k`.
 
-With a weekly GCPI, a redemption settles one to two weeks after it is requested. With a daily GCPI, one to two days. The cadence is a GCPI-001 decision, and this delay is its direct consequence for holders.
+GCPI v1 is monthly and published up to about two months after the month ends (GCPI-001 §8.6), so a redemption settles about three to four months after it is requested. A weekly GCPI would settle in one to two weeks. The cadence is a GCPI-001 decision, and this delay is its direct consequence for holders.
 
 ## 8.3 Settlement
 
@@ -458,7 +458,7 @@ These ratios are the direct cost of a slow oracle. A weekly GCPI needs larger ra
 1. **Allocation of redemptions.** Proportional across all positions (this draft) or lowest-ratio-first, as in Liquity. Lowest-first improves system health and rewards safe minters, but needs a sorted position list with gas-bounded insertion.
 2. **Funding rate.** Whether a holder-to-minter funding rate is needed to keep supply adequate, and whether it can be measured on-chain without a manipulable market price.
 3. **Stability pool.** Whether a pool of deposited $COPRA should absorb liquidations automatically, as in Liquity, instead of relying on liquidators sourcing $COPRA from the market at the moment of liquidation.
-4. **GCPI cadence.** Daily or weekly. Daily shortens redemption delay and lowers the required ratios. Weekly may be all the sources support.
+4. **GCPI cadence.** Decided in GCPI-001 §8.6 (#90): monthly. No source supports daily, and weekly needs an open weekly primary source that does not exist today. What remains open here is whether COPRA-001 can be sized for a monthly index at all (#96): it needs collateral ratios of about 180–320%, against about 140–160% for a weekly one ([BACKTEST](../../gcpi/BACKTEST.md#ratios-implied-by-132)).
 5. **Collateral assets.** USDC only, or more than one stablecoin to reduce the Circle dependency.
 6. **Parameter values.** Every §13 value, from the GCPI backtest.
 7. **Protocol fee recipient.** Who controls it, and whether it should be fixed permanently at deployment.
