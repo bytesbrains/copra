@@ -44,6 +44,20 @@ test('the output does not depend on observation order', () => {
   }
 });
 
+test('a trailing newline is not canonical, with the same codes as the Python engine', () => {
+  const cases = [
+    ['observation_id', (i) => { i.observations[0].market = 'PH\n'; }],
+    ['observation_period', (i) => { i.observations[0].period = '2020-01\n'; }],
+    ['observation_integer', (i) => { i.observations[0].price = '100\n'; }],
+    ['methodology_id', (i) => { i.methodology.id = 'GCPI-test\n'; }],
+  ];
+  for (const [code, mutate] of cases) {
+    const inp = structuredClone(load('normal').input);
+    mutate(inp);
+    assert.equal(engine.runSafe(inp), engine.canonical({ error: code }), code);
+  }
+});
+
 test('canonical encoding refuses numbers and non-printable text', () => {
   for (const bad of [1.5, 3, 'café', 'tab\there']) {
     assert.throws(() => engine.canonical({ x: bad }), engine.EngineError);

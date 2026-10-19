@@ -9,7 +9,7 @@ import unittest
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", ".."))
 SPEC = os.path.join(ROOT, "docs", "specs", "GCPI-001.md")
 DOCS = [SPEC, os.path.join(ROOT, "docs", "specs", "COPRA-001.md"), os.path.join(ROOT, "gcpi", "rfcs", "0000-template.md")] + [
-    os.path.join(ROOT, "gcpi", f) for f in ("SOURCES.md", "BACKTEST.md", "AUTHENTICATION.md", "ENGINE.md")]
+    os.path.join(ROOT, "gcpi", f) for f in ("SOURCES.md", "BACKTEST.md", "AUTHENTICATION.md", "ENGINE.md", "CONTRACTS.md")]
 RESULTS = os.path.join(ROOT, "gcpi", "backtest", "data", "results.json")
 
 LINK = re.compile(r"\]\(([^)\s]+)\)")

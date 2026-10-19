@@ -1,0 +1,339 @@
+{
+ "description": "A tie goes to the reference (ENGINE \u00a75). The Philippines jumps 50% and is quarantined. Next month's 120 passes against both 100 and the pending 150, and is relatively exactly as far from each (20/100 = 30/150). So it joins the reference, and the 150 is rejected.",
+ "expected": {
+  "engine": "GCPI-ENGINE-v1",
+  "methodology": "GCPI-test",
+  "methodology_hash": "d12d30b176c51c9a26c426c095789ad384594ac5e7bc0f485d41ec5376903ca6",
+  "periods": [
+   {
+    "accepted": [
+     "ID",
+     "PH"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "10000",
+    "decided_at": "2020-02",
+    "input_commitment": "1a87c3d2d2f4919cd882ef3719eaeeb0af2abf61d216ff776593896764b31a2b",
+    "level": "930000000000000000",
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2020-02",
+      "decision": "ACCEPTED",
+      "observations": [
+       "b11087b2a2b39ec6d4293e2f13dcd49a7be4c28b169d070ea94f8335dab23696"
+      ],
+      "price": "800000000000000000"
+     },
+     "PH": {
+      "band": "normal",
+      "decided_at": "2020-02",
+      "decision": "ACCEPTED",
+      "observations": [
+       "480fc7cff1f68140e22ed67530923690992109e661a05548daae61d0a51dd7eb"
+      ],
+      "price": "1000000000000000000"
+     }
+    },
+    "matched": [],
+    "period": "2020-02",
+    "reason": "base",
+    "status": "VALID"
+   },
+   {
+    "accepted": [
+     "ID"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "3500",
+    "decided_at": "2020-04",
+    "input_commitment": "cf4b719146ca3c34d7b0acdc7aaaae0c7072d180d5eba6d1d640f5fd94c95c67",
+    "level": null,
+    "linked_from": null,
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2020-03",
+      "decision": "ACCEPTED",
+      "observations": [
+       "8870a59705a07dec2297d2a2f4993db69e704cb7d5e26662a395e25aaefb589a"
+      ],
+      "price": "800000000000000000"
+     },
+     "PH": {
+      "band": "quarantine",
+      "decided_at": "2020-04",
+      "decision": "REJECTED_ANOMALY",
+      "observations": [
+       "4d4592f219c2f368a6ec9b5ca508b3dfb6be6c1793b6333d8ffe706b4db26644"
+      ],
+      "price": "1500000000000000000"
+     }
+    },
+    "matched": [],
+    "period": "2020-03",
+    "reason": "market_rejected",
+    "status": "INVALID_INPUT"
+   },
+   {
+    "accepted": [
+     "ID",
+     "PH"
+    ],
+    "candidate": null,
+    "comparable": false,
+    "coverage_bp": "10000",
+    "decided_at": "2020-04",
+    "input_commitment": "a8f5f37ed664c75fc2803cf1deec547ab1985b88fbbede4ed471d6f2ce2be69a",
+    "level": "1047009828437029176",
+    "linked_from": "2020-02",
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2020-04",
+      "decision": "ACCEPTED",
+      "observations": [
+       "7483c6a15e4fce7aee6acc7c6217cfadbb7d94ab906308eee8265c55d1685fe2"
+      ],
+      "price": "800000000000000000"
+     },
+     "PH": {
+      "band": "normal",
+      "decided_at": "2020-04",
+      "decision": "ACCEPTED",
+      "observations": [
+       "effbc1e56de3998c248cba9ac939493a6a1db96c2a33bbd4cbbfba446cbd2900"
+      ],
+      "price": "1200000000000000000"
+     }
+    },
+    "matched": [
+     "ID",
+     "PH"
+    ],
+    "period": "2020-04",
+    "reason": "linked",
+    "status": "VALID"
+   },
+   {
+    "accepted": [
+     "ID",
+     "PH"
+    ],
+    "candidate": null,
+    "comparable": true,
+    "coverage_bp": "10000",
+    "decided_at": "2020-05",
+    "input_commitment": "c321860bbc9b9cfb7907a3690ad136d7d06dad25503e81af580e38ea3936b91b",
+    "level": "1052672891887780234",
+    "linked_from": "2020-04",
+    "markets": {
+     "ID": {
+      "band": "normal",
+      "decided_at": "2020-05",
+      "decision": "ACCEPTED",
+      "observations": [
+       "9d516eb25a9fba9c2a47fa5e664e4b59019fa855bd1722aa57d75af6c8586fe7"
+      ],
+      "price": "800000000000000000"
+     },
+     "PH": {
+      "band": "normal",
+      "decided_at": "2020-05",
+      "decision": "ACCEPTED",
+      "observations": [
+       "b86821d066d78bc6ca8e525aca82c950b1ce1478b313e58e480c2274802291c5"
+      ],
+      "price": "1210000000000000000"
+     }
+    },
+    "matched": [
+     "ID",
+     "PH"
+    ],
+    "period": "2020-05",
+    "reason": "linked",
+    "status": "VALID"
+   }
+  ]
+ },
+ "expected_sha256": "d2d61944a384f159817625c2b7c819e78a0a5f6f1787b174b9bf6f0637253093",
+ "input": {
+  "first": "2020-01",
+  "last": "2020-05",
+  "methodology": {
+   "bands_bp": [
+    "2500",
+    "3000",
+    "4000"
+   ],
+   "base_period": "2020-02",
+   "circuit_breaker_bp": "4000",
+   "corroborators": {},
+   "id": "GCPI-test",
+   "markets": {
+    "ID": "35",
+    "PH": "65"
+   },
+   "max_publication_lag_days": "90",
+   "min_coverage_bp": "7000",
+   "signals": []
+  },
+  "observations": [
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "PH",
+    "period": "2020-01",
+    "price": "100",
+    "price_exp": "2",
+    "published": "1580601600",
+    "record": "ed31f25015b65571d0e23d53a0f7ebf4286430610707cc2a1224bbed129b0617",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "PH",
+    "period": "2020-02",
+    "price": "100",
+    "price_exp": "2",
+    "published": "1583107200",
+    "record": "28307c2c28bb13fc8c0d1228d4225f9b23651e4d1f7b87a46348fecbf745f068",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "PH",
+    "period": "2020-03",
+    "price": "150",
+    "price_exp": "2",
+    "published": "1585785600",
+    "record": "dd7abd51718141bbc14bf2d8cc9c772694eb77aac4628565562f11c43f202f82",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "PH",
+    "period": "2020-04",
+    "price": "120",
+    "price_exp": "2",
+    "published": "1588377600",
+    "record": "f88c490664cc85d10bdc5934b119128ad409690eadd485a65c52a4c34c327f06",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "PH",
+    "period": "2020-05",
+    "price": "121",
+    "price_exp": "2",
+    "published": "1591056000",
+    "record": "53d024f1c42c6e209bbd69fb7ed27ff6e92bd490656d0dc96454eb073d432b45",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2020-01",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1580601600",
+    "record": "60ddea58e87483cb9e142ced4c7ecf81258dd3b71460b499ff22f4fb9f4728ea",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2020-02",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1583107200",
+    "record": "7b8b87b9a2611631a06660a7491197c1161cbcdb6088c42303976fcff4bfc132",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2020-03",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1585785600",
+    "record": "9bf4c6acc346f8c36ddc96dceb32520eb2410dfb893adc086fd6da3880188263",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2020-04",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1588377600",
+    "record": "c190fbd1f60e781bdd46421b494e2de7ad44f816417035acba261fc50beb9486",
+    "source": "test-source",
+    "unit": "kg"
+   },
+   {
+    "basis": "",
+    "currency": "USD",
+    "fx": "",
+    "fx_exp": "",
+    "fx_source": "",
+    "market": "ID",
+    "period": "2020-05",
+    "price": "80",
+    "price_exp": "2",
+    "published": "1591056000",
+    "record": "dd9812f99b48aa794c6200c795a1b8922064dd1a5424bbb6e3dc2cc7e402adfc",
+    "source": "test-source",
+    "unit": "kg"
+   }
+  ]
+ },
+ "name": "closer_tie"
+}

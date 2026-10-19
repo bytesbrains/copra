@@ -114,6 +114,10 @@ class Vectors(unittest.TestCase):
             "circuit_breaker": {"2020-03": ("VALID", "confirmed"), "2020-04": ("VALID", "linked"),
                                 "2020-06": ("INVALID_INPUT", "circuit_breaker_rejected"), "2020-07": ("VALID", "linked")},
             "no_base": {"2020-02": ("INSUFFICIENT_COVERAGE", "base_coverage"), "2020-03": ("UNAVAILABLE", "no_base")},
+            "bands_disabled": {p: ("VALID", "linked") for p in ("2020-03", "2020-04", "2020-05")},
+            "closer_tie": {"2020-03": ("INVALID_INPUT", "market_rejected"), "2020-04": ("VALID", "linked")},
+            "long_pending": {"2020-03": ("VALID", "linked"), "2022-09": ("INSUFFICIENT_COVERAGE", "coverage"),
+                             "2022-10": ("VALID", "linked")},
         }
         for name, expect in want.items():
             got = periods(name)
@@ -121,6 +125,8 @@ class Vectors(unittest.TestCase):
                 self.assertEqual((got[p]["status"], got[p]["reason"]), (status, reason), f"{name} {p}")
                 self.assertEqual(got[p]["level"] is not None, status == "VALID", f"{name} {p}")
         self.assertEqual(periods("genuine_shock")["2020-03"]["decided_at"], "2020-04")
+        spike = periods("bands_disabled")["2020-03"]
+        self.assertEqual((spike["markets"]["PH"]["decision"], spike["markets"]["PH"]["band"]), ("ACCEPTED", None))
         self.assertEqual(periods("missing_market")["2020-04"]["linked_from"], "2020-02")
         self.assertFalse(periods("missing_market")["2020-04"]["comparable"])
         self.assertTrue(periods("missing_market")["2020-05"]["comparable"])
@@ -186,6 +192,18 @@ class Determinism(unittest.TestCase):
         extra = dict(noisy["observations"][0], market="XX")
         noisy["observations"].append(extra)
         self.assertEqual(engine.canonical(engine.run(noisy)), engine.canonical(engine.run(copy.deepcopy(inp))))
+
+    def test_a_trailing_newline_is_not_canonical(self):
+        # Python's `$` also matches before a final newline; JavaScript's does not. The anchors must agree.
+        for code, mutate in [("observation_id", lambda i: i["observations"][0].update(market="PH\n")),
+                             ("observation_period", lambda i: i["observations"][0].update(period="2020-01\n")),
+                             ("observation_integer", lambda i: i["observations"][0].update(price="100\n")),
+                             ("methodology_id", lambda i: i["methodology"].update(id="GCPI-test\n"))]:
+            inp = copy.deepcopy(vector("normal")["input"])
+            mutate(inp)
+            with self.assertRaises(engine.EngineError) as e:
+                engine.run(inp)
+            self.assertEqual(e.exception.code, code)
 
     def test_every_commitment_field_matters(self):
         o = vector("normal")["input"]["observations"][0]

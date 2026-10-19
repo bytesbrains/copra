@@ -25,11 +25,11 @@ UNIT_KG = {"kg": 1, "quintal": 100, "t": 1000}
 BANDS = ("normal", "corroborate", "confirm", "quarantine")
 SECONDS_PER_DAY = 86400
 
-PERIOD = re.compile(r"^[0-9]{4}-(0[1-9]|1[0-2])$")
-UINT = re.compile(r"^(0|[1-9][0-9]*)$")
-HEX32 = re.compile(r"^[0-9a-f]{64}$")
-ID = re.compile(r"^[A-Za-z0-9_.-]{1,64}$")
-CODE = re.compile(r"^[A-Z]{3}$")
+PERIOD = re.compile(r"^[0-9]{4}-(0[1-9]|1[0-2])\Z")
+UINT = re.compile(r"^(0|[1-9][0-9]*)\Z")
+HEX32 = re.compile(r"^[0-9a-f]{64}\Z")
+ID = re.compile(r"^[A-Za-z0-9_.-]{1,64}\Z")
+CODE = re.compile(r"^[A-Z]{3}\Z")
 
 
 class EngineError(Exception):
