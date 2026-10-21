@@ -102,12 +102,12 @@ Value(D, P) = D × P / 10^8 / 10^12
 
 All consensus-critical arithmetic is fixed-point integer arithmetic with full-precision multiply-divide (`mulDiv`).
 
-**Rounding rule:** every rounding favors the system and its remaining holders.
+**Rounding rule:** every rounding favors the system and its remaining holders, except position debt balances, which round down so every position stays repayable (below).
 
 - Debt value in ratio checks rounds up.
 - Collateral value in ratio checks rounds down.
 - Payouts to redeemers, liquidators, and withdrawing owners round down.
-- Debt removed from positions rounds down. Collateral removed from positions rounds up.
+- Position debt balances round down: realized debt never exceeds the debt that exists, so every position stays repayable and closeable. Rounding up instead would strand unrepayable dust above `totalSupply`. The dust remainder stays in `totalDebt` and remains redeemable. Collateral removed from positions rounds up.
 
 ---
 
@@ -489,9 +489,9 @@ Sequencing (#96): minters first (the pitch now has numbers — about 1%/yr expec
 
 **Invariant 1 — Full backing at creation.** Every $COPRA is minted against a position whose ratio is at least `MCR` at the usable price.
 
-**Invariant 2 — Supply accounting.** The ERC-20 `totalSupply` of $COPRA, which includes tokens escrowed in pending redemptions, equals the sum of all position debt `Σ D_j`, at all times.
+**Invariant 2 — Supply accounting.** The ERC-20 `totalSupply` of $COPRA, which includes tokens escrowed in pending redemptions, equals the sum of all position debt `Σ D_j`, up to dust: `Σ D_j` never exceeds `totalSupply`, and the gap is bounded by `totalDebt / 1e18` plus a few wei per position (§3).
 
-**Invariant 3 — Collateral accounting.** The position manager's USDC balance equals the sum of position collateral plus unclaimed fee balances, at all times.
+**Invariant 3 — Collateral accounting.** The position manager's USDC balance equals the sum of position collateral plus unclaimed fee balances, up to dust of a few units per position, with the sum never exceeding the balance (§3).
 
 **Invariant 4 — No protocol capital.** No function requires or accepts capital from the protocol, its developers, or the fee recipient to remain solvent.
 
