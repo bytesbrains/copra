@@ -52,6 +52,9 @@ jobs:
       - name: Run GCPI source registry tests
         run: python3 -m unittest discover -s test/gcpi -v
 
+      - name: Run COPRA-001 economics tests
+        run: python3 -m unittest discover -s test/econ -v
+
       - name: Run GCPI reference engine tests (JavaScript)
         run: node --test test/gcpi/*.test.cjs
 

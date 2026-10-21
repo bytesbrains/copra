@@ -3,12 +3,12 @@
 ## Overcollateralized Synthetic Copra, Settled Against GCPI
 
 **Specification:** COPRA-001\
-**Version:** 0.1 Draft\
-**Date:** 18 October 2026\
+**Version:** 0.2 Draft\
+**Date:** 22 October 2026\
 **Network:** Base L2\
 **Price input:** [GCPI-001](GCPI-001.md), the Global Copra Price Index\
 **Replaces:** the v1 `CopraVault` design (fixed USDC pool redeemed at the oracle price)\
-**Status:** Proposed design — every parameter is provisional until calibrated against the GCPI historical backtest (GCPI-001 Phase 2), and the design requires economic modeling and independent security review before deployment
+**Status:** Proposed design — parameters calibrated by economic simulation over GCPI history ([ECONOMICS](../../econ/ECONOMICS.md), #96), and the §16 questions resolved except regulation (#98). The design requires independent security review before deployment
 
 ---
 
@@ -251,6 +251,8 @@ Payout    = Gross − Fee
 
 **Allocation across positions:** the debt reduction and collateral reduction are applied to all positions in proportion to their debt, using global accumulators so that settlement cost does not grow with the number of positions. Each position pays out the same collateral per unit of debt redeemed, so positions with a higher ratio see their ratio rise.
 
+**Cover rule:** a position covers its share up to its collateral. Anything liquidatable was liquidated before settlement, so only unliquidatable dust fails to cover; its uncovered debt is bad debt and redistributes under §11.1, and the position closes. The alternatives (lowest-ratio-first, collateral-proportional takes) were simulated against this rule over 142 rolling windows and neither improves safety ([ECONOMICS](../../econ/ECONOMICS.md#4-allocation-proportional-lowest-first-or-collateral-proportional), §16 item 1).
+
 If the system is in shortfall when the request settles, the payout is reduced pro rata (§11.3).
 
 ## 8.4 Cancellation
@@ -313,15 +315,15 @@ The redemption settlement reserve reimburses settlers' gas per settled batch, up
 
 ## 10.3 Market premium
 
-The protocol defines no funding rate in this version.
+The protocol defines no funding rate in this version (§16 item 2).
 
-If demand to hold $COPRA exceeds demand to mint it, $COPRA trades above GCPI. A minter can then mint against GCPI and sell at the market premium, so the premium itself pays minters for taking the short side. Supply grows until the premium no longer covers the minters' risk.
+If demand to hold $COPRA exceeds demand to mint it, $COPRA trades above GCPI. A minter can then mint against GCPI and sell at the market premium, so the premium itself pays minters for taking the short side. Supply grows until the premium no longer covers the minters' risk. Simulation puts the break-even premium at about 1% a year at zero premium ([ECONOMICS](../../econ/ECONOMICS.md#5-funding-what-minters-earn)): drift, volatility drag and the ~2% lag transfer on each redemption, net of redeem fees.
 
-A funding rate paid from holders to minters, as in perpetual futures, would need a market price of $COPRA on-chain. A DEX price is manipulable, so a funding rate is deferred to a later version (§16).
+A funding rate paid from holders to minters, as in perpetual futures, would need a market price of $COPRA on-chain. A DEX price is manipulable in the thin pools a new token has, so a funding rate is deferred to a later version — and only with evidence that supply is inadequate at the market premium, and a measurement that is not manipulable.
 
 ## 10.4 Protocol fee recipient
 
-The protocol fee recipient is the only mutable setting in COPRA-001. It may be changed by its current controller through a two-step transfer. It confers no other power: it cannot change any rate, threshold, price input, or position.
+The protocol fee recipient is an immutable address set at deployment and disclosed in the deployment record (§16 item 7). It confers no power: it cannot change any rate, threshold, price input, or position. Changing the recipient is a new deployment (§14).
 
 Protocol revenue depends only on minting volume, never on the direction of GCPI.
 
@@ -336,7 +338,7 @@ A position has bad debt when `C_j < Value(D_j, P)`. Liquidating it is unprofitab
 - The liquidator may repay only the debt the collateral covers with the bonus: `x = C_j / (P × (1 + LIQ_BONUS))`, and receives all of `C_j`.
 - The remaining debt `D_j − x`, now with no collateral, is **redistributed**: it is added to every other position's debt in proportion to that position's collateral, using global accumulators.
 
-Redistribution keeps every outstanding $COPRA backed by some position. The loss falls on minters, the side of the market that chose copra-price risk, not on holders.
+Redistribution keeps every outstanding $COPRA backed by some position. The loss falls on minters, the side of the market that chose copra-price risk, not on holders. The same rule absorbs the uncovered remainder when a position cannot cover its redemption share (§8.3 cover rule).
 
 ## 11.2 System health
 
@@ -381,27 +383,27 @@ State is computed from the price input and positions on every call. No address c
 
 ## 13.1 Parameter list
 
-| Parameter | Role | Illustrative value | Calibration |
+| Parameter | Role | Value | Calibration |
 | --- | --- | --- | --- |
-| `MCR` | Minimum ratio after minting or withdrawing | 250–300% | §13.2 |
-| `LR` | Liquidation threshold | 150–200% | §13.2 |
-| `LIQ_BONUS_BPS` | Liquidator discount | 500–1000 (5–10%) | Liquidator gas and execution cost on Base |
-| `MIN_DEBT` | Smallest non-zero position debt | To be set | Gas cost of liquidation at the bonus |
-| `MAX_PRICE_AGE` | Oldest usable GCPI finalization | One GCPI period plus a grace window | GCPI cadence and historical finalization delays |
-| `REDEEM_EXPIRY` | Wait before a redemption without a settlement price may be cancelled | Several GCPI periods | Historical GCPI outage lengths |
-| `MINT_FEE_BPS` | Mint fee | To be set | Market comparison |
-| `MINT_FEE_PROTOCOL_SHARE` | Protocol share of the mint fee | To be set | — |
-| `REDEEM_FEE_BPS` | Redemption fee, retained by positions | To be set | Must exceed the expected one-period forward-price edge |
+| `MCR` | Minimum ratio after minting or withdrawing | 250% | §13.2; no mass liquidation in any of 142 windows |
+| `LR` | Liquidation threshold | 160% | §13.2; every outage-cascade liquidation covers |
+| `LIQ_BONUS_BPS` | Liquidator discount | 500 (5%) | Gas and execution cost on Base; a month of slack, no rush premium |
+| `MIN_DEBT` | Smallest non-zero position debt | 100 $COPRA | Bonus $7.50 at $1.50/kg against ~$2 gas |
+| `MAX_PRICE_AGE` | Oldest usable GCPI finalization | 45 days | 1.5× the normal ~30-day finalization interval; revisited once GCPI records release times |
+| `REDEEM_EXPIRY` | Wait before a redemption without a settlement price may be cancelled | 6 periods | Covers a 3-month outage with settlement to spare; longer outages cancel safely |
+| `MINT_FEE_BPS` | Mint fee | 50 (0.5%) | In line with one-time borrowing fees |
+| `MINT_FEE_PROTOCOL_SHARE` | Protocol share of the mint fee, in bps of the fee | 5000 (50%) | Neutral default; the rest feeds the settlement reserve |
+| `REDEEM_FEE_BPS` | Redemption fee, retained by positions | 100 (1%) | Exceeds the one-period mean edge (0.4–0.7%); the full-horizon remainder via the premium |
 
-The illustrative values are not proposals. They indicate scale only.
+Derivations in [ECONOMICS](../../econ/ECONOMICS.md#8-parameter-values). A deployment that changes any value re-runs the calibration or documents why it does not apply.
 
 ## 13.2 Sizing the ratios
 
-Let `R(h)` be the GCPI rise over `h` calculation periods that is exceeded with probability no more than an agreed tolerance (or the historical maximum, whichever is larger), measured on the GCPI backtest.
+Let `R(h)` be the GCPI rise over `h` calculation periods, measured on the GCPI backtest. `R(h)` is the historical maximum including the 1973 shock (R(1) = 47.7%): 1973 is copra on an export basis, and designing for the decade because it is recent would leave the 1973-scale shock unsized.
 
-Let `L` be the liquidation window: the number of periods between a position crossing `LR` and its liquidation, including GCPI finalization delay.
+Let `L = 1` be the liquidation window: with monthly finalization and permissionless liquidation, a position crossing `LR` is liquidated within one period.
 
-Let `M` be the owner's reaction window: the number of periods an owner is expected to need to top up or repay.
+Let `M = 1` be the owner's reaction window: one period to top up or repay.
 
 Then:
 
@@ -410,16 +412,16 @@ LR  ≥  (1 + LIQ_BONUS) × (1 + R(L))
 MCR ≥  LR × (1 + R(M))
 ```
 
-The first condition keeps a position that crosses `LR` able to pay the liquidator in full after a further `R(L)` rise. The second keeps a freshly minted position out of liquidation for `M` periods of adverse movement.
+The first condition keeps a position that crosses `LR` able to pay the liquidator in full after a further `R(L)` rise. The second keeps a freshly minted position out of liquidation for `M` periods of adverse movement. With the values above: 1.60 ≥ 1.05 × 1.477 = 1.551, and 2.50 ≥ 1.60 × 1.477 = 2.363. The second formula was validated by simulation: every tested pair with MCR/LR below 1.477 suffers joint liquidation of minimum-compliant positions in 1973 windows, and every pair above it liquidates nothing ([ECONOMICS](../../econ/ECONOMICS.md#3-ratio-sizing)).
 
-These ratios are the direct cost of a slow oracle. A weekly GCPI needs larger ratios than a daily one, which makes minting more expensive and supply thinner.
+These ratios are the direct cost of a slow oracle. A weekly GCPI would need about 140–160% MCR where the monthly index needs 250% MCR, which makes minting more expensive and supply thinner.
 
 ---
 
 # 14. Immutability and Versioning
 
 - COPRA-001 contracts are not upgradeable and have no pause.
-- Every parameter in §13 except the fee recipient is an immutable constant of the deployment.
+- Every parameter in §13, including the fee recipient (§10.4), is an immutable constant of the deployment.
 - The GCPI adapter and methodology version are bound immutably at deployment.
 - A new parameter set, a new GCPI version, or a new collateral asset is a new deployment with a new token address. Existing positions and tokens are unaffected, and holders migrate by their own choice.
 
@@ -455,15 +457,17 @@ These ratios are the direct cost of a slow oracle. A weekly GCPI needs larger ra
 
 # 16. Open Questions
 
-1. **Allocation of redemptions.** Proportional across all positions (this draft) or lowest-ratio-first, as in Liquity. Lowest-first improves system health and rewards safe minters, but needs a sorted position list with gas-bounded insertion.
-2. **Funding rate.** Whether a holder-to-minter funding rate is needed to keep supply adequate, and whether it can be measured on-chain without a manipulable market price.
-3. **Stability pool.** Whether a pool of deposited $COPRA should absorb liquidations automatically, as in Liquity, instead of relying on liquidators sourcing $COPRA from the market at the moment of liquidation.
-4. **GCPI cadence.** Decided in GCPI-001 §8.6 (#90): monthly. No source supports daily, and weekly needs an open weekly primary source that does not exist today. What remains open here is whether COPRA-001 can be sized for a monthly index at all (#96): it needs collateral ratios of about 180–320%, against about 140–160% for a weekly one ([BACKTEST](../../gcpi/BACKTEST.md#ratios-implied-by-132)).
-5. **Collateral assets.** USDC only, or more than one stablecoin to reduce the Circle dependency.
-6. **Parameter values.** Every §13 value, from the GCPI backtest.
-7. **Protocol fee recipient.** Who controls it, and whether it should be fixed permanently at deployment.
-8. **Regulatory classification.** Whether $COPRA, the minter position (effectively a short commodity-index position), or the protocol is a regulated derivative or security in the jurisdictions where it will be used. This must be answered by counsel before mainnet.
-9. **Bootstrapping.** Who the first minters and liquidity providers are. The design needs no protocol capital, but it does not create participants.
+Resolved in v0.2 by #96 except item 8. Each resolution points to its evidence.
+
+1. **Allocation of redemptions. Resolved: proportional, with the §8.3 cover rule.** Lowest-ratio-first was simulated against proportional over 142 rolling windows with redemption surges: no safety gain (worst TCR equal or worse, because redeemed-out collateral leaves the system), fees concentrated on the riskiest minters, and a sorted position list to build. Collateral-proportional takes are a tested-equivalent alternative ([ECONOMICS](../../econ/ECONOMICS.md#4-allocation-proportional-lowest-first-or-collateral-proportional)).
+2. **Funding rate. Resolved: none in v0.2.** Break-even needs about 1% a year of market premium, which §10.3 supplies when demand exceeds supply. No premium covers 1973-scale tails, and no on-chain market price is measurable without manipulation in thin pools ([ECONOMICS](../../econ/ECONOMICS.md#5-funding-what-minters-earn)).
+3. **Stability pool. Resolved: none.** Wipeout months need up to 100% of supply as liquidator float, which deposited $COPRA cannot cover; the pool adds timing games and keeps the empty-pool case. Rely on the bonus, the month-long execution window, and committed keepers ([ECONOMICS](../../econ/ECONOMICS.md#6-liquidators-and-the-stability-pool)).
+4. **GCPI cadence. Resolved: monthly is sizable.** MCR 250%, LR 160% (§13.2): zero shortfall in 142 rolling windows including 1973, plus a 6-month outage during the 1973 rise. Redemption settles in 3–4 months, 6 under a 3-month outage ([ECONOMICS](../../econ/ECONOMICS.md#3-ratio-sizing)).
+5. **Collateral assets. Resolved: USDC only.** A second stablecoin needs its own pricing, depeg rules and payout choice, for diversification that shares the same banking-system tail risk. The Circle dependency stays disclosed; §14 is the escape hatch ([ECONOMICS](../../econ/ECONOMICS.md#7-collateral-and-fee-recipient)).
+6. **Parameter values. Resolved: §13 table**, derived from R(h) with 1973 included and L = M = 1 ([ECONOMICS](../../econ/ECONOMICS.md#8-parameter-values)).
+7. **Protocol fee recipient. Resolved: fixed at deployment** (§10.4), disclosed in the deployment record. Which address is a deployment decision, not a spec decision ([ECONOMICS](../../econ/ECONOMICS.md#7-collateral-and-fee-recipient)).
+8. **Regulatory classification. Open, deferred to #98.** Whether $COPRA, the minter position (effectively a short commodity-index position), or the protocol is a regulated derivative or security in the jurisdictions where it will be used. This must be answered by counsel before mainnet.
+9. **Bootstrapping. Answered with a plan (§17); participants still pending.** Minters first (hedgers and premium harvesters, with numbers), then the pool, then keepers. Commitments remain a §19 acceptance criterion.
 
 ---
 
@@ -476,6 +480,8 @@ The protocol supplies no capital and no participants. At launch:
 - **Safety requires liquidators.** Liquidation is open to anyone, and on a small system a single active liquidator may be the only one. Positions remain safe only while someone liquidates them.
 
 The candidates to recruit first are copra market participants who want a short hedge, and market makers who want the minting and redemption spread.
+
+Sequencing (#96): minters first (the pitch now has numbers — about 1%/yr expected cost at zero premium, a month to react, liquidation only below 160% at a known monthly price), then a $COPRA/USDC pool seeded by participants once supply exists, then at least one keeper running open-source liquidation-and-settlement software. Testnet rehearsal on Base Sepolia against the mock GCPI (#97) precedes any mainnet conversation. copra.dev running the first keeper is permitted — the calls are permissionless — but must be disclosed as centralization until independent keepers join.
 
 ---
 
@@ -508,8 +514,8 @@ The candidates to recruit first are copra market participants who want a short h
 COPRA-001 may be considered for mainnet only when:
 
 - GCPI-001 meets its own acceptance criteria (GCPI-001 §17), including shadow publication.
-- Every §13 parameter is derived from the GCPI backtest, with the derivation published.
-- Simulation over historical GCPI paths, including the largest observed rises, shows no shortfall at the chosen parameters, or documents its frequency and size.
+- Every §13 parameter is derived from the GCPI backtest, with the derivation published. Met by [ECONOMICS](../../econ/ECONOMICS.md#8-parameter-values).
+- Simulation over historical GCPI paths, including the largest observed rises, shows no shortfall at the chosen parameters, or documents its frequency and size. Met by [ECONOMICS](../../econ/ECONOMICS.md): no shortfall at (250%, 160%) in 142 rolling windows and a 6-month outage during the 1973 rise.
 - Invariants 2, 3, 6 and 7 are covered by property-based and fuzz tests.
 - Forward-price settlement is shown to be order-independent.
 - Bad-debt redistribution and shortfall payouts are tested on adversarial position sets.
@@ -517,4 +523,4 @@ COPRA-001 may be considered for mainnet only when:
 - The regulatory question (§16, item 8) has a written answer from counsel.
 - Initial minters, liquidity providers, and at least one liquidator are committed.
 
-*End of COPRA-001, Draft v0.1.*
+*End of COPRA-001, Draft v0.2.*
