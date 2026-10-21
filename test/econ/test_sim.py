@@ -159,6 +159,45 @@ class Redemption(unittest.TestCase):
         st.finalized = {4: 1.0}
         self.assertIsNone(sim.settlement_period(st, sim.Request(1.0, 4), 99))
 
+    def test_partial_fill_pays_only_the_debt_actually_settled(self):
+        st = state(redeem_fee=0.0, min_debt=1.0)
+        sim.add_position(st, 1000.0, 100.0)
+        pay = sim.settle_request(st, sim.Request(1000.0, 0), 1.0)
+        # Only 100 of debt exists: the payout is on the 100 settled, not scaled
+        # up to the 1000 requested, and the position is emptied.
+        self.assertAlmostEqual(pay, 100.0)
+        self.assertAlmostEqual(sim.totals(st)[1], 0.0)
+        self.assertAlmostEqual(sim.totals(st)[0], 900.0)
+
+    def test_step_records_settled_debt_not_requested_debt(self):
+        st = state(lag=2, min_debt=1.0)
+        sim.add_position(st, 1000.0, 100.0)
+        st.finalized = {1: 2.0}
+        st.pending.append(sim.Request(1000.0, 0))  # settles at month 1
+        rec = sim.step(st, 3, None, True, lambda w, p, s: 0.0)
+        self.assertEqual(rec["settled_n"], 1)
+        self.assertAlmostEqual(rec["settled_amt"], 100.0)
+        # Gross 200, fee 1.00, payout 199.00 — on the 100 settled.
+        self.assertAlmostEqual(rec["settled_pay"], 199.0)
+
+    def test_proportional_cover_does_not_depend_on_position_order(self):
+        def run(order):
+            st = state(redeem_fee=0.0, min_debt=1.0)
+            for c, d in order:
+                sim.add_position(st, c, d)
+            pay = sim.settle_request(st, sim.Request(100.0, 0), 1.0)
+            return pay, sorted((p.c, p.d) for p in st.positions), st.bad_debt_usd
+        dust_first = run([(5.0, 100.0), (1000.0, 100.0)])
+        dust_last = run([(1000.0, 100.0), (5.0, 100.0)])
+        self.assertEqual(dust_first, dust_last)
+        pay, ((c, d),), bad = dust_first
+        # Pins the covered outcome: dust covers 5 of its 50 share; the rest
+        # (45 uncovered + 50 leftover) redistributes onto the healthy position.
+        self.assertAlmostEqual(pay, 100.0)
+        self.assertAlmostEqual(c, 950.0)
+        self.assertAlmostEqual(d, 145.0)
+        self.assertAlmostEqual(bad, 95.0)
+
 
 class Maintainer(unittest.TestCase):
     def test_tops_up_to_mcr_after_the_delay(self):

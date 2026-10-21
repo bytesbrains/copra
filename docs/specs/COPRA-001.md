@@ -414,7 +414,7 @@ MCR ≥  LR × (1 + R(M))
 
 The first condition keeps a position that crosses `LR` able to pay the liquidator in full after a further `R(L)` rise. The second keeps a freshly minted position out of liquidation for `M` periods of adverse movement. With the values above: 1.60 ≥ 1.05 × 1.477 = 1.551, and 2.50 ≥ 1.60 × 1.477 = 2.363. The second formula was validated by simulation: every tested pair with MCR/LR below 1.477 suffers joint liquidation of minimum-compliant positions in 1973 windows, and every pair above it liquidates nothing ([ECONOMICS](../../econ/ECONOMICS.md#3-ratio-sizing)).
 
-These ratios are the direct cost of a slow oracle. A weekly GCPI needs about 140–160% collateral where a monthly one needs 250%, which makes minting more expensive and supply thinner.
+These ratios are the direct cost of a slow oracle. A weekly GCPI would need about 140–160% MCR where the monthly index needs 250% MCR, which makes minting more expensive and supply thinner.
 
 ---
 

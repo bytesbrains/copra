@@ -55,7 +55,7 @@ Assumptions that flatter or hurt the results, stated plainly:
 - **Floats, not fixed-point.** Consensus arithmetic is #97's problem; nothing here depends on rounding.
 - **The paths are proxies.** A two-market chain-linked headline would be smoother than any single source, so single-source paths overstate jumps — conservative for sizing.
 
-`test/econ/test_sim.py` pins the mechanism on hand-computed cases: liquidation math, the bad-debt split, dust left unliquidated, all three allocation rules, the cover failure, forward pricing (never at k), shortfall pro-rata, expiry, maintainer top-ups and withdrawals, and USD/$COPRA conservation over a scripted run.
+`test/econ/test_sim.py` pins the mechanism on hand-computed cases: liquidation math, the bad-debt split, dust left unliquidated, all three allocation rules, the cover failure and its order-independence, forward pricing (never at k), shortfall pro-rata, partial-fill settlement, expiry, maintainer top-ups and withdrawals, and USD/$COPRA conservation over a scripted run.
 
 ---
 
@@ -185,5 +185,5 @@ Commitments from all three are still required by §19 before mainnet. This quest
 ```bash
 python3 econ/paths.py /tmp/econ-cache            # needs wb_2020.xlsx + wb_current.xlsx (fetch.py FILES)
 python3 econ/experiments.py                      # ~15 s; rewrites data/results.json; prints A–E
-python3 -m unittest discover -s test/econ        # 24 tests on hand-computed cases
+python3 -m unittest discover -s test/econ        # 27 tests on hand-computed cases
 ```

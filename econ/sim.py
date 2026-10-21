@@ -209,7 +209,8 @@ def settle_request(state, req, price):
         raise ValueError(f"unknown allocation {p.allocation!r}")
     # The fee stays in the system: collateral removed is payout, debt removed is amount.
     state.positions = [q for q in state.positions if q.d > 1e-9 or q.c > 1e-9]
-    return payout * (req.amount / amount) if amount < req.amount else payout
+    # A partial fill (amount < req.amount) still pays only what was settled.
+    return payout
 
 
 def _allocate_proportional(state, amount, payout, price, fee_per_debt):
@@ -218,11 +219,13 @@ def _allocate_proportional(state, amount, payout, price, fee_per_debt):
     A position covers its share unless it is underwater (CR < haircut*(1-fee));
     anything liquidatable was liquidated before settlement, so in practice only
     unprofitable dust fails. Uncovered debt is bad debt and redistributes (§11.1).
+    Shares are fixed up front: debt redistributed mid-pass must not change
+    later shares.
     """
     _, d = totals(state)
     per_unit = payout / amount
-    for pos in state.positions:
-        take_d = amount * pos.d / d
+    takes = [amount * pos.d / d for pos in state.positions]
+    for pos, take_d in zip(state.positions, takes):
         need_c = take_d * per_unit
         if need_c > pos.c + 1e-9:
             covered_d = pos.c / per_unit if per_unit > 0 else 0.0
@@ -315,9 +318,10 @@ def step(state, wall, ref, valid, demand_fn):
     for req in state.pending:
         s = settlement_period(state, req, wall)
         if s is not None and price is not None:
+            _, d_before = totals(state)
             pay = settle_request(state, req, state.finalized[s])
             settled_n += 1
-            settled_amt += req.amount
+            settled_amt += min(req.amount, d_before)
             settled_pay += pay
             state.settle_delays.append(wall - req.k)
         elif wall - req.k >= p.redeem_expiry and s is None:
