@@ -19,9 +19,9 @@ the closest open copra-price history, each a different regime:
 World Bank data: CC BY-4.0, https://www.worldbank.org/en/about/legal/terms-of-use.
 CDB/PSA columns repeat the derived monthly facts already published in dataset.csv.
 
-Usage: paths.py <wb cache dir> <out csv>
-The cache dir needs wb_2020.xlsx and wb_current.xlsx (see gcpi/backtest/fetch.py FILES).
-Writes econ/data/paths.csv by default. Stdlib only.
+Usage: paths.py <wb cache dir>
+The cache dir holds wb_2020.xlsx and wb_current.xlsx (see gcpi/backtest/fetch.py FILES).
+Always writes econ/data/paths.csv next to this script. Stdlib only.
 """
 
 import csv
@@ -66,8 +66,10 @@ def write(months, paths, out):
 
 
 def main(argv):
-    cache = argv[1] if len(argv) > 1 else "/tmp/econ-cache"
-    out = argv[2] if len(argv) > 2 else os.path.join(HERE, "data", "paths.csv")
+    if len(argv) != 2:
+        sys.exit("usage: paths.py <wb cache dir>")
+    cache = argv[1]
+    out = os.path.join(HERE, "data", "paths.csv")
     months, paths = build(cache)
     write(months, paths, out)
     for k, v in paths.items():

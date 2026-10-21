@@ -11,8 +11,8 @@ Experiments:
   E  outage stress: a 3- and 6-month outage as the steepest rise begins
   F  minter returns: genesis-cohort multiples and their decomposition
 
-Usage: experiments.py [out json]
-Reads econ/data/paths.csv. Stdlib only.
+Usage: experiments.py
+Reads econ/data/paths.csv, writes econ/data/results.json. Stdlib only.
 """
 
 import datetime
@@ -344,7 +344,9 @@ def main(argv):
         "E_outage": experiment_e(paths),
         "E2_outage_thin": experiment_e2(paths),
     }
-    out = argv[1] if len(argv) > 1 else os.path.join(HERE, "data", "results.json")
+    if len(argv) != 1:
+        sys.exit("usage: experiments.py")
+    out = os.path.join(HERE, "data", "results.json")
     with open(out, "w") as f:
         json.dump(res, f, indent=1)
     print(f"wrote {out}")
