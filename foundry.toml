@@ -14,5 +14,14 @@ fs_permissions = [{ access = "read", path = "./gcpi/engine" }, { access = "read"
 
 # GCPI (#92) needs the optimizer to fit EIP-170. It is scoped to src/gcpi, so every other contract,
 # CopraRegistry included, compiles exactly as before.
-additional_compiler_profiles = [{ name = "gcpi", optimizer = true, optimizer_runs = 200 }]
-compilation_restrictions = [{ paths = "src/gcpi/**", optimizer_runs = 200 }]
+additional_compiler_profiles = [
+  { name = "gcpi", optimizer = true, optimizer_runs = 200 },
+  # COPRA-001 v2 (#97): like gcpi, plus via-IR — the manager's settle path is past the
+  # legacy stack limit, and via-IR cannot go global (it would move CopraRegistry).
+  # The profile must mirror the restriction's settings or no profile matches.
+  { name = "v2", optimizer = true, optimizer_runs = 200, via_ir = true },
+]
+compilation_restrictions = [
+  { paths = "src/gcpi/**", optimizer_runs = 200 },
+  { paths = "src/v2/**", optimizer_runs = 200, via_ir = true },
+]
