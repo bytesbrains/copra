@@ -46,7 +46,7 @@ contract CopraV2Base is Test {
     function setUp() public virtual {
         genesis = block.timestamp;
         collateral = new MockCollateral(COLL_DECIMALS);
-        gcpi = new MockGCPI(genesis, PERIOD);
+        gcpi = new MockGCPI(genesis, PERIOD, address(this));
         manager = new CopraManagerV2(
             address(collateral),
             COLL_DECIMALS,
@@ -115,6 +115,18 @@ contract CopraV2Base is Test {
         manager.deposit(id, coll);
         manager.mint(id, debt);
         vm.stopPrank();
+    }
+
+    /// @dev Alice and Bob mint 1000 each; Alice requests 400 in the current period.
+    function _redemptionSetup() internal returns (uint256 alicePos, uint256 bobPos, uint256 req) {
+        _fund(ALICE, 100_000e6);
+        _fund(BOB, 100_000e6);
+        _finalize(PRICE, Status.VALID); // period 0
+        alicePos = _mintPosition(ALICE, 1000e18, 5000e6);
+        bobPos = _mintPosition(BOB, 1000e18, 8000e6);
+        _enterPeriod(1);
+        vm.prank(ALICE);
+        req = manager.requestRedeem(400e18);
     }
 
     /// @dev Invariant 2 (exact) and Invariant 3 (exact) on the main manager.

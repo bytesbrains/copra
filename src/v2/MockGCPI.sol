@@ -8,16 +8,20 @@ import "../gcpi/GCPITypes.sol";
  * @title MockGCPI
  * @author Copra Protocol (https://copra.dev)
  * @notice COPRA-001 §4.1 test double, for Forge tests and the Base Sepolia sandbox.
- *         Periods are fixed-length windows from genesis; anyone may finalize the next period
- *         once its window has ended, with any price and any final status. There is no
- *         authentication, no aggregation and no challenge window: it is a mock, and the
- *         deployment script refuses every chain but testnets for that reason.
+ *         Periods are fixed-length windows from genesis; only the trusted updater
+ *         finalizes the next period once its window has ended, with any price and any
+ *         final status. There is no aggregation and no challenge window: it is a mock,
+ *         and a deployment script must refuse every chain but testnets for that reason.
  */
 contract MockGCPI is IGCPI {
     /// @notice First second of period 0.
     uint256 public immutable genesis;
     /// @notice Seconds per calculation period (30 days on the testnet deployment).
     uint256 public immutable periodDuration;
+    /// @notice The only address that may finalize periods: the test contract in Forge,
+    ///         a trusted updater on testnet. Finalized prices move funds in the manager,
+    ///         so this must never be permissionless on a shared deployment.
+    address public immutable updater;
 
     struct Record {
         uint256 price;
@@ -33,20 +37,26 @@ contract MockGCPI is IGCPI {
     error NotFinalStatus(Status status);
     error ZeroPriceForValid();
     error NonzeroPriceForNonValid();
+    error OnlyUpdater();
+    error ZeroAddress();
 
-    constructor(uint256 _genesis, uint256 _periodDuration) {
+    constructor(uint256 _genesis, uint256 _periodDuration, address _updater) {
+        if (_updater == address(0)) revert ZeroAddress();
         genesis = _genesis;
         periodDuration = _periodDuration;
+        updater = _updater;
     }
 
     /**
-     * @notice Finalizes the next period. Permissionless on purpose: on testnet anyone may
-     *         drive time forward, and in tests the test contract does. The window must have
-     *         ended, so no period finalizes before its sources could have published.
+     * @notice Finalizes the next period. Updater only: the price feeds the manager's
+     *         fund-moving math, so anyone-may-finalize would let anyone move funds.
+     *         The window must have ended, so no period finalizes before its sources
+     *         could have published.
      * @param price USD per kilogram at 8 decimals; nonzero if and only if VALID.
      * @param status The final status: anything but NONE and PENDING_CONFIRMATION.
      */
     function finalize(uint256 price, Status status) external returns (uint256 periodId) {
+        if (msg.sender != updater) revert OnlyUpdater();
         if (status == Status.NONE || status == Status.PENDING_CONFIRMATION) revert NotFinalStatus(status);
         if (status == Status.VALID) {
             if (price == 0) revert ZeroPriceForValid();

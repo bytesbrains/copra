@@ -30,9 +30,10 @@ import "../gcpi/GCPITypes.sol";
  *        debt = (debtBase + collBase * (redist - redistSnapshot) / 1e18) * debtScale / 1e18
  *        collateral = collBase * collScale / 1e18
  *      settle() scales debtScale by (D-A)/D and collScale by (C-paid)/C; liquidation moves
- *      bad debt B by adding B*collScale/(C*debtScale) to redist, which attributes exactly
- *      B*c/C to each position. All three updates are O(1) and exact up to dust that favors
- *      the system (§3 rounding rule): debt rounds up, collateral and payouts down.
+ *      bad debt B by adding B*collScale/(C*debtScale) to redist, which attributes B*c/C
+ *      to each position. All three updates are O(1) and exact up to dust (§3 rounding
+ *      rule): debt balances round down so positions stay repayable, collateral and
+ *      payouts round down so dust favors the system.
  *
  *      A settle that redeems the entire supply would zero debtScale and orphan every stored
  *      base, so it opens a new epoch instead: the old scales are saved, fresh ones start,
@@ -139,6 +140,10 @@ contract CopraManagerV2 is ReentrancyGuard {
     uint256 public redist;
     uint64 public epoch;
     mapping(uint64 => EpochEnd) public epochEnds;
+    /// @notice Settlement haircut per period (§11.3, Invariant 7), pinned by the first
+    ///         settle at that period so every redemption settling there shares one rate
+    ///         no matter how settles are batched or ordered. Stored plus one; 0 = unset.
+    mapping(uint256 => uint256) private _periodHaircut;
 
     event PositionOpened(uint256 indexed id, address indexed owner);
     event Deposited(uint256 indexed id, address indexed from, uint256 amount);
@@ -480,6 +485,7 @@ contract CopraManagerV2 is ReentrancyGuard {
     function close(uint256 id) external nonReentrant {
         (Position storage p, uint256 coll, uint256 debt) = _current(id);
         if (msg.sender != p.owner) revert NotOwner();
+        address owner = p.owner;
         if (debt > 0) {
             copraToken.burnFromManager(msg.sender, debt);
             totalDebt -= debt;
@@ -491,7 +497,7 @@ contract CopraManagerV2 is ReentrancyGuard {
             emit Withdrawn(id, p.owner, coll);
         }
         delete _positions[id];
-        emit PositionClosed(id, p.owner);
+        emit PositionClosed(id, owner);
     }
 
     // ------------------------------------------------------------------------
@@ -566,8 +572,9 @@ contract CopraManagerV2 is ReentrancyGuard {
         if (seized > 0) collateralToken.safeTransfer(msg.sender, seized);
         if (bad > 0) {
             if (totalColl > 0) {
-                // Attribute exactly B*c/C to each position: M += B*Ĉ/(C*S).
-                redist += Math.mulDiv(Math.mulDiv(bad, collScale, totalColl), SCALE, debtScale, Math.Rounding.Ceil);
+                // Attribute B*c/C to each position, rounding down (§3): the dust stays
+                // in totalDebt and remains redeemable.
+                redist += Math.mulDiv(Math.mulDiv(bad, collScale, totalColl), SCALE, debtScale);
                 delete _positions[id];
             } else {
                 // With no collateral anywhere the husk keeps its debt: repayable, and
@@ -654,7 +661,7 @@ contract CopraManagerV2 is ReentrancyGuard {
             r.pending = false;
         }
         // Pass 2: one atomic update — burn escrow, shrink the scales, pay floored shares.
-        uint256 payout = _burnForGroup(amount, price);
+        uint256 payout = _burnForGroup(amount, price, s);
         uint256 paid;
         for (uint256 i; i < n; ++i) {
             uint256 requestAmount = _requests[ids[i]].amount;
@@ -702,9 +709,8 @@ contract CopraManagerV2 is ReentrancyGuard {
     ///      payout after haircut and fee. Scale and epoch updates happen in the caller
     ///      after the payout is applied, so a full-supply redemption records the true
     ///      terminal scales (debt exactly 0, post-payout collateral).
-    function _burnForGroup(uint256 amount, uint256 price) internal returns (uint256 payout) {
-        uint256 haircut = _systemRatio(price);
-        if (haircut > SCALE) haircut = SCALE;
+    function _burnForGroup(uint256 amount, uint256 price, uint256 s) internal returns (uint256 payout) {
+        uint256 haircut = _haircutForPeriod(s, price);
         uint256 gross = Math.mulDiv(_debtValueDown(amount, price), haircut, SCALE);
         uint256 fee = Math.mulDiv(gross, redeemFeeBps, BPS_DENOMINATOR, Math.Rounding.Ceil);
         payout = gross - fee;
@@ -712,11 +718,24 @@ contract CopraManagerV2 is ReentrancyGuard {
         totalDebt -= amount;
     }
 
+    /// @dev The settlement haircut for period `s`: the live system ratio (capped at
+    ///      par), pinned on first use so later settles at `s` share the rate.
+    function _haircutForPeriod(uint256 s, uint256 price) internal returns (uint256) {
+        uint256 pinned = _periodHaircut[s];
+        if (pinned != 0) return pinned - 1;
+        uint256 haircut = _systemRatio(price);
+        if (haircut > SCALE) haircut = SCALE;
+        _periodHaircut[s] = haircut + 1;
+        return haircut;
+    }
+
     /**
      * @notice Returns the escrowed $COPRA when no VALID period at or after k+1 finalized
      *         within REDEEM_EXPIRY of the request (§8.4). Requester only. Past expiry with a
      *         settlement price in existence the request must settle instead — cancelling
-     *         would be a free option against minters.
+     *         would be a free option against minters. Past SCAN_CAP finalized periods
+     *         without a VALID record the scan reverts (a dead index); the escrow waits
+     *         for a reachable settlement period rather than cancelling against one.
      */
     function cancel(uint256 id) external nonReentrant {
         Redemption storage r = _requests[id];

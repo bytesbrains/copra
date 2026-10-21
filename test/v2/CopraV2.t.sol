@@ -285,18 +285,6 @@ contract CopraV2Test is CopraV2Base {
     // Redemption (§8)
     // ------------------------------------------------------------------------
 
-    /// @dev Alice and Bob mint 1000 each; Alice requests 400 in the current period.
-    function _redemptionSetup() internal returns (uint256 alicePos, uint256 bobPos, uint256 req) {
-        _fund(ALICE, 100_000e6);
-        _fund(BOB, 100_000e6);
-        _finalize(PRICE, Status.VALID); // period 0
-        alicePos = _mintPosition(ALICE, 1000e18, 5000e6);
-        bobPos = _mintPosition(BOB, 1000e18, 8000e6);
-        _enterPeriod(1);
-        vm.prank(ALICE);
-        req = manager.requestRedeem(400e18);
-    }
-
     function test_RequestSettleHappyPath() public {
         (uint256 alicePos, uint256 bobPos, uint256 req) = _redemptionSetup();
         (,,,, bool pending) = manager.requestOf(req);
@@ -530,16 +518,24 @@ contract CopraV2Test is CopraV2Base {
 
     function test_FullSupplyRedemptionOpensEpochAndSyncs() public {
         _fund(ALICE, 100_000e6);
+        _fund(BOB, 100_000e6);
         _finalize(PRICE, Status.VALID);
         uint256 id = _mintPosition(ALICE, 1000e18, 5000e6);
+        // Bob deposits but never mints: a debt-free survivor through two epochs.
+        vm.startPrank(BOB);
+        uint256 bob = manager.open();
+        manager.deposit(bob, 3000e6);
+        vm.stopPrank();
         _enterPeriod(1);
         vm.prank(ALICE);
         uint256 req = manager.requestRedeem(1000e18); // the entire supply
         _finalize(2 * PRICE, Status.VALID); // period 1
-        _finalize(2 * PRICE, Status.VALID); // period 2
+        _finalize(2 * PRICE, Status.VALID); // period 2 = s
+        uint256 pre1 = manager.totalColl();
         uint256[] memory ids = new uint256[](1);
         ids[0] = req;
         manager.settle(ids);
+        uint256 post1 = manager.totalColl();
         assertEq(manager.epoch(), 1, "full redemption opens an epoch");
         assertEq(manager.totalDebt(), 0);
         assertEq(token.totalSupply(), 0);
@@ -548,18 +544,39 @@ contract CopraV2Test is CopraV2Base {
         vm.prank(ALICE);
         vm.expectRevert(CopraManagerV2.NeedsSync.selector);
         manager.deposit(id, 1);
+        // Leave both survivors unsynced through a second full-supply epoch.
+        _finalize(2 * PRICE, Status.VALID); // period 3
+        _mintPosition(ALICE, 100e18, 1000e6);
+        vm.prank(ALICE);
+        uint256 req2 = manager.requestRedeem(100e18); // the entire new supply
+        _finalize(2 * PRICE, Status.VALID); // period 4
+        uint256 pre2 = manager.totalColl();
+        _finalize(2 * PRICE, Status.VALID); // period 5 = s
+        ids[0] = req2;
+        manager.settle(ids);
+        uint256 post2 = manager.totalColl();
+        assertEq(manager.epoch(), 2, "second full redemption opens another epoch");
+        // One permissionless sync hops both epochs for each survivor.
+        assertEq(manager.epochsBehind(id), 2);
+        assertEq(manager.epochsBehind(bob), 2);
         vm.prank(KEEPER);
         manager.syncPosition(id);
+        vm.prank(KEEPER);
+        manager.syncPosition(bob);
         assertEq(manager.epochsBehind(id), 0);
-        // Balances survived the hop: all debt redeemed, leftover collateral intact.
-        (, uint256 coll, uint256 debt) = manager.positionOf(id);
-        assertEq(debt, 0);
-        assertGt(coll, 1000e6, "collateral net of payout");
+        assertEq(manager.epochsBehind(bob), 0);
+        (, uint256 aliceColl, uint256 aliceDebt) = manager.positionOf(id);
+        (, uint256 bobColl, uint256 bobDebt) = manager.positionOf(bob);
+        assertEq(aliceDebt, 0, "all debt redeemed");
+        assertEq(bobDebt, 0, "never had debt");
+        // Bob's collateral took both haircuts and nothing else.
+        uint256 want = (3000e6 * post1) / pre1;
+        want = (want * post2) / pre2;
+        assertApproxEqAbs(bobColl, want, 5, "debt-free survivor haircut twice");
+        assertGt(aliceColl, 1000e6, "collateral net of payouts");
         vm.prank(ALICE);
         manager.deposit(id, 100e6); // acts again
-        _assertConserved();
-        // And the system mints on after the epoch: the scale was reset, not broken.
-        _finalize(2 * PRICE, Status.VALID);
+        // And the system mints on after the epochs: scales reset, not broken.
         _mintPosition(ALICE, 100e18, 1000e6);
         _assertConserved();
     }
@@ -590,6 +607,14 @@ contract CopraV2Test is CopraV2Base {
         assertEq(f, block.timestamp);
         (p, s, f) = gcpi.record(1);
         assertEq(uint256(s), uint256(Status.NONE), "unfinalized reads NONE");
+    }
+
+    function test_MockFinalizeOnlyUpdater() public {
+        // Finalized prices move funds in the manager; strangers cannot finalize.
+        vm.warp(genesis + PERIOD);
+        vm.prank(BOB);
+        vm.expectRevert(MockGCPI.OnlyUpdater.selector);
+        gcpi.finalize(PRICE, Status.VALID);
     }
 
     function test_RegistryPointsAtConsistentSet() public {
@@ -699,6 +724,6 @@ contract CopraV2Test is CopraV2Base {
         // approve/transfer/transferFrom are the unblockable ERC20 surface (Invariant 8);
         // only mint/burnFromManager are manager-gated.
         _assertMutators("out/CopraTokenV2.sol/CopraTokenV2.json", "approve,burnFromManager,mint,transfer,transferFrom");
-        _assertMutators("out/MockGCPI.sol/MockGCPI.json", "finalize"); // permissionless: it is a mock
+        _assertMutators("out/MockGCPI.sol/MockGCPI.json", "finalize"); // updater-gated; the mock has no other mutator
     }
 }
