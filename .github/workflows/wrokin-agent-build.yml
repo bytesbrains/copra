@@ -79,7 +79,7 @@ jobs:
           # checkout and must not be able to read it off disk (#275).
           persist-credentials: false
       # https://github.com/bytesbrains/wrokin-agent — v0.9.7, pinned by commit.
-      - uses: bytesbrains/wrokin-agent@2e0b694af33ae1d675245403435c39fced63a297
+      - uses: bytesbrains/wrokin-agent@ea4c107fd9262478691b3f649a35697e9f73bdba
         with:
           issue_number: ${{ inputs.issue_number }}
           pr_number: ${{ inputs.pr_number }}
